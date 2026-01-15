@@ -89,16 +89,18 @@ const Teachers = () => {
                 বিনামূল্যে শুরু করুন।
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/register">
+                <Link to="/teacher-dashboard">
                   <Button variant="hero" size="lg">
-                    বিনামূল্যে শুরু করুন
+                    টিচার ড্যাশবোর্ডে যান
                     <ChevronRight className="w-5 h-5 ml-1" />
                   </Button>
                 </Link>
-                <Button variant="outline" size="lg">
-                  <PlayCircle className="w-5 h-5 mr-2" />
-                  ডেমো দেখুন
-                </Button>
+                <Link to="/register">
+                  <Button variant="outline" size="lg">
+                    <PlayCircle className="w-5 h-5 mr-2" />
+                    রেজিস্ট্রেশন করুন
+                  </Button>
+                </Link>
               </div>
             </div>
             
