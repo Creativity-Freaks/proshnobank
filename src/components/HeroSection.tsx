@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Play, Award, Users, BookOpen } from "lucide-react";
 
@@ -32,13 +33,17 @@ const HeroSection = () => {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              <Button variant="accent" size="xl">
-                <Play className="w-5 h-5" />
-                এখনই শুরু করো
-              </Button>
-              <Button variant="outline" size="xl" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                ফ্রি ট্রায়াল নাও
-              </Button>
+              <Link to="/register">
+                <Button variant="accent" size="xl">
+                  <Play className="w-5 h-5" />
+                  এখনই শুরু করো
+                </Button>
+              </Link>
+              <Link to="/live-exams">
+                <Button variant="outline" size="xl" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
+                  ফ্রি ট্রায়াল নাও
+                </Button>
+              </Link>
             </div>
 
             {/* Stats */}

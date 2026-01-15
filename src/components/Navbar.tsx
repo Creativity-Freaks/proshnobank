@@ -8,10 +8,11 @@ const Navbar = () => {
 
   const navLinks = [
     { name: "হোম", href: "/" },
+    { name: "ড্যাশবোর্ড", href: "/dashboard" },
     { name: "এক্সাম ব্যাচ", href: "/batches" },
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
-    { name: "শিক্ষকদের জন্য", href: "/teachers" },
+    { name: "লিডারবোর্ড", href: "/leaderboard" },
   ];
 
   return (
