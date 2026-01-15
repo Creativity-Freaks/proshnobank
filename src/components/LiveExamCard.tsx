@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Clock, Users, Calendar, ArrowRight } from "lucide-react";
 
@@ -101,10 +102,12 @@ const LiveExamCard = () => {
               রিয়েল এক্সাম হলের মতো পরিবেশে পরীক্ষা দাও
             </p>
           </div>
-          <Button variant="outline" className="mt-4 md:mt-0 gap-2">
-            সব এক্সাম দেখো
-            <ArrowRight className="w-4 h-4" />
-          </Button>
+          <Link to="/live-exams">
+            <Button variant="outline" className="mt-4 md:mt-0 gap-2">
+              সব এক্সাম দেখো
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -150,9 +153,11 @@ const LiveExamCard = () => {
                 <CountdownTimer targetDate={exam.startTime} />
               </div>
 
-              <Button variant="hero" className="w-full">
-                এক্সামে যোগ দাও
-              </Button>
+              <Link to={`/exam/${exam.id}`}>
+                <Button variant="hero" className="w-full">
+                  এক্সামে যোগ দাও
+                </Button>
+              </Link>
             </div>
           ))}
         </div>

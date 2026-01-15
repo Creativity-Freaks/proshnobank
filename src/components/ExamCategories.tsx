@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { GraduationCap, Stethoscope, Cog, Building2, Briefcase, BookOpen } from "lucide-react";
 
 const categories = [
@@ -60,8 +61,9 @@ const ExamCategories = () => {
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {categories.map((category, index) => (
-            <div
+            <Link
               key={index}
+              to="/batches"
               className="group bg-card rounded-2xl p-6 shadow-card hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer border border-border"
             >
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
@@ -79,7 +81,7 @@ const ExamCategories = () => {
                 </span>
                 <BookOpen className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
