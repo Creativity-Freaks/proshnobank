@@ -15,6 +15,7 @@ import ExamTake from "./pages/ExamTake";
 import ExamDetails from "./pages/ExamDetails";
 import Teachers from "./pages/Teachers";
 import Dashboard from "./pages/Dashboard";
+import TeacherDashboard from "./pages/TeacherDashboard";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
           <Route path="/question-bank" element={<QuestionBank />} />
           <Route path="/batches" element={<ExamBatches />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
