@@ -5,6 +5,15 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import QuestionBank from "./pages/QuestionBank";
+import ExamBatches from "./pages/ExamBatches";
+import Leaderboard from "./pages/Leaderboard";
+import LiveExams from "./pages/LiveExams";
+import ExamTake from "./pages/ExamTake";
+import ExamDetails from "./pages/ExamDetails";
+import Teachers from "./pages/Teachers";
 
 const queryClient = new QueryClient();
 
@@ -16,7 +25,15 @@ const App = () => (
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/question-bank" element={<QuestionBank />} />
+          <Route path="/batches" element={<ExamBatches />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/live-exams" element={<LiveExams />} />
+          <Route path="/exam/:id" element={<ExamDetails />} />
+          <Route path="/exam/:id/take" element={<ExamTake />} />
+          <Route path="/teachers" element={<Teachers />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

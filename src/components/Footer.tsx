@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { BookOpen, Facebook, Youtube, Mail, Phone } from "lucide-react";
 
 const Footer = () => {
@@ -5,14 +6,13 @@ const Footer = () => {
     <footer className="bg-foreground text-background py-16">
       <div className="container mx-auto px-4">
         <div className="grid md:grid-cols-4 gap-12">
-          {/* Brand */}
           <div className="space-y-4">
-            <div className="flex items-center gap-2">
+            <Link to="/" className="flex items-center gap-2">
               <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
                 <BookOpen className="w-6 h-6 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold font-bengali">প্রশ্নব্যাংক</span>
-            </div>
+            </Link>
             <p className="text-background/70 font-bengali text-sm">
               বাংলাদেশের সেরা অনলাইন পরীক্ষা প্ল্যাটফর্ম। তোমার স্বপ্নের লক্ষ্যে পৌঁছে দিতে আমরা আছি।
             </p>
@@ -26,29 +26,26 @@ const Footer = () => {
             </div>
           </div>
 
-          {/* Quick Links */}
           <div>
             <h4 className="font-bold font-bengali text-lg mb-4">দ্রুত লিংক</h4>
             <ul className="space-y-3 text-sm">
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">এক্সাম ব্যাচ</a></li>
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্নব্যাংক</a></li>
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">লাইভ এক্সাম</a></li>
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">লিডারবোর্ড</a></li>
+              <li><Link to="/batches" className="text-background/70 hover:text-background font-bengali transition-colors">এক্সাম ব্যাচ</Link></li>
+              <li><Link to="/question-bank" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্নব্যাংক</Link></li>
+              <li><Link to="/live-exams" className="text-background/70 hover:text-background font-bengali transition-colors">লাইভ এক্সাম</Link></li>
+              <li><Link to="/leaderboard" className="text-background/70 hover:text-background font-bengali transition-colors">লিডারবোর্ড</Link></li>
             </ul>
           </div>
 
-          {/* Teacher Section */}
           <div>
             <h4 className="font-bold font-bengali text-lg mb-4">শিক্ষকদের জন্য</h4>
             <ul className="space-y-3 text-sm">
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্ন তৈরী করুন</a></li>
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">OMR মূল্যায়ন</a></li>
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">অনলাইন পরীক্ষা</a></li>
-              <li><a href="#" className="text-background/70 hover:text-background font-bengali transition-colors">টিচার প্যানেল</a></li>
+              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্ন তৈরী করুন</Link></li>
+              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">OMR মূল্যায়ন</Link></li>
+              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">অনলাইন পরীক্ষা</Link></li>
+              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">টিচার প্যানেল</Link></li>
             </ul>
           </div>
 
-          {/* Contact */}
           <div>
             <h4 className="font-bold font-bengali text-lg mb-4">যোগাযোগ</h4>
             <ul className="space-y-3 text-sm">
