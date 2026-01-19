@@ -16,6 +16,12 @@ import ExamDetails from "./pages/ExamDetails";
 import Teachers from "./pages/Teachers";
 import Dashboard from "./pages/Dashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
+import SSCExams from "./pages/categories/SSCExams";
+import HSCExams from "./pages/categories/HSCExams";
+import MedicalExams from "./pages/categories/MedicalExams";
+import EngineeringExams from "./pages/categories/EngineeringExams";
+import UniversityExams from "./pages/categories/UniversityExams";
+import JobExams from "./pages/categories/JobExams";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +44,12 @@ const App = () => (
           <Route path="/exam/:id" element={<ExamDetails />} />
           <Route path="/exam/:id/take" element={<ExamTake />} />
           <Route path="/teachers" element={<Teachers />} />
+          <Route path="/category/ssc" element={<SSCExams />} />
+          <Route path="/category/hsc" element={<HSCExams />} />
+          <Route path="/category/medical" element={<MedicalExams />} />
+          <Route path="/category/engineering" element={<EngineeringExams />} />
+          <Route path="/category/university" element={<UniversityExams />} />
+          <Route path="/category/job" element={<JobExams />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

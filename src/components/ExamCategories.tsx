@@ -8,6 +8,7 @@ const categories = [
     description: "এসএসসি বোর্ড পরীক্ষার প্রস্তুতি",
     color: "from-blue-500 to-cyan-500",
     exams: "১২০+ এক্সাম",
+    link: "/category/ssc",
   },
   {
     icon: GraduationCap,
@@ -15,6 +16,7 @@ const categories = [
     description: "এইচএসসি বোর্ড পরীক্ষার প্রস্তুতি",
     color: "from-purple-500 to-pink-500",
     exams: "১৫০+ এক্সাম",
+    link: "/category/hsc",
   },
   {
     icon: Stethoscope,
@@ -22,6 +24,7 @@ const categories = [
     description: "MBBS ভর্তি পরীক্ষার প্রস্তুতি",
     color: "from-emerald-500 to-teal-500",
     exams: "২০০+ এক্সাম",
+    link: "/category/medical",
   },
   {
     icon: Cog,
@@ -29,6 +32,7 @@ const categories = [
     description: "BUET, CUET, KUET ভর্তি প্রস্তুতি",
     color: "from-orange-500 to-amber-500",
     exams: "১৮০+ এক্সাম",
+    link: "/category/engineering",
   },
   {
     icon: Building2,
@@ -36,6 +40,7 @@ const categories = [
     description: "ঢাবি, জাবি, রাবি ভর্তি প্রস্তুতি",
     color: "from-rose-500 to-red-500",
     exams: "২৫০+ এক্সাম",
+    link: "/category/university",
   },
   {
     icon: Briefcase,
@@ -43,6 +48,7 @@ const categories = [
     description: "BCS, Bank, Primary সহ সব চাকরি",
     color: "from-indigo-500 to-violet-500",
     exams: "৩০০+ এক্সাম",
+    link: "/category/job",
   },
 ];
 
@@ -63,7 +69,7 @@ const ExamCategories = () => {
           {categories.map((category, index) => (
             <Link
               key={index}
-              to="/batches"
+              to={category.link}
               className="group bg-card rounded-2xl p-6 shadow-card hover:shadow-lg transition-all duration-300 hover:-translate-y-1 cursor-pointer border border-border"
             >
               <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${category.color} flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300`}>
