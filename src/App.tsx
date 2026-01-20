@@ -13,6 +13,7 @@ import Leaderboard from "./pages/Leaderboard";
 import LiveExams from "./pages/LiveExams";
 import ExamTake from "./pages/ExamTake";
 import ExamDetails from "./pages/ExamDetails";
+import ExamSetup from "./pages/ExamSetup";
 import Teachers from "./pages/Teachers";
 import Dashboard from "./pages/Dashboard";
 import TeacherDashboard from "./pages/TeacherDashboard";
@@ -41,6 +42,7 @@ const App = () => (
           <Route path="/batches" element={<ExamBatches />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="/live-exams" element={<LiveExams />} />
+          <Route path="/exam/setup" element={<ExamSetup />} />
           <Route path="/exam/:id" element={<ExamDetails />} />
           <Route path="/exam/:id/take" element={<ExamTake />} />
           <Route path="/teachers" element={<Teachers />} />

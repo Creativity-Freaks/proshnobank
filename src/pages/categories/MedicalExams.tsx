@@ -2,7 +2,8 @@ import { useState, useMemo } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import ExamFilters from "@/components/ExamFilters";
-import { Stethoscope, Clock, Users, BookOpen, Trophy, ArrowRight } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Stethoscope, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const subjects = [
@@ -76,14 +77,22 @@ const MedicalExams = () => {
       
       <section className="pt-24 pb-12 bg-gradient-to-br from-emerald-500/10 to-teal-500/10">
         <div className="container mx-auto px-4">
-          <div className="flex items-center gap-4 mb-6">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
-              <Stethoscope className="w-8 h-8 text-white" />
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                <Stethoscope className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground">মেডিকেল ভর্তি</h1>
+                <p className="text-muted-foreground">MBBS ভর্তি পরীক্ষার প্রস্তুতি</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl md:text-4xl font-bold text-foreground">মেডিকেল ভর্তি</h1>
-              <p className="text-muted-foreground">MBBS ভর্তি পরীক্ষার প্রস্তুতি</p>
-            </div>
+            <Link to="/exam/setup?category=medical">
+              <Button variant="hero" size="lg" className="w-full md:w-auto">
+                <Settings className="w-5 h-5 mr-2" />
+                কাস্টম এক্সাম সেটআপ
+              </Button>
+            </Link>
           </div>
           
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
