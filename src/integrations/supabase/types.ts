@@ -14,7 +14,105 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      exam_attempts: {
+        Row: {
+          answers: Json | null
+          correct_answers: number
+          created_at: string
+          difficulty: string | null
+          duration_minutes: number
+          id: string
+          marks_per_question: number
+          max_score: number
+          negative_marking: boolean
+          negative_marks: number
+          score: number
+          skipped: number
+          subject: string
+          time_taken_seconds: number | null
+          topic: string | null
+          total_questions: number
+          user_id: string
+          wrong_answers: number
+        }
+        Insert: {
+          answers?: Json | null
+          correct_answers?: number
+          created_at?: string
+          difficulty?: string | null
+          duration_minutes: number
+          id?: string
+          marks_per_question?: number
+          max_score: number
+          negative_marking?: boolean
+          negative_marks?: number
+          score?: number
+          skipped?: number
+          subject: string
+          time_taken_seconds?: number | null
+          topic?: string | null
+          total_questions: number
+          user_id: string
+          wrong_answers?: number
+        }
+        Update: {
+          answers?: Json | null
+          correct_answers?: number
+          created_at?: string
+          difficulty?: string | null
+          duration_minutes?: number
+          id?: string
+          marks_per_question?: number
+          max_score?: number
+          negative_marking?: boolean
+          negative_marks?: number
+          score?: number
+          skipped?: number
+          subject?: string
+          time_taken_seconds?: number | null
+          topic?: string | null
+          total_questions?: number
+          user_id?: string
+          wrong_answers?: number
+        }
+        Relationships: []
+      }
+      question_bank: {
+        Row: {
+          correct_answer: number
+          created_at: string
+          difficulty: Database["public"]["Enums"]["difficulty_level"]
+          explanation: string | null
+          id: string
+          options: Json
+          question_text: string
+          subject: string
+          topic: string
+        }
+        Insert: {
+          correct_answer: number
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          explanation?: string | null
+          id?: string
+          options?: Json
+          question_text: string
+          subject: string
+          topic: string
+        }
+        Update: {
+          correct_answer?: number
+          created_at?: string
+          difficulty?: Database["public"]["Enums"]["difficulty_level"]
+          explanation?: string | null
+          id?: string
+          options?: Json
+          question_text?: string
+          subject?: string
+          topic?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +121,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      difficulty_level: "easy" | "medium" | "hard"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +248,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      difficulty_level: ["easy", "medium", "hard"],
+    },
   },
 } as const
