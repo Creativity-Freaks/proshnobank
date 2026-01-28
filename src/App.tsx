@@ -23,6 +23,7 @@ import MedicalExams from "./pages/categories/MedicalExams";
 import EngineeringExams from "./pages/categories/EngineeringExams";
 import UniversityExams from "./pages/categories/UniversityExams";
 import JobExams from "./pages/categories/JobExams";
+import AdminPanel from "./pages/AdminPanel";
 
 const queryClient = new QueryClient();
 
@@ -52,6 +53,7 @@ const App = () => (
           <Route path="/category/engineering" element={<EngineeringExams />} />
           <Route path="/category/university" element={<UniversityExams />} />
           <Route path="/category/job" element={<JobExams />} />
+          <Route path="/admin" element={<AdminPanel />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
