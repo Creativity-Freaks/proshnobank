@@ -9,6 +9,8 @@ import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import QuestionBank from "./pages/QuestionBank";
 import ExamBatches from "./pages/ExamBatches";
 import Leaderboard from "./pages/Leaderboard";
