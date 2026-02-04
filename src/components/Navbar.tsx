@@ -1,29 +1,25 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, User, GraduationCap, LogOut } from "lucide-react";
+import { Menu, X, BookOpen, LogOut, Shield } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useToast } from "@/hooks/use-toast";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
-  
-  // Mock authentication state - replace with real auth later
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userRole, setUserRole] = useState<"student" | "teacher" | null>(null);
+  const { user, signOut, isLoading } = useAuth();
+  const { isAdmin } = useAdminCheck();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  // Demo login functions
-  const handleDemoStudentLogin = () => {
-    setIsLoggedIn(true);
-    setUserRole("student");
-  };
-
-  const handleDemoTeacherLogin = () => {
-    setIsLoggedIn(true);
-    setUserRole("teacher");
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
-    setUserRole(null);
+  const handleLogout = async () => {
+    await signOut();
+    toast({
+      title: "লগআউট সফল",
+      description: "তুমি সফলভাবে লগআউট করেছো",
+    });
+    navigate("/");
   };
 
   const publicNavLinks = [
@@ -34,7 +30,7 @@ const Navbar = () => {
     { name: "লিডারবোর্ড", href: "/leaderboard" },
   ];
 
-  const studentNavLinks = [
+  const loggedInNavLinks = [
     { name: "হোম", href: "/" },
     { name: "ড্যাশবোর্ড", href: "/dashboard" },
     { name: "এক্সাম ব্যাচ", href: "/batches" },
@@ -43,17 +39,7 @@ const Navbar = () => {
     { name: "লিডারবোর্ড", href: "/leaderboard" },
   ];
 
-  const teacherNavLinks = [
-    { name: "হোম", href: "/" },
-    { name: "শিক্ষক প্যানেল", href: "/teacher-dashboard" },
-    { name: "এক্সাম ব্যাচ", href: "/batches" },
-    { name: "প্রশ্নব্যাংক", href: "/question-bank" },
-    { name: "লাইভ এক্সাম", href: "/live-exams" },
-  ];
-
-  const navLinks = isLoggedIn 
-    ? (userRole === "teacher" ? teacherNavLinks : studentNavLinks)
-    : publicNavLinks;
+  const navLinks = user ? loggedInNavLinks : publicNavLinks;
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
@@ -76,24 +62,37 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="text-muted-foreground hover:text-foreground transition-colors font-bengali text-sm flex items-center gap-1"
+              >
+                <Shield className="w-4 h-4" />
+                অ্যাডমিন
+              </Link>
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {!isLoggedIn ? (
+            {isLoading ? (
+              <div className="w-20 h-8 bg-muted animate-pulse rounded" />
+            ) : !user ? (
               <>
-                <Button variant="ghost" size="sm" className="gap-2" onClick={handleDemoStudentLogin}>
-                  <User className="w-4 h-4" />
-                  ছাত্র লগইন
-                </Button>
-                <Button variant="outline" size="sm" className="gap-2" onClick={handleDemoTeacherLogin}>
-                  <GraduationCap className="w-4 h-4" />
-                  শিক্ষক লগইন
-                </Button>
+                <Link to="/login">
+                  <Button variant="ghost" size="sm" className="font-bengali">
+                    লগইন
+                  </Button>
+                </Link>
+                <Link to="/register">
+                  <Button variant="hero" size="sm" className="font-bengali">
+                    রেজিস্ট্রেশন
+                  </Button>
+                </Link>
               </>
             ) : (
               <>
-                <span className="text-sm text-muted-foreground font-bengali">
-                  {userRole === "teacher" ? "👨‍🏫 শিক্ষক" : "👨‍🎓 ছাত্র"}
+                <span className="text-sm text-muted-foreground font-bengali truncate max-w-[150px]">
+                  {user.email}
                 </span>
                 <Button variant="ghost" size="sm" className="gap-2" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
@@ -122,15 +121,29 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className="block text-muted-foreground hover:text-foreground transition-colors font-bengali py-2 flex items-center gap-1"
+                onClick={() => setIsOpen(false)}
+              >
+                <Shield className="w-4 h-4" />
+                অ্যাডমিন
+              </Link>
+            )}
             <div className="flex gap-3 pt-3 border-t border-border">
-              {!isLoggedIn ? (
+              {!user ? (
                 <>
-                  <Button variant="outline" size="sm" className="flex-1" onClick={handleDemoStudentLogin}>
-                    ছাত্র লগইন
-                  </Button>
-                  <Button variant="hero" size="sm" className="flex-1" onClick={handleDemoTeacherLogin}>
-                    শিক্ষক লগইন
-                  </Button>
+                  <Link to="/login" className="flex-1" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full font-bengali">
+                      লগইন
+                    </Button>
+                  </Link>
+                  <Link to="/register" className="flex-1" onClick={() => setIsOpen(false)}>
+                    <Button variant="hero" size="sm" className="w-full font-bengali">
+                      রেজিস্ট্রেশন
+                    </Button>
+                  </Link>
                 </>
               ) : (
                 <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleLogout}>
