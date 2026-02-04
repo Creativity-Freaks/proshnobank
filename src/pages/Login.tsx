@@ -1,19 +1,76 @@
-import { useState } from "react";
-import { Link } from "react-router-dom";
+import { useState, useEffect } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Eye, EyeOff, Mail, Lock } from "lucide-react";
+import { BookOpen, Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  const { signIn, user, isLoading } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !isLoading) {
+      navigate("/");
+    }
+  }, [user, isLoading, navigate]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Login submitted:", { email, password });
+    
+    if (!email || !password) {
+      toast({
+        title: "ত্রুটি",
+        description: "সব ফিল্ড পূরণ করো",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    const { error } = await signIn(email, password);
+    
+    if (error) {
+      let message = "লগইন করতে সমস্যা হয়েছে";
+      if (error.message.includes("Invalid login credentials")) {
+        message = "ইমেইল বা পাসওয়ার্ড ভুল হয়েছে";
+      } else if (error.message.includes("Email not confirmed")) {
+        message = "প্রথমে তোমার ইমেইল ভেরিফাই করো";
+      }
+      
+      toast({
+        title: "লগইন ব্যর্থ",
+        description: message,
+        variant: "destructive",
+      });
+    } else {
+      toast({
+        title: "সফল!",
+        description: "সফলভাবে লগইন হয়েছে",
+      });
+      navigate("/");
+    }
+    
+    setIsSubmitting(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center py-12 px-4">
@@ -50,6 +107,7 @@ const Login = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
               </div>
             </div>
@@ -66,6 +124,7 @@ const Login = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isSubmitting}
                 />
                 <button
                   type="button"
@@ -87,8 +146,15 @@ const Login = () => {
               </Link>
             </div>
 
-            <Button type="submit" variant="hero" className="w-full font-bengali">
-              লগইন করো
+            <Button type="submit" variant="hero" className="w-full font-bengali" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  লগইন হচ্ছে...
+                </>
+              ) : (
+                "লগইন করো"
+              )}
             </Button>
           </form>
 
