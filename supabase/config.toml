@@ -1,1 +1,10 @@
 project_id = "urtptlxotyyjfqynpbwx"
+
+[functions.questions]
+verify_jwt = false
+
+[functions.exams]
+verify_jwt = false
+
+[functions.leaderboard]
+verify_jwt = false
