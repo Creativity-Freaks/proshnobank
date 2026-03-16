@@ -69,7 +69,7 @@ const AdminPanel = () => {
     try {
       setIsSubmitting(true);
       if (editingQuestion) {
-        await questionsApi.update(editingQuestion.id, formData);
+        await questionsApi.update(editingQuestion.id, formData as unknown as Record<string, unknown>);
         toast({ title: 'সফল!', description: 'প্রশ্ন আপডেট হয়েছে।' });
       } else {
         await questionsApi.create(formData);

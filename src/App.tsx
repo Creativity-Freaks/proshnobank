@@ -28,6 +28,7 @@ import EngineeringExams from "./pages/categories/EngineeringExams";
 import UniversityExams from "./pages/categories/UniversityExams";
 import JobExams from "./pages/categories/JobExams";
 import AdminPanel from "./pages/AdminPanel";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
