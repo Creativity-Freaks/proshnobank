@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, LogOut, Shield } from "lucide-react";
+import { Menu, X, BookOpen, LogOut, Shield, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useToast } from "@/hooks/use-toast";
@@ -91,9 +91,12 @@ const Navbar = () => {
               </>
             ) : (
               <>
-                <span className="text-sm text-muted-foreground font-bengali truncate max-w-[150px]">
-                  {user.email}
-                </span>
+                <Link to="/profile">
+                  <Button variant="ghost" size="sm" className="gap-2 font-bengali">
+                    <User className="w-4 h-4" />
+                    {user.user_metadata?.full_name || user.email?.split("@")[0]}
+                  </Button>
+                </Link>
                 <Button variant="ghost" size="sm" className="gap-2" onClick={handleLogout}>
                   <LogOut className="w-4 h-4" />
                   লগআউট

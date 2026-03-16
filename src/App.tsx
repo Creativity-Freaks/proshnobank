@@ -28,6 +28,7 @@ import EngineeringExams from "./pages/categories/EngineeringExams";
 import UniversityExams from "./pages/categories/UniversityExams";
 import JobExams from "./pages/categories/JobExams";
 import AdminPanel from "./pages/AdminPanel";
+import Profile from "./pages/Profile";
 
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
             <Route path="/forgot-password" element={<ForgotPassword />} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/teacher-dashboard" element={<TeacherDashboard />} />
             <Route path="/question-bank" element={<QuestionBank />} />
             <Route path="/batches" element={<ExamBatches />} />
