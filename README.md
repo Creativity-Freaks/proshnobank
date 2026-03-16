@@ -1,73 +1,77 @@
-# Welcome to your Lovable project
+# ProshnoBank
 
-## Project info
+A lightweight, open-source online exam platform built with React, TypeScript, Vite and Supabase. ProshnoBank provides tools for creating and taking timed exams, managing question banks, live exam sessions, leaderboards, and an admin/teacher interface.
 
-**URL**: https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID
+**Project Summary**
 
-## How can I edit this code?
+- **Purpose:** Provide schools, tutors, and learners a simple web-based system to host practice and live exams, manage question banks, and view performance analytics.
+- **Core features:** question bank management, exam setup, live exam taking, auto-timed sessions, leaderboards, admin/teacher dashboards, and user authentication.
+- **Tech stack:** React + TypeScript, Vite, Tailwind CSS, Supabase (auth, database, serverless functions), Vitest for tests.
 
-There are several ways of editing your application.
+**Key Pages & Components**
 
-**Use Lovable**
+- `Index` / Landing page with features and hero section
+- `Login` / `Register` / `Profile` pages for user authentication
+- `ExamSetup`, `ExamBatches`, `ExamDetails`, `ExamTake` for full exam lifecycle
+- `QuestionBank`, `QuestionList`, `QuestionForm` for question management
+- `AdminPanel`, `TeacherDashboard` for privileged user flows
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and start prompting.
+**Getting Started (Development)**
 
-Changes made via Lovable will be committed automatically to this repo.
+Prerequisites:
 
-**Use your preferred IDE**
+- Node.js (v16+ recommended) or Bun
+- A Supabase project with API keys (for local development create a .env file and set env vars as shown below)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+Install dependencies:
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+```
+npm install
+```
 
-Follow these steps:
+Run the dev server:
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+```
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+Build for production:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```
+npm run build
+```
 
-**Use GitHub Codespaces**
+Run tests:
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+```
+npm run test
+```
 
-## What technologies are used for this project?
+Environment variables (create a `.env` file in project root):
 
-This project is built with:
+- `VITE_SUPABASE_URL` — your Supabase project URL
+- `VITE_SUPABASE_ANON_KEY` — your Supabase anon/public key
+- Any other secrets referenced in `supabase/config.toml` or `src/integrations/supabase/client.ts`
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+**Project Structure (high level)**
 
-## How can I deploy this project?
+- `src/components` — UI and page components
+- `src/pages` — route pages (Admin, Dashboard, Exams, Auth, etc.)
+- `src/integrations/supabase` — Supabase client + types
+- `src/lib` — API helpers and utilities
+- `supabase/functions` — serverless edge functions for backend logic
 
-Simply open [Lovable](https://lovable.dev/projects/REPLACE_WITH_PROJECT_ID) and click on Share -> Publish.
+**Contributing**
 
-## Can I connect a custom domain to my Lovable project?
+See `CONTRIBUTING.md` for setup, workflow, and PR guidelines.
 
-Yes, you can!
+**License**
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+This project is licensed under the MIT License — see the `LICENSE` file for details.
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+**Where to look next**
+
+- API helpers: `src/lib/api.ts`
+- Supabase integration: `src/integrations/supabase/client.ts`
+- Admin & question management: `src/components/admin` and `src/pages/QuestionBank.tsx`
+- Exam taking flow: `src/pages/ExamTake.tsx` and related components
