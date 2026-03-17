@@ -18,7 +18,7 @@ const Register = () => {
     confirmPassword: "",
   });
 
-  const { signUp, user, isLoading } = useAuth();
+  const { signUp, signInWithGoogle, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
