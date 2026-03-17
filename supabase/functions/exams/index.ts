@@ -33,6 +33,11 @@ async function getUser(req: Request) {
   return data.user;
 }
 
+function stripCorrectAnswer(question: Record<string, unknown>) {
+  const { correct_answer, ...rest } = question;
+  return rest;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -47,8 +52,11 @@ Deno.serve(async (req) => {
   );
 
   try {
-    // GET ?action=generate - Generate random questions for an exam
+    // GET ?action=generate - Generate random questions for an exam (auth required)
     if (req.method === "GET" && action === "generate") {
+      const user = await getUser(req);
+      if (!user) return errorResponse("Unauthorized", 401);
+
       const subject = url.searchParams.get("subject");
       const topic = url.searchParams.get("topic");
       const difficulty = url.searchParams.get("difficulty");
@@ -72,8 +80,11 @@ Deno.serve(async (req) => {
       const shuffled = (data || []).sort(() => Math.random() - 0.5);
       const selected = shuffled.slice(0, Math.min(count, shuffled.length));
 
+      // Strip correct_answer from response - answers are validated server-side on submit
+      const sanitized = selected.map(stripCorrectAnswer);
+
       return jsonResponse({
-        data: selected,
+        data: sanitized,
         total_available: data?.length || 0,
         selected_count: selected.length,
       });
@@ -164,22 +175,74 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST - Submit exam attempt
+    // POST - Submit exam attempt (server-side score calculation)
     if (req.method === "POST") {
       const user = await getUser(req);
       if (!user) return errorResponse("Unauthorized", 401);
 
       const body = await req.json();
       const {
-        subject, topic, difficulty, duration_minutes, total_questions,
-        correct_answers, wrong_answers, skipped, score, max_score,
+        subject, topic, difficulty, duration_minutes,
         marks_per_question, negative_marking, negative_marks,
         time_taken_seconds, answers,
       } = body;
 
-      if (!subject || !total_questions || !duration_minutes || max_score === undefined) {
-        return errorResponse("Missing required fields");
+      if (!subject || !duration_minutes || !answers || !Array.isArray(answers) || answers.length === 0) {
+        return errorResponse("Missing required fields: subject, duration_minutes, answers[]");
       }
+
+      // Validate marks_per_question
+      const mPerQ = Number(marks_per_question) || 1;
+      const negMarks = Number(negative_marks) || 0;
+      const hasNegativeMarking = !!negative_marking;
+
+      // Extract question IDs from submitted answers
+      const questionIds = answers.map((a: { question_id: string }) => a.question_id).filter(Boolean);
+      if (questionIds.length === 0) {
+        return errorResponse("No valid question_id in answers");
+      }
+
+      // Look up correct answers from the database (server is the authority)
+      const { data: dbQuestions, error: qError } = await supabase
+        .from("question_bank")
+        .select("id, correct_answer")
+        .in("id", questionIds);
+
+      if (qError) return errorResponse("Failed to validate questions", 500);
+
+      // Build a map of question_id -> correct_answer
+      const correctMap: Record<string, number> = {};
+      (dbQuestions || []).forEach((q: { id: string; correct_answer: number }) => {
+        correctMap[q.id] = q.correct_answer;
+      });
+
+      // Server-side score calculation
+      let correct = 0;
+      let wrong = 0;
+      let skipped = 0;
+      const gradedAnswers: { question_id: string; selected: number; correct: number; is_correct: boolean }[] = [];
+
+      for (const ans of answers as { question_id: string; selected: number }[]) {
+        const correctAnswer = correctMap[ans.question_id];
+        if (correctAnswer === undefined) continue; // question not found, skip
+
+        if (ans.selected === -1 || ans.selected === undefined || ans.selected === null) {
+          skipped++;
+          gradedAnswers.push({ question_id: ans.question_id, selected: -1, correct: correctAnswer, is_correct: false });
+        } else if (ans.selected === correctAnswer) {
+          correct++;
+          gradedAnswers.push({ question_id: ans.question_id, selected: ans.selected, correct: correctAnswer, is_correct: true });
+        } else {
+          wrong++;
+          gradedAnswers.push({ question_id: ans.question_id, selected: ans.selected, correct: correctAnswer, is_correct: false });
+        }
+      }
+
+      const totalQuestions = gradedAnswers.length;
+      const positiveMarks = correct * mPerQ;
+      const deductedMarks = hasNegativeMarking ? wrong * negMarks : 0;
+      const score = Math.max(0, positiveMarks - deductedMarks);
+      const maxScore = totalQuestions * mPerQ;
 
       const { data, error } = await supabase
         .from("exam_attempts")
@@ -189,23 +252,36 @@ Deno.serve(async (req) => {
           topic: topic || null,
           difficulty: difficulty || null,
           duration_minutes,
-          total_questions,
-          correct_answers: correct_answers || 0,
-          wrong_answers: wrong_answers || 0,
-          skipped: skipped || 0,
-          score: score || 0,
-          max_score,
-          marks_per_question: marks_per_question || 1,
-          negative_marking: negative_marking || false,
-          negative_marks: negative_marks || 0,
+          total_questions: totalQuestions,
+          correct_answers: correct,
+          wrong_answers: wrong,
+          skipped,
+          score,
+          max_score: maxScore,
+          marks_per_question: mPerQ,
+          negative_marking: hasNegativeMarking,
+          negative_marks: negMarks,
           time_taken_seconds: time_taken_seconds || null,
-          answers: answers || [],
+          answers: gradedAnswers,
         })
         .select()
         .single();
 
       if (error) return errorResponse(error.message, 500);
-      return jsonResponse({ data }, 201);
+
+      // Return server-computed results so client can display them
+      return jsonResponse({
+        data,
+        results: {
+          correct,
+          wrong,
+          skipped,
+          score,
+          max_score: maxScore,
+          total_questions: totalQuestions,
+          graded_answers: gradedAnswers,
+        },
+      }, 201);
     }
 
     return errorResponse("Invalid action or method", 400);
