@@ -3,26 +3,6 @@
  * 
  * All API calls go through Supabase Edge Functions.
  * Frontend uses these functions instead of direct Supabase client calls.
- * 
- * ## API Endpoints
- * 
- * ### Questions API (`/functions/v1/questions`)
- * - `GET ?subject=X&topic=X&difficulty=X&search=X&limit=50&offset=0` - List questions
- * - `GET ?id=X` - Get single question
- * - `POST` - Create question (admin only, requires auth)
- * - `PUT` - Update question (admin only, requires auth)
- * - `DELETE ?id=X` - Delete question (admin only, requires auth)
- * 
- * ### Exams API (`/functions/v1/exams`)
- * - `GET ?action=generate&subjects=X,Y&difficulty=X&count=10` - Generate random exam questions
- * - `GET ?action=attempts&limit=20&offset=0` - Get user's exam history (auth required)
- * - `GET ?action=attempt&id=X` - Get single attempt (auth required)
- * - `GET ?action=stats` - Get user's statistics (auth required)
- * - `POST` - Submit exam attempt (auth required)
- * 
- * ### Leaderboard API (`/functions/v1/leaderboard`)
- * - `GET ?action=rankings&period=weekly&subject=all&limit=20` - Get leaderboard
- * - `GET ?action=stats` - Get global stats
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -69,7 +49,6 @@ async function apiCall<T = unknown>(
 // ==================== Questions API ====================
 
 export const questionsApi = {
-  /** List questions with optional filters */
   list: (filters?: {
     subject?: string;
     topic?: string;
@@ -90,10 +69,8 @@ export const questionsApi = {
       } as Record<string, string>
     ),
 
-  /** Get single question by id */
   get: (id: string) => apiCall<{ data: unknown }>("questions", { id }),
 
-  /** Create a new question (admin only) */
   create: (question: {
     subject: string;
     topic: string;
@@ -104,11 +81,9 @@ export const questionsApi = {
     explanation?: string;
   }) => apiCall<{ data: unknown }>("questions", undefined, { method: "POST", body: question }),
 
-  /** Update a question (admin only) */
   update: (id: string, data: Record<string, unknown>) =>
     apiCall<{ data: unknown }>("questions", undefined, { method: "PUT", body: { id, ...data } }),
 
-  /** Delete a question (admin only) */
   delete: (id: string) =>
     apiCall<{ success: boolean }>("questions", { id }, { method: "DELETE" }),
 };
@@ -116,7 +91,6 @@ export const questionsApi = {
 // ==================== Exams API ====================
 
 export const examsApi = {
-  /** Generate random questions for an exam */
   generate: (config: {
     subjects?: string;
     subject?: string;
@@ -136,7 +110,6 @@ export const examsApi = {
       } as Record<string, string>
     ),
 
-  /** Get user's exam attempts history */
   attempts: (filters?: { limit?: number; offset?: number }) =>
     apiCall<{ data: unknown[]; total: number }>("exams", {
       action: "attempts",
@@ -144,11 +117,9 @@ export const examsApi = {
       offset: String(filters?.offset || 0),
     }),
 
-  /** Get single attempt */
   getAttempt: (id: string) =>
     apiCall<{ data: unknown }>("exams", { action: "attempt", id }),
 
-  /** Get user's exam statistics */
   stats: () =>
     apiCall<{
       data: {
@@ -160,30 +131,33 @@ export const examsApi = {
       };
     }>("exams", { action: "stats" }),
 
-  /** Submit an exam attempt */
+  /** Submit exam - only sends question_id + selected index, server calculates score */
   submit: (attempt: {
     subject: string;
-    topic?: string;
     difficulty?: string;
     duration_minutes: number;
-    total_questions: number;
-    correct_answers: number;
-    wrong_answers: number;
-    skipped: number;
-    score: number;
-    max_score: number;
     marks_per_question?: number;
     negative_marking?: boolean;
     negative_marks?: number;
     time_taken_seconds?: number;
-    answers?: unknown[];
-  }) => apiCall<{ data: unknown }>("exams", undefined, { method: "POST", body: attempt }),
+    answers: { question_id: string; selected: number }[];
+  }) => apiCall<{
+    data: unknown;
+    results: {
+      correct: number;
+      wrong: number;
+      skipped: number;
+      score: number;
+      max_score: number;
+      total_questions: number;
+      graded_answers: { question_id: string; selected: number; correct: number; is_correct: boolean }[];
+    };
+  }>("exams", undefined, { method: "POST", body: attempt }),
 };
 
 // ==================== Leaderboard API ====================
 
 export const leaderboardApi = {
-  /** Get leaderboard rankings */
   rankings: (filters?: {
     period?: string;
     subject?: string;
@@ -205,7 +179,6 @@ export const leaderboardApi = {
       limit: String(filters?.limit || 20),
     }),
 
-  /** Get global stats */
   stats: () =>
     apiCall<{
       data: {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -7,7 +7,7 @@ import { examsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import {
   Clock, ChevronLeft, ChevronRight, Flag, CheckCircle,
-  AlertCircle, BookOpen, X, MinusCircle, Loader2,
+  AlertCircle, BookOpen, X, Loader2,
 } from "lucide-react";
 
 interface ExamConfig {
@@ -25,10 +25,19 @@ interface Question {
   id: string;
   question_text: string;
   options: string[];
-  correct_answer: number;
   subject?: string;
   topic?: string;
   difficulty?: string;
+}
+
+interface ExamResults {
+  correct: number;
+  wrong: number;
+  skipped: number;
+  score: number;
+  max_score: number;
+  total_questions: number;
+  graded_answers: { question_id: string; selected: number; correct: number; is_correct: boolean }[];
 }
 
 const ExamTake = () => {
@@ -51,6 +60,7 @@ const ExamTake = () => {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [examResults, setExamResults] = useState<ExamResults | null>(null);
 
   // Load questions from API
   useEffect(() => {
@@ -67,7 +77,6 @@ const ExamTake = () => {
           id: q.id,
           question_text: q.question_text,
           options: q.options,
-          correct_answer: q.correct_answer,
           subject: q.subject,
           topic: q.topic,
           difficulty: q.difficulty,
@@ -96,56 +105,39 @@ const ExamTake = () => {
   const handleAnswer = (optionIndex: number) => setAnswers({ ...answers, [currentQuestion]: optionIndex });
   const toggleFlag = () => setFlagged(flagged.includes(currentQuestion) ? flagged.filter((f) => f !== currentQuestion) : [...flagged, currentQuestion]);
 
-  const calculateScore = () => {
-    let correct = 0, wrong = 0;
-    questions.forEach((q, i) => {
-      if (answers[i] !== undefined) {
-        if (answers[i] === q.correct_answer) correct++;
-        else wrong++;
-      }
-    });
-    const skipped = questions.length - Object.keys(answers).length;
-    const positiveMarks = correct * config.marksPerQuestion;
-    const negativeMarks = wrong * config.negativeMarking;
-    return { correct, wrong, skipped, totalMarks: positiveMarks - negativeMarks, positiveMarks, negativeMarks };
-  };
-
   const handleSubmit = async () => {
     setIsSubmitted(true);
     setShowSubmitDialog(false);
-    const { correct, wrong, skipped, totalMarks } = calculateScore();
-    const totalPossible = questions.length * config.marksPerQuestion;
 
-    // Submit to API
-    if (user) {
-      try {
-        setSubmitting(true);
-        await examsApi.submit({
-          subject: config.subjects.join(", ") || "General",
-          difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
-          duration_minutes: config.duration,
-          total_questions: questions.length,
-          correct_answers: correct,
-          wrong_answers: wrong,
-          skipped,
-          score: Math.max(0, totalMarks),
-          max_score: totalPossible,
-          marks_per_question: config.marksPerQuestion,
-          negative_marking: config.negativeMarking > 0,
-          negative_marks: config.negativeMarking,
-          time_taken_seconds: config.duration * 60 - timeLeft,
-          answers: questions.map((q, i) => ({ question_id: q.id, selected: answers[i] ?? -1, correct: q.correct_answer })),
-        });
-      } catch (e) {
-        console.error("Failed to submit exam:", e);
-      } finally {
-        setSubmitting(false);
-      }
+    if (!user) return;
+
+    try {
+      setSubmitting(true);
+      // Send only question_id + selected index — server calculates everything
+      const res = await examsApi.submit({
+        subject: config.subjects.join(", ") || "General",
+        difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
+        duration_minutes: config.duration,
+        marks_per_question: config.marksPerQuestion,
+        negative_marking: config.negativeMarking > 0,
+        negative_marks: config.negativeMarking,
+        time_taken_seconds: config.duration * 60 - timeLeft,
+        answers: questions.map((q, i) => ({
+          question_id: q.id,
+          selected: answers[i] ?? -1,
+        })),
+      });
+
+      // Use server-computed results
+      setExamResults((res as any).results);
+    } catch (e) {
+      console.error("Failed to submit exam:", e);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const progress = questions.length > 0 ? (Object.keys(answers).length / questions.length) * 100 : 0;
-  const totalPossibleMarks = questions.length * config.marksPerQuestion;
 
   if (loadingQuestions) {
     return (
@@ -172,8 +164,20 @@ const ExamTake = () => {
   }
 
   if (isSubmitted) {
-    const { correct, wrong, skipped, totalMarks, positiveMarks, negativeMarks } = calculateScore();
-    const percentage = totalPossibleMarks > 0 ? (totalMarks / totalPossibleMarks) * 100 : 0;
+    if (submitting || !examResults) {
+      return (
+        <div className="min-h-screen bg-background font-bengali flex items-center justify-center">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
+            <p className="text-muted-foreground">ফলাফল তৈরি হচ্ছে...</p>
+          </div>
+        </div>
+      );
+    }
+
+    const { correct, wrong, skipped, score, max_score } = examResults;
+    const percentage = max_score > 0 ? (score / max_score) * 100 : 0;
+
     return (
       <div className="min-h-screen bg-background font-bengali flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full text-center">
@@ -181,9 +185,8 @@ const ExamTake = () => {
             {percentage >= 80 ? <CheckCircle className="w-12 h-12 text-green-600" /> : <AlertCircle className="w-12 h-12 text-yellow-600" />}
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">পরীক্ষা শেষ!</h1>
-          {submitting && <p className="text-sm text-muted-foreground mb-2">ফলাফল সেভ হচ্ছে...</p>}
           <div className="bg-muted rounded-xl p-6 mb-6">
-            <p className="text-4xl font-bold text-primary mb-2">{totalMarks.toFixed(1)}/{totalPossibleMarks}</p>
+            <p className="text-4xl font-bold text-primary mb-2">{score}/{max_score}</p>
             <p className="text-muted-foreground">মোট মার্কস ({percentage.toFixed(1)}%)</p>
             <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
               <div><p className="font-bold text-green-600">{correct}</p><p className="text-muted-foreground">সঠিক</p></div>
