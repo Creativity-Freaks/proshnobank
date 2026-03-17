@@ -13,7 +13,7 @@ const Login = () => {
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  const { signIn, user, isLoading } = useAuth();
+  const { signIn, signInWithGoogle, user, isLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
 
