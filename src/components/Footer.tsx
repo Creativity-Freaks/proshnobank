@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { BookOpen, Facebook, Youtube, Mail, Phone } from "lucide-react";
+import { Facebook, Youtube, Instagram, Mail, Phone } from "lucide-react";
+import BrandLogo from "@/components/BrandLogo";
 
 const Footer = () => {
   return (
@@ -8,20 +9,38 @@ const Footer = () => {
         <div className="grid md:grid-cols-4 gap-12">
           <div className="space-y-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
-                <BookOpen className="w-6 h-6 text-primary-foreground" />
-              </div>
-              <span className="text-xl font-bold font-bengali">প্রশ্নব্যাংক</span>
+              <BrandLogo size="md" textClassName="text-xl text-background" />
             </Link>
             <p className="text-background/70 font-bengali text-sm">
               বাংলাদেশের সেরা অনলাইন পরীক্ষা প্ল্যাটফর্ম। তোমার স্বপ্নের লক্ষ্যে পৌঁছে দিতে আমরা আছি।
             </p>
             <div className="flex gap-4">
-              <a href="#" className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary transition-colors">
+              <a
+                href="https://www.facebook.com/aacwith10ms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary transition-colors"
+                aria-label="Facebook"
+              >
                 <Facebook className="w-5 h-5" />
               </a>
-              <a href="#" className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary transition-colors">
+              <a
+                href="https://www.youtube.com/@DevPreneur"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary transition-colors"
+                aria-label="YouTube"
+              >
                 <Youtube className="w-5 h-5" />
+              </a>
+              <a
+                href="https://www.instagram.com/proshnobank_by_aac"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center hover:bg-primary transition-colors"
+                aria-label="Instagram"
+              >
+                <Instagram className="w-5 h-5" />
               </a>
             </div>
           </div>
@@ -51,11 +70,15 @@ const Footer = () => {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2 text-background/70">
                 <Mail className="w-4 h-4" />
-                <span>info@proshnobank.com</span>
+                <a href="mailto:info.proshnobank@gmail.com" className="hover:text-background transition-colors">
+                  info.proshnobank@gmail.com
+                </a>
               </li>
               <li className="flex items-center gap-2 text-background/70">
                 <Phone className="w-4 h-4" />
-                <span>+880 1700 000000</span>
+                <a href="tel:01642948324" className="hover:text-background transition-colors">
+                  01642948324
+                </a>
               </li>
             </ul>
           </div>

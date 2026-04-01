@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, BookOpen, LogOut, Shield, User } from "lucide-react";
+import { Menu, X, LogOut, Shield, User } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useToast } from "@/hooks/use-toast";
+import BrandLogo from "@/components/BrandLogo";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -46,10 +47,7 @@ const Navbar = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <BookOpen className="w-6 h-6 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold font-bengali text-foreground">প্রশ্নব্যাংক</span>
+            <BrandLogo size="md" textClassName="text-base sm:text-xl" />
           </Link>
 
           <div className="hidden md:flex items-center gap-8">

@@ -3,9 +3,10 @@ import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Mail, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
+import { Mail, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import BrandLogo from "@/components/BrandLogo";
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState("");
@@ -56,10 +57,7 @@ const ForgotPassword = () => {
         <div className="w-full max-w-md">
           {/* Logo */}
           <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-            <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-              <BookOpen className="w-7 h-7 text-primary-foreground" />
-            </div>
-            <span className="text-2xl font-bold font-bengali text-foreground">প্রশ্নব্যাংক</span>
+            <BrandLogo size="lg" />
           </Link>
 
           {/* Success Card */}
@@ -94,10 +92,7 @@ const ForgotPassword = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-            <BookOpen className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <span className="text-2xl font-bold font-bengali text-foreground">প্রশ্নব্যাংক</span>
+          <BrandLogo size="lg" />
         </Link>
 
         {/* Forgot Password Card */}

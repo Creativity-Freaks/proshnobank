@@ -3,10 +3,11 @@ import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { BookOpen, Eye, EyeOff, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import BrandLogo from "@/components/BrandLogo";
 
 const Register = () => {
   usePageMeta({
@@ -111,10 +112,7 @@ const Register = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <Link to="/" className="flex items-center justify-center gap-2 mb-8">
-          <div className="w-12 h-12 rounded-xl bg-gradient-primary flex items-center justify-center">
-            <BookOpen className="w-7 h-7 text-primary-foreground" />
-          </div>
-          <span className="text-2xl font-bold font-bengali text-foreground">প্রশ্নব্যাংক</span>
+          <BrandLogo size="lg" />
         </Link>
 
         {/* Register Card */}
