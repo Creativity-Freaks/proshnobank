@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useToast } from '@/hooks/use-toast';
 import { useAdminCheck } from '@/hooks/useAdminCheck';
@@ -11,6 +11,7 @@ import { QuestionList } from '@/components/admin/QuestionList';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import { Plus, Search, ArrowLeft, Shield, Loader2 } from 'lucide-react';
+import type { Tables } from '@/integrations/supabase/types';
 
 interface QuestionFormData {
   subject: string;
@@ -22,15 +23,33 @@ interface QuestionFormData {
   explanation?: string;
 }
 
+type Question = Tables<'question_bank'>;
+
+function isQuestion(value: unknown): value is Question {
+  if (!value || typeof value !== 'object') return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === 'string' &&
+    typeof v.subject === 'string' &&
+    typeof v.topic === 'string' &&
+    (v.difficulty === 'easy' || v.difficulty === 'medium' || v.difficulty === 'hard') &&
+    typeof v.question_text === 'string' &&
+    Array.isArray(v.options) &&
+    v.options.every((o) => typeof o === 'string') &&
+    typeof v.correct_answer === 'number' &&
+    typeof v.created_at === 'string'
+  );
+}
+
 const AdminPanel = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   const { isAdmin, isLoading: isCheckingAdmin } = useAdminCheck();
 
-  const [questions, setQuestions] = useState<any[]>([]);
+  const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
-  const [editingQuestion, setEditingQuestion] = useState<any | null>(null);
+  const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,34 +61,36 @@ const AdminPanel = () => {
       toast({ title: 'অ্যাক্সেস অস্বীকৃত', description: 'অ্যাডমিন অনুমতি প্রয়োজন।', variant: 'destructive' });
       navigate('/');
     }
-  }, [isAdmin, isCheckingAdmin]);
+  }, [isAdmin, isCheckingAdmin, navigate, toast]);
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       setIsLoading(true);
-      const filters: any = {};
-      if (subjectFilter !== 'all') filters.subject = subjectFilter;
-      if (difficultyFilter !== 'all') filters.difficulty = difficultyFilter;
-      if (searchQuery) filters.search = searchQuery;
-
-      const res = await questionsApi.list(filters);
-      setQuestions(res.data as any[]);
-    } catch (error: any) {
-      toast({ title: 'Error', description: 'প্রশ্ন লোড করতে সমস্যা হয়েছে।', variant: 'destructive' });
+      const res = await questionsApi.list({
+        subject: subjectFilter !== 'all' ? subjectFilter : undefined,
+        difficulty: difficultyFilter !== 'all' ? difficultyFilter : undefined,
+        search: searchQuery || undefined,
+      });
+      const data = Array.isArray(res.data) ? (res.data as unknown[]) : [];
+      setQuestions(data.filter(isQuestion));
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'প্রশ্ন লোড করতে সমস্যা হয়েছে।';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [difficultyFilter, searchQuery, subjectFilter, toast]);
 
   useEffect(() => {
     if (isAdmin) fetchQuestions();
-  }, [isAdmin, subjectFilter, difficultyFilter, searchQuery]);
+  }, [isAdmin, fetchQuestions]);
 
   const handleSubmit = async (formData: QuestionFormData) => {
     try {
       setIsSubmitting(true);
       if (editingQuestion) {
-        await questionsApi.update(editingQuestion.id, formData as unknown as Record<string, unknown>);
+        const updateData: Record<string, unknown> = { ...formData };
+        await questionsApi.update(editingQuestion.id, updateData);
         toast({ title: 'সফল!', description: 'প্রশ্ন আপডেট হয়েছে।' });
       } else {
         await questionsApi.create(formData);
@@ -78,14 +99,15 @@ const AdminPanel = () => {
       setShowForm(false);
       setEditingQuestion(null);
       fetchQuestions();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message || 'প্রশ্ন সেভ করতে সমস্যা হয়েছে।', variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'প্রশ্ন সেভ করতে সমস্যা হয়েছে।';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleEdit = (question: any) => { setEditingQuestion(question); setShowForm(true); };
+  const handleEdit = (question: Question) => { setEditingQuestion(question); setShowForm(true); };
 
   const handleDelete = async (id: string) => {
     if (!confirm('আপনি কি নিশ্চিত?')) return;
@@ -94,8 +116,9 @@ const AdminPanel = () => {
       await questionsApi.delete(id);
       toast({ title: 'সফল!', description: 'প্রশ্ন মুছে ফেলা হয়েছে।' });
       fetchQuestions();
-    } catch (error: any) {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'প্রশ্ন মুছতে সমস্যা হয়েছে।';
+      toast({ title: 'Error', description: message, variant: 'destructive' });
     } finally {
       setIsDeleting(null);
     }
@@ -104,7 +127,7 @@ const AdminPanel = () => {
   if (isCheckingAdmin) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
   if (!isAdmin) return null;
 
-  const subjects = [...new Set(questions.map((q: any) => q.subject))];
+  const subjects = [...new Set(questions.map((q) => q.subject))];
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

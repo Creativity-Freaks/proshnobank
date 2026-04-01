@@ -95,8 +95,9 @@ const Profile = () => {
       });
       if (error) throw error;
       toast({ title: "সফল!", description: "প্রোফাইল আপডেট হয়েছে।" });
-    } catch (e: any) {
-      toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "প্রোফাইল আপডেট করতে সমস্যা হয়েছে।";
+      toast({ title: "ত্রুটি", description: message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -118,8 +119,9 @@ const Profile = () => {
       toast({ title: "সফল!", description: "পাসওয়ার্ড পরিবর্তন হয়েছে।" });
       setNewPassword("");
       setConfirmPassword("");
-    } catch (e: any) {
-      toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "পাসওয়ার্ড পরিবর্তন করতে সমস্যা হয়েছে।";
+      toast({ title: "ত্রুটি", description: message, variant: "destructive" });
     } finally {
       setChangingPassword(false);
     }

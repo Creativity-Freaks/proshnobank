@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { examsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import type { Tables } from "@/integrations/supabase/types";
 import {
   Clock, ChevronLeft, ChevronRight, Flag, CheckCircle,
   AlertCircle, BookOpen, X, Loader2,
@@ -30,14 +31,21 @@ interface Question {
   difficulty?: string;
 }
 
-interface ExamResults {
-  correct: number;
-  wrong: number;
-  skipped: number;
-  score: number;
-  max_score: number;
-  total_questions: number;
-  graded_answers: { question_id: string; selected: number; correct: number; is_correct: boolean }[];
+type ExamAttempt = Tables<"exam_attempts">;
+
+function isQuestionRow(value: unknown): value is Question {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.id === "string" &&
+    typeof v.question_text === "string" &&
+    Array.isArray(v.options) &&
+    v.options.every((o) => typeof o === "string")
+  );
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.map((v) => v.trim()).filter(Boolean)));
 }
 
 const ExamTake = () => {
@@ -46,10 +54,24 @@ const ExamTake = () => {
   const location = useLocation();
   const { user } = useAuth();
 
-  const config: ExamConfig = location.state?.config || {
-    category: "general", subjects: [], topics: {}, questionCount: 10,
-    duration: 30, marksPerQuestion: 1, negativeMarking: 0, difficulty: "all",
-  };
+  const defaultConfig = useMemo<ExamConfig>(
+    () => ({
+      category: "general",
+      subjects: [],
+      topics: {},
+      questionCount: 10,
+      duration: 30,
+      marksPerQuestion: 1,
+      negativeMarking: 0,
+      difficulty: "all",
+    }),
+    [],
+  );
+
+  const config = useMemo<ExamConfig>(() => {
+    const state = location.state as { config?: ExamConfig } | null | undefined;
+    return state?.config ?? defaultConfig;
+  }, [defaultConfig, location.state]);
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -60,84 +82,92 @@ const ExamTake = () => {
   const [showSubmitDialog, setShowSubmitDialog] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [examResults, setExamResults] = useState<ExamResults | null>(null);
+  const [attempt, setAttempt] = useState<ExamAttempt | null>(null);
+
+  const loadQuestions = useCallback(async () => {
+    try {
+      setLoadingQuestions(true);
+      const subjects = config.subjects.length > 0 ? config.subjects.join(",") : undefined;
+      const selectedTopics = uniqueStrings(
+        Object.values(config.topics || {}).flatMap((arr) => (Array.isArray(arr) ? arr : [])),
+      );
+      const topics = selectedTopics.length > 0 ? selectedTopics.join(",") : undefined;
+      const res = await examsApi.generate({
+        subjects,
+        topics,
+        difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
+        count: config.questionCount,
+      });
+      const data = Array.isArray(res.data) ? (res.data as unknown[]) : [];
+      setQuestions(
+        data
+          .filter(isQuestionRow)
+          .map((q) => ({
+            id: q.id,
+            question_text: q.question_text,
+            options: q.options,
+            subject: q.subject,
+            topic: q.topic,
+            difficulty: q.difficulty,
+          })),
+      );
+    } catch (e) {
+      console.error("Failed to load exam questions:", e);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  }, [config.difficulty, config.questionCount, config.subjects, config.topics]);
 
   // Load questions from API
   useEffect(() => {
-    const loadQuestions = async () => {
-      try {
-        setLoadingQuestions(true);
-        const subjects = config.subjects.length > 0 ? config.subjects.join(",") : undefined;
-        const res = await examsApi.generate({
-          subjects,
-          difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
-          count: config.questionCount,
-        });
-        setQuestions((res.data as any[]).map((q: any) => ({
-          id: q.id,
-          question_text: q.question_text,
-          options: q.options,
-          subject: q.subject,
-          topic: q.topic,
-          difficulty: q.difficulty,
-        })));
-      } catch (e) {
-        console.error("Failed to load exam questions:", e);
-      } finally {
-        setLoadingQuestions(false);
-      }
-    };
     loadQuestions();
-  }, []);
+  }, [loadQuestions]);
+
+  const handleSubmit = useCallback(async () => {
+    setIsSubmitted(true);
+    setShowSubmitDialog(false);
+    setAttempt(null);
+
+    if (!user) return;
+
+    try {
+      setSubmitting(true);
+      const res = await examsApi.submit({
+        subject: config.subjects.join(", ") || "General",
+        difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
+        duration_minutes: config.duration,
+        marks_per_question: config.marksPerQuestion,
+        negative_marks: config.negativeMarking,
+        time_taken_seconds: config.duration * 60 - timeLeft,
+        answers: questions.map((q, i) => ({ question_id: q.id, selected: answers[i] ?? -1 })),
+      });
+      setAttempt(res.data as ExamAttempt);
+    } catch (e) {
+      console.error("Failed to submit exam:", e);
+    } finally {
+      setSubmitting(false);
+    }
+  }, [answers, config, questions, timeLeft, user]);
 
   // Timer
   useEffect(() => {
     if (timeLeft > 0 && !isSubmitted && !loadingQuestions) {
       const timer = setInterval(() => setTimeLeft((t) => t - 1), 1000);
       return () => clearInterval(timer);
-    } else if (timeLeft === 0 && !isSubmitted && !loadingQuestions) {
+    }
+    if (timeLeft === 0 && !isSubmitted && !loadingQuestions) {
       handleSubmit();
     }
-  }, [timeLeft, isSubmitted, loadingQuestions]);
+    return;
+  }, [handleSubmit, isSubmitted, loadingQuestions, timeLeft]);
 
   const formatTime = (s: number) => `${Math.floor(s / 60).toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
 
   const handleAnswer = (optionIndex: number) => setAnswers({ ...answers, [currentQuestion]: optionIndex });
   const toggleFlag = () => setFlagged(flagged.includes(currentQuestion) ? flagged.filter((f) => f !== currentQuestion) : [...flagged, currentQuestion]);
 
-  const handleSubmit = async () => {
-    setIsSubmitted(true);
-    setShowSubmitDialog(false);
-
-    if (!user) return;
-
-    try {
-      setSubmitting(true);
-      // Send only question_id + selected index — server calculates everything
-      const res = await examsApi.submit({
-        subject: config.subjects.join(", ") || "General",
-        difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
-        duration_minutes: config.duration,
-        marks_per_question: config.marksPerQuestion,
-        negative_marking: config.negativeMarking > 0,
-        negative_marks: config.negativeMarking,
-        time_taken_seconds: config.duration * 60 - timeLeft,
-        answers: questions.map((q, i) => ({
-          question_id: q.id,
-          selected: answers[i] ?? -1,
-        })),
-      });
-
-      // Use server-computed results
-      setExamResults((res as any).results);
-    } catch (e) {
-      console.error("Failed to submit exam:", e);
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
   const progress = questions.length > 0 ? (Object.keys(answers).length / questions.length) * 100 : 0;
+  const totalPossibleMarks = attempt?.max_score ?? questions.length * config.marksPerQuestion;
 
   if (loadingQuestions) {
     return (
@@ -164,20 +194,20 @@ const ExamTake = () => {
   }
 
   if (isSubmitted) {
-    if (submitting || !examResults) {
+    if (!attempt) {
       return (
-        <div className="min-h-screen bg-background font-bengali flex items-center justify-center">
-          <div className="text-center">
+        <div className="min-h-screen bg-background font-bengali flex items-center justify-center p-4">
+          <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full text-center">
             <Loader2 className="w-12 h-12 animate-spin text-primary mx-auto mb-4" />
-            <p className="text-muted-foreground">ফলাফল তৈরি হচ্ছে...</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">ফলাফল প্রসেস হচ্ছে...</h1>
+            <p className="text-muted-foreground">অনুগ্রহ করে অপেক্ষা করুন</p>
           </div>
         </div>
       );
     }
 
-    const { correct, wrong, skipped, score, max_score } = examResults;
-    const percentage = max_score > 0 ? (score / max_score) * 100 : 0;
-
+    const totalMarks = Number(attempt.score);
+    const percentage = attempt.max_score > 0 ? (totalMarks / attempt.max_score) * 100 : 0;
     return (
       <div className="min-h-screen bg-background font-bengali flex items-center justify-center p-4">
         <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full text-center">
@@ -186,12 +216,12 @@ const ExamTake = () => {
           </div>
           <h1 className="text-2xl font-bold text-foreground mb-2">পরীক্ষা শেষ!</h1>
           <div className="bg-muted rounded-xl p-6 mb-6">
-            <p className="text-4xl font-bold text-primary mb-2">{score}/{max_score}</p>
+            <p className="text-4xl font-bold text-primary mb-2">{totalMarks.toFixed(1)}/{attempt.max_score}</p>
             <p className="text-muted-foreground">মোট মার্কস ({percentage.toFixed(1)}%)</p>
             <div className="mt-4 grid grid-cols-3 gap-4 text-sm">
-              <div><p className="font-bold text-green-600">{correct}</p><p className="text-muted-foreground">সঠিক</p></div>
-              <div><p className="font-bold text-red-600">{wrong}</p><p className="text-muted-foreground">ভুল</p></div>
-              <div><p className="font-bold text-muted-foreground">{skipped}</p><p className="text-muted-foreground">এড়িয়ে গেছ</p></div>
+              <div><p className="font-bold text-green-600">{attempt.correct_answers}</p><p className="text-muted-foreground">সঠিক</p></div>
+              <div><p className="font-bold text-red-600">{attempt.wrong_answers}</p><p className="text-muted-foreground">ভুল</p></div>
+              <div><p className="font-bold text-muted-foreground">{attempt.skipped}</p><p className="text-muted-foreground">এড়িয়ে গেছ</p></div>
             </div>
           </div>
           <div className="flex gap-3">

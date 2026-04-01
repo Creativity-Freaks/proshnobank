@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
+import { examsApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { 
   Clock, 
@@ -12,73 +13,131 @@ import {
   Bell, 
   ChevronRight,
   Trophy,
-  Zap
+  Zap,
+  Loader2,
 } from "lucide-react";
 
-const liveExams = [
-  {
-    id: 1,
-    title: "BCS প্রিলি মডেল টেস্ট - ০১",
-    category: "BCS",
-    startTime: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
-    duration: "২ ঘণ্টা ৩০ মিনিট",
-    questions: 200,
-    participants: 1250,
-    prize: "১০,০০০ টাকা",
-    status: "upcoming",
-  },
-  {
-    id: 2,
-    title: "মেডিকেল ভর্তি - জীববিজ্ঞান",
-    category: "মেডিকেল",
-    startTime: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
-    duration: "১ ঘণ্টা",
-    questions: 100,
-    participants: 850,
-    prize: "৫,০০০ টাকা",
-    status: "starting-soon",
-  },
-  {
-    id: 3,
-    title: "HSC পদার্থবিজ্ঞান - অধ্যায় ১-৫",
-    category: "HSC",
-    startTime: new Date(Date.now() - 30 * 60 * 1000), // Started 30 minutes ago
-    duration: "১ ঘণ্টা ৩০ মিনিট",
-    questions: 80,
-    participants: 620,
-    prize: null,
-    status: "live",
-  },
-  {
-    id: 4,
-    title: "SSC গণিত - সম্পূর্ণ সিলেবাস",
-    category: "SSC",
-    startTime: new Date(Date.now() + 24 * 60 * 60 * 1000), // Tomorrow
-    duration: "১ ঘণ্টা ১৫ মিনিট",
-    questions: 60,
-    participants: 0,
-    prize: null,
-    status: "upcoming",
-  },
-  {
-    id: 5,
-    title: "ইঞ্জিনিয়ারিং - ফিজিক্স + ম্যাথ",
-    category: "ইঞ্জিনিয়ারিং",
-    startTime: new Date(Date.now() + 5 * 60 * 60 * 1000), // 5 hours from now
-    duration: "২ ঘণ্টা",
-    questions: 120,
-    participants: 380,
-    prize: "৭,৫০০ টাকা",
-    status: "upcoming",
-  },
-];
+type LiveStatus = "upcoming" | "starting-soon" | "live";
+
+type ExamConfig = {
+  category: string;
+  subjects: string[];
+  topics: Record<string, string[]>;
+  questionCount: number;
+  duration: number;
+  marksPerQuestion: number;
+  negativeMarking: number;
+  difficulty: string;
+};
+
+type LiveExamItem = {
+  id: string;
+  title: string;
+  category: string;
+  startTime: Date;
+  durationLabel: string;
+  questions: number;
+  participants: number;
+  prize: string | null;
+  status: LiveStatus;
+  config: ExamConfig;
+};
+
+function formatMinutesBn(minutes: number) {
+  const total = Math.max(0, Math.trunc(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h > 0 && m > 0) return `${h.toLocaleString("bn-BD")} ঘণ্টা ${m.toLocaleString("bn-BD")} মিনিট`;
+  if (h > 0) return `${h.toLocaleString("bn-BD")} ঘণ্টা`;
+  return `${m.toLocaleString("bn-BD")} মিনিট`;
+}
+
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((x): x is string => typeof x === "string");
+}
+
+function toTopicsRecord(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const v = value as Record<string, unknown>;
+  const out: Record<string, string[]> = {};
+  Object.entries(v).forEach(([k, val]) => {
+    out[k] = toStringArray(val);
+  });
+  return out;
+}
 
 const LiveExams = () => {
   const [, setCurrentTime] = useState(new Date());
+  const [liveExams, setLiveExams] = useState<LiveExamItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        setLoading(true);
+        const res = await examsApi.live();
+        const rows = Array.isArray(res.data) ? (res.data as unknown[]) : [];
+        const mapped = rows
+          .map((r): LiveExamItem | null => {
+            if (!r || typeof r !== "object") return null;
+            const v = r as Record<string, unknown>;
+            const id = typeof v.id === "string" ? v.id : null;
+            const title = typeof v.title === "string" ? v.title : null;
+            const category = typeof v.category === "string" ? v.category : null;
+            const start = typeof v.start_time === "string" ? new Date(v.start_time) : null;
+            const status = (v.status === "upcoming" || v.status === "starting-soon" || v.status === "live") ? (v.status as LiveStatus) : "upcoming";
+            const participants = typeof v.participants === "number" ? v.participants : 0;
+            const prize = typeof v.prize === "string" ? v.prize : null;
+            const questionCount = typeof v.question_count === "number" ? v.question_count : 10;
+            const durationMinutes = typeof v.duration_minutes === "number" ? v.duration_minutes : 30;
+            const marksPerQuestion = typeof v.marks_per_question === "number" ? v.marks_per_question : 1;
+            const negativeMarks = typeof v.negative_marks === "number" ? v.negative_marks : 0;
+            const difficulty = typeof v.difficulty === "string" ? v.difficulty : "all";
+            const subjects = toStringArray(v.subjects);
+            const topics = toTopicsRecord(v.topics);
+
+            if (!id || !title || !category || !start || Number.isNaN(start.getTime())) return null;
+
+            return {
+              id,
+              title,
+              category,
+              startTime: start,
+              durationLabel: formatMinutesBn(durationMinutes),
+              questions: questionCount,
+              participants,
+              prize,
+              status,
+              config: {
+                category,
+                subjects,
+                topics,
+                questionCount,
+                duration: durationMinutes,
+                marksPerQuestion,
+                negativeMarking: negativeMarks,
+                difficulty,
+              },
+            };
+          })
+          .filter((x): x is LiveExamItem => Boolean(x));
+
+        setLiveExams(mapped);
+      } catch (e) {
+        console.error("Failed to load live exams:", e);
+        setLiveExams([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    load();
   }, []);
 
   const getTimeRemaining = (startTime: Date) => {
@@ -148,8 +207,17 @@ const LiveExams = () => {
       {/* Live Exams Grid */}
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {liveExams.map((exam) => (
+          {loading ? (
+            <div className="flex justify-center py-16"><Loader2 className="w-10 h-10 animate-spin text-primary" /></div>
+          ) : liveExams.length === 0 ? (
+            <div className="text-center py-16 text-muted-foreground">
+              <Zap className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <p className="text-xl font-bold text-foreground">এখনো কোনো লাইভ এক্সাম নেই</p>
+              <p>পরবর্তীতে আবার চেষ্টা করুন</p>
+            </div>
+          ) : (
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {liveExams.map((exam) => (
               <div
                 key={exam.id}
                 className={`bg-card rounded-2xl border overflow-hidden hover:shadow-card transition-all duration-300 ${
@@ -181,7 +249,7 @@ const LiveExams = () => {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Clock className="w-4 h-4" />
-                      <span>{exam.duration}</span>
+                      <span>{exam.durationLabel}</span>
                     </div>
                     <div className="flex items-center gap-2 text-muted-foreground">
                       <Users className="w-4 h-4" />
@@ -200,14 +268,14 @@ const LiveExams = () => {
                 {/* Footer */}
                 <div className="px-6 pb-6">
                   {exam.status === "live" ? (
-                    <Link to={`/exam/${exam.id}/take`}>
+                    <Link to={`/exam/${exam.id}/take`} state={{ config: exam.config }}>
                       <Button variant="hero" className="w-full bg-red-500 hover:bg-red-600">
                         <PlayCircle className="w-4 h-4 mr-2" />
                         এখনই জয়েন করো
                       </Button>
                     </Link>
                   ) : exam.status === "starting-soon" ? (
-                    <Link to={`/exam/${exam.id}/take`}>
+                    <Link to={`/exam/${exam.id}/take`} state={{ config: exam.config }}>
                       <Button variant="hero" className="w-full">
                         <PlayCircle className="w-4 h-4 mr-2" />
                         প্রস্তুত হও
@@ -221,8 +289,9 @@ const LiveExams = () => {
                   )}
                 </div>
               </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

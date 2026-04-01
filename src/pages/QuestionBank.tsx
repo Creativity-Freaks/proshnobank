@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -33,6 +33,16 @@ interface QuestionGroup {
   count: number;
 }
 
+function clampInt(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, Math.trunc(value)));
+}
+
+function isQuestionLike(value: unknown): value is { subject: string; topic: string; difficulty: string } {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Record<string, unknown>;
+  return typeof v.subject === "string" && typeof v.topic === "string" && typeof v.difficulty === "string";
+}
+
 const QuestionBank = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("all");
@@ -40,23 +50,21 @@ const QuestionBank = () => {
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    loadQuestions();
-  }, [selectedSubject, searchQuery]);
-
-  const loadQuestions = async () => {
+  const loadQuestions = useCallback(async () => {
     try {
       setLoading(true);
-      const filters: Record<string, string> = { limit: "200" };
-      if (selectedSubject !== "all") filters.subject = selectedSubject;
-      if (searchQuery) filters.search = searchQuery;
-
-      const res = await questionsApi.list(filters as any);
+      const res = await questionsApi.list({
+        limit: 200,
+        subject: selectedSubject !== "all" ? selectedSubject : undefined,
+        search: searchQuery || undefined,
+      });
       setTotal(res.total);
 
       // Group by subject+topic+difficulty
       const map = new Map<string, QuestionGroup>();
-      (res.data as any[]).forEach((q) => {
+      const data = Array.isArray(res.data) ? (res.data as unknown[]) : [];
+      data.forEach((q) => {
+        if (!isQuestionLike(q)) return;
         const key = `${q.subject}|${q.topic}|${q.difficulty}`;
         const existing = map.get(key);
         if (existing) {
@@ -71,7 +79,11 @@ const QuestionBank = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [searchQuery, selectedSubject]);
+
+  useEffect(() => {
+    loadQuestions();
+  }, [loadQuestions]);
 
   return (
     <div className="min-h-screen bg-background font-bengali">
@@ -139,7 +151,21 @@ const QuestionBank = () => {
                       <BookOpen className="w-4 h-4" /> {g.count} প্রশ্ন
                     </span>
                   </div>
-                  <Link to={`/exam/setup?category=medical`}>
+                  <Link
+                    to="/exam/custom/take"
+                    state={{
+                      config: {
+                        category: "general",
+                        subjects: [g.subject],
+                        topics: { [g.subject]: [g.topic] },
+                        questionCount: clampInt(Math.min(g.count, 25), 5, 50),
+                        duration: 30,
+                        marksPerQuestion: 1,
+                        negativeMarking: 0,
+                        difficulty: g.difficulty,
+                      },
+                    }}
+                  >
                     <Button variant="outline" className="w-full group-hover:bg-primary group-hover:text-primary-foreground transition-colors">
                       প্র্যাকটিস শুরু করো <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>

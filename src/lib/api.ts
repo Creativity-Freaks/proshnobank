@@ -3,6 +3,26 @@
  * 
  * All API calls go through Supabase Edge Functions.
  * Frontend uses these functions instead of direct Supabase client calls.
+ * 
+ * ## API Endpoints
+ * 
+ * ### Questions API (`/functions/v1/questions`)
+ * - `GET ?subject=X&topic=X&difficulty=X&search=X&limit=50&offset=0` - List questions
+ * - `GET ?id=X` - Get single question
+ * - `POST` - Create question (admin only, requires auth)
+ * - `PUT` - Update question (admin only, requires auth)
+ * - `DELETE ?id=X` - Delete question (admin only, requires auth)
+ * 
+ * ### Exams API (`/functions/v1/exams`)
+ * - `GET ?action=generate&subjects=X,Y&topics=A,B&difficulty=X&count=10` - Generate random exam questions
+ * - `GET ?action=attempts&limit=20&offset=0` - Get user's exam history (auth required)
+ * - `GET ?action=attempt&id=X` - Get single attempt (auth required)
+ * - `GET ?action=stats` - Get user's statistics (auth required)
+ * - `POST` - Submit exam attempt (auth required)
+ * 
+ * ### Leaderboard API (`/functions/v1/leaderboard`)
+ * - `GET ?action=rankings&period=weekly&subject=all&limit=20` - Get leaderboard
+ * - `GET ?action=stats` - Get global stats
  */
 
 import { supabase } from "@/integrations/supabase/client";
@@ -95,6 +115,7 @@ export const examsApi = {
     subjects?: string;
     subject?: string;
     topic?: string;
+    topics?: string;
     difficulty?: string;
     count?: number;
   }) =>
@@ -105,6 +126,7 @@ export const examsApi = {
         subjects: config.subjects,
         subject: config.subject,
         topic: config.topic,
+        topics: config.topics,
         difficulty: config.difficulty,
         count: String(config.count || 10),
       } as Record<string, string>
@@ -131,28 +153,22 @@ export const examsApi = {
       };
     }>("exams", { action: "stats" }),
 
-  /** Submit exam - only sends question_id + selected index, server calculates score */
+  /** List live exam events (public) */
+  live: () => apiCall<{ data: unknown[] }>("exams", { action: "live" }),
+
+  /** Get exam template details (public) */
+  details: (id: string) => apiCall<{ data: unknown }>("exams", { action: "details", id }),
+
+  /** Submit an exam attempt */
   submit: (attempt: {
     subject: string;
     difficulty?: string;
     duration_minutes: number;
     marks_per_question?: number;
-    negative_marking?: boolean;
     negative_marks?: number;
     time_taken_seconds?: number;
     answers: { question_id: string; selected: number }[];
-  }) => apiCall<{
-    data: unknown;
-    results: {
-      correct: number;
-      wrong: number;
-      skipped: number;
-      score: number;
-      max_score: number;
-      total_questions: number;
-      graded_answers: { question_id: string; selected: number; correct: number; is_correct: boolean }[];
-    };
-  }>("exams", undefined, { method: "POST", body: attempt }),
+  }) => apiCall<{ data: unknown }>("exams", undefined, { method: "POST", body: attempt }),
 };
 
 // ==================== Leaderboard API ====================
