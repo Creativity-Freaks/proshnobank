@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD034 MD060 -->
 # ProshnoBank — Project Summary
 
 ProshnoBank is a web-based exam and practice platform designed for Bangla-first learners and educators. It combines a modern React UI with Supabase (Auth + Postgres + Edge Functions) to deliver question-bank management, exam generation, timed exam-taking, attempt history, and leaderboards.

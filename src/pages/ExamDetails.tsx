@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { examsApi } from "@/lib/api";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { 
   BookOpen, 
   Clock, 
@@ -91,6 +92,13 @@ const ExamDetails = () => {
   const { id } = useParams();
   const [details, setDetails] = useState<ExamTemplateDetails | null>(null);
   const [loading, setLoading] = useState(true);
+
+  usePageMeta({
+    title: details ? details.title : "এক্সাম ডিটেইলস",
+    description: details
+      ? `${details.title} পরীক্ষার প্রশ্ন, সময়, মার্কিং ও অংশগ্রহণের বিস্তারিত দেখো।`
+      : "নির্বাচিত পরীক্ষার বিস্তারিত তথ্য দেখো।",
+  });
 
   useEffect(() => {
     const load = async () => {

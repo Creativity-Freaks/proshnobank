@@ -6,8 +6,14 @@ import { Label } from "@/components/ui/label";
 import { BookOpen, Eye, EyeOff, Mail, Lock, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Login = () => {
+  usePageMeta({
+    title: "লগইন",
+    description: "প্রশ্নব্যাংক অ্যাকাউন্টে লগইন করে এক্সাম, র‍্যাংকিং ও ড্যাশবোর্ড ব্যবহার করো।",
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

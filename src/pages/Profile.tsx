@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -37,8 +37,7 @@ const Profile = () => {
   }
 
   if (!user) {
-    navigate("/login");
-    return null;
+    return <Navigate to="/login" replace />;
   }
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -80,8 +79,9 @@ const Profile = () => {
 
       setAvatarUrl(urlWithCacheBust);
       toast({ title: "সফল!", description: "প্রোফাইল ছবি আপডেট হয়েছে।" });
-    } catch (e: any) {
-      toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "প্রোফাইল ছবি আপডেট করতে সমস্যা হয়েছে।";
+      toast({ title: "ত্রুটি", description: message, variant: "destructive" });
     } finally {
       setUploadingAvatar(false);
     }

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { examsApi } from "@/lib/api";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import {
   BookOpen, Trophy, Clock, Target, TrendingUp, Calendar,
   Award, ChevronRight, Play, CheckCircle2, XCircle, BarChart3,
@@ -33,6 +34,11 @@ interface UserStats {
 }
 
 const Dashboard = () => {
+  usePageMeta({
+    title: "ড্যাশবোর্ড",
+    description: "তোমার সাম্প্রতিক এক্সাম, বিষয়ভিত্তিক প্রগ্রেস এবং পারফরম্যান্স ট্র্যাক করো।",
+  });
+
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const [stats, setStats] = useState<UserStats | null>(null);

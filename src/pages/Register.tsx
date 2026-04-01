@@ -6,8 +6,14 @@ import { Label } from "@/components/ui/label";
 import { BookOpen, Eye, EyeOff, Mail, Lock, User, Phone, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Register = () => {
+  usePageMeta({
+    title: "রেজিস্ট্রেশন",
+    description: "নতুন অ্যাকাউন্ট তৈরি করে লাইভ এক্সাম, প্রশ্নব্যাংক এবং ড্যাশবোর্ড ব্যবহার শুরু করো।",
+  });
+
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({

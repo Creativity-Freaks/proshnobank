@@ -1,31 +1,89 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+const defaultDevOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",")
+  .map((o: string) => o.trim())
+  .filter(Boolean);
+const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : defaultDevOrigins;
+
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+const subjectAliases: Record<string, string[]> = {
+  bangla: ["bangla", "বাংলা"],
+  english: ["english", "ইংরেজি"],
+  math: ["math", "mathematics", "গণিত"],
+  physics: ["physics", "পদার্থবিজ্ঞান", "পদার্থ"],
+  chemistry: ["chemistry", "রসায়ন"],
+  biology: ["biology", "জীববিজ্ঞান"],
+  gk: ["gk", "general knowledge", "সাধারণ জ্ঞান"],
+  ict: ["ict"],
+  science: ["science", "বিজ্ঞান"],
+  computer: ["computer", "কম্পিউটার"],
+  iq: ["iq", "বুদ্ধিমত্তা"],
 };
 
-function jsonResponse(data: unknown, status = 200) {
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "*";
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET,POST,PUT,DELETE,OPTIONS",
+    Vary: "Origin",
+  };
+}
+
+function jsonResponse(req: Request, data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
-function errorResponse(message: string, status = 400) {
-  return jsonResponse({ error: message }, status);
+function errorResponse(req: Request, message: string, status = 400) {
+  return jsonResponse(req, { error: message }, status);
+}
+
+function parseIntSafe(value: string | null, fallback: number) {
+  const n = Number.parseInt(value || "", 10);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function getClientKey(req: Request) {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = req.headers.get("x-real-ip");
+  return realIp || "anonymous";
+}
+
+function applyRateLimit(key: string, maxRequests: number, windowMs: number) {
+  const now = Date.now();
+  const record = rateBuckets.get(key);
+
+  if (!record || now >= record.resetAt) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (record.count >= maxRequests) {
+    return false;
+  }
+
+  record.count += 1;
+  rateBuckets.set(key, record);
+  return true;
 }
 
 async function getAuthenticatedUser(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
-  const anonClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
+  const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
 
   const token = authHeader.replace("Bearer ", "");
   const { data, error } = await anonClient.auth.getUser(token);
@@ -33,35 +91,59 @@ async function getAuthenticatedUser(req: Request) {
   return data.user;
 }
 
-function stripCorrectAnswer(question: Record<string, unknown>) {
-  const { correct_answer, ...rest } = question;
-  return rest;
-}
+async function isAdmin(supabase: unknown, userId: string): Promise<boolean> {
+  const client = supabase as {
+    from: (table: string) => {
+      select: (columns: string) => {
+        eq: (column: string, value: string) => {
+          eq: (column: string, value: string) => {
+            maybeSingle: () => Promise<{ data: unknown }>;
+          };
+        };
+      };
+    };
+  };
 
-async function isAdmin(supabase: ReturnType<typeof createClient>, userId: string): Promise<boolean> {
-  const { data } = await supabase
+  const { data } = await client
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
     .eq("role", "admin")
     .maybeSingle();
-  return !!data;
+
+  return Boolean(data);
 }
 
-Deno.serve(async (req) => {
+function subjectCandidates(input: string) {
+  const normalized = input.trim().toLowerCase();
+  const alias = subjectAliases[normalized];
+  if (!alias) return [input];
+  return Array.from(new Set([...alias, input]));
+}
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
+  }
+
+  const requester = getClientKey(req);
+  const actionForRate = req.method === "GET" ? "read" : "write";
+  const rateAllowed = applyRateLimit(
+    `${requester}:questions:${actionForRate}`,
+    req.method === "GET" ? 120 : 40,
+    60_000,
+  );
+
+  if (!rateAllowed) {
+    return errorResponse(req, "Too many requests, please try again later", 429);
   }
 
   const url = new URL(req.url);
+  const action = url.searchParams.get("action") || "list";
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
   try {
-    // GET - List/search questions
     if (req.method === "GET") {
       const user = await getAuthenticatedUser(req);
       const userIsAdmin = user ? await isAdmin(supabase, user.id) : false;
@@ -70,105 +152,131 @@ Deno.serve(async (req) => {
       const topic = url.searchParams.get("topic");
       const difficulty = url.searchParams.get("difficulty");
       const search = url.searchParams.get("search");
-      const limit = parseInt(url.searchParams.get("limit") || "50");
-      const offset = parseInt(url.searchParams.get("offset") || "0");
+      const limit = parseIntSafe(url.searchParams.get("limit"), 50);
+      const offset = parseIntSafe(url.searchParams.get("offset"), 0);
       const id = url.searchParams.get("id");
 
-      // Get single question by id
+      const baseSelect = userIsAdmin
+        ? "id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at"
+        : "id, subject, topic, difficulty, question_text, options, explanation, created_at";
+
       if (id) {
-        const { data, error } = await supabase
-          .from("question_bank")
-          .select("*")
-          .eq("id", id)
-          .single();
-        if (error) return errorResponse("Question not found", 404);
-        return jsonResponse({ data: userIsAdmin ? data : stripCorrectAnswer(data) });
+        const { data, error } = await supabase.from("question_bank").select(baseSelect).eq("id", id).single();
+        if (error) return errorResponse(req, "Question not found", 404);
+        return jsonResponse(req, { data });
       }
 
       let query = supabase
         .from("question_bank")
-        .select("*", { count: "exact" })
-        .order("created_at", { ascending: false })
-        .range(offset, offset + limit - 1);
+        .select(action === "groups" ? "subject, topic, difficulty, question_text" : baseSelect, { count: "exact" })
+        .order("created_at", { ascending: false });
 
-      if (subject && subject !== "all") query = query.eq("subject", subject);
+      if (subject && subject !== "all") {
+        const candidates = subjectCandidates(subject);
+        query = candidates.length > 1 ? query.in("subject", candidates) : query.eq("subject", candidates[0]);
+      }
+
       if (topic) query = query.eq("topic", topic);
       if (difficulty && difficulty !== "all") query = query.eq("difficulty", difficulty);
       if (search) query = query.ilike("question_text", `%${search}%`);
 
-      const { data, error, count } = await query;
-      if (error) return errorResponse(error.message, 500);
+      if (action === "groups") {
+        const { data, error, count } = await query;
+        if (error) return errorResponse(req, error.message, 500);
 
-      // Strip correct_answer for non-admin users
-      const responseData = userIsAdmin ? data : (data || []).map(stripCorrectAnswer);
-      return jsonResponse({ data: responseData, total: count, limit, offset });
+        const grouped = new Map<string, { subject: string; topic: string; difficulty: string; count: number }>();
+        const groupedRows = (data || []) as unknown as Array<{ subject: string; topic: string; difficulty: string }>;
+        groupedRows.forEach((row) => {
+          const key = `${row.subject}|${row.topic}|${row.difficulty}`;
+          const prev = grouped.get(key);
+          if (prev) prev.count += 1;
+          else grouped.set(key, { ...row, count: 1 });
+        });
+
+        const sortedGroups = Array.from(grouped.values()).sort((a, b) => b.count - a.count);
+        const paged = sortedGroups.slice(offset, offset + limit);
+
+        return jsonResponse(req, {
+          data: paged,
+          total_questions: count || 0,
+          total_groups: sortedGroups.length,
+          limit,
+          offset,
+        });
+      }
+
+      const { data, error, count } = await query.range(offset, offset + limit - 1);
+      if (error) return errorResponse(req, error.message, 500);
+      return jsonResponse(req, { data, total: count, limit, offset });
     }
 
-    // POST - Create question (admin only)
     if (req.method === "POST") {
       const user = await getAuthenticatedUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
-      if (!(await isAdmin(supabase, user.id))) return errorResponse("Forbidden: Admin access required", 403);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
+      if (!(await isAdmin(supabase, user.id))) return errorResponse(req, "Forbidden: Admin access required", 403);
 
       const body = await req.json();
       const { subject, topic, difficulty, question_text, options, correct_answer, explanation } = body;
 
-      if (!subject || !topic || !question_text || !options || correct_answer === undefined) {
-        return errorResponse("Missing required fields: subject, topic, question_text, options, correct_answer");
+      if (!subject || !topic || !question_text || !Array.isArray(options) || correct_answer === undefined) {
+        return errorResponse(req, "Missing required fields: subject, topic, question_text, options, correct_answer");
       }
 
       const { data, error } = await supabase
         .from("question_bank")
-        .insert({ subject, topic, difficulty: difficulty || "medium", question_text, options, correct_answer, explanation: explanation || null })
-        .select()
+        .insert({
+          subject,
+          topic,
+          difficulty: difficulty || "medium",
+          question_text,
+          options,
+          correct_answer,
+          explanation: explanation || null,
+        })
+        .select("id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at")
         .single();
 
-      if (error) return errorResponse(error.message, 500);
-      return jsonResponse({ data }, 201);
+      if (error) return errorResponse(req, error.message, 500);
+      return jsonResponse(req, { data }, 201);
     }
 
-    // PUT - Update question (admin only)
     if (req.method === "PUT") {
       const user = await getAuthenticatedUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
-      if (!(await isAdmin(supabase, user.id))) return errorResponse("Forbidden", 403);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
+      if (!(await isAdmin(supabase, user.id))) return errorResponse(req, "Forbidden", 403);
 
       const body = await req.json();
       const { id, ...updateData } = body;
-      if (!id) return errorResponse("Missing question id");
+      if (!id) return errorResponse(req, "Missing question id");
 
       const { data, error } = await supabase
         .from("question_bank")
         .update(updateData)
         .eq("id", id)
-        .select()
+        .select("id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at")
         .single();
 
-      if (error) return errorResponse(error.message, 500);
-      return jsonResponse({ data });
+      if (error) return errorResponse(req, error.message, 500);
+      return jsonResponse(req, { data });
     }
 
-    // DELETE - Delete question (admin only)
     if (req.method === "DELETE") {
       const user = await getAuthenticatedUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
-      if (!(await isAdmin(supabase, user.id))) return errorResponse("Forbidden", 403);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
+      if (!(await isAdmin(supabase, user.id))) return errorResponse(req, "Forbidden", 403);
 
       const id = url.searchParams.get("id");
-      if (!id) return errorResponse("Missing question id");
+      if (!id) return errorResponse(req, "Missing question id");
 
-      const { error } = await supabase
-        .from("question_bank")
-        .delete()
-        .eq("id", id);
+      const { error } = await supabase.from("question_bank").delete().eq("id", id);
+      if (error) return errorResponse(req, error.message, 500);
 
-      if (error) return errorResponse(error.message, 500);
-      return jsonResponse({ success: true });
+      return jsonResponse(req, { success: true });
     }
 
-    return errorResponse("Method not allowed", 405);
+    return errorResponse(req, "Method not allowed", 405);
   } catch (err) {
     console.error("Questions API error:", err);
-    return errorResponse("Internal server error", 500);
+    return errorResponse(req, "Internal server error", 500);
   }
 });

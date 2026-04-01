@@ -6,6 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Plus, Trash2 } from 'lucide-react';
+import { SUBJECT_OPTIONS, normalizeSubjectKey } from '@/lib/subjects';
 
 interface QuestionFormData {
   subject: string;
@@ -24,11 +25,6 @@ interface QuestionFormProps {
   isSubmitting: boolean;
 }
 
-const subjects = [
-  'বাংলা', 'English', 'গণিত', 'পদার্থবিজ্ঞান', 'রসায়ন', 
-  'জীববিজ্ঞান', 'সাধারণ জ্ঞান', 'ICT', 'ভূগোল', 'ইতিহাস'
-];
-
 export const QuestionForm = ({ initialData, onSubmit, onCancel, isSubmitting }: QuestionFormProps) => {
   const [formData, setFormData] = useState<QuestionFormData>({
     subject: '',
@@ -42,7 +38,10 @@ export const QuestionForm = ({ initialData, onSubmit, onCancel, isSubmitting }: 
 
   useEffect(() => {
     if (initialData) {
-      setFormData(initialData);
+      setFormData({
+        ...initialData,
+        subject: normalizeSubjectKey(initialData.subject) || initialData.subject,
+      });
     }
   }, [initialData]);
 
@@ -95,8 +94,8 @@ export const QuestionForm = ({ initialData, onSubmit, onCancel, isSubmitting }: 
                   <SelectValue placeholder="বিষয় নির্বাচন করুন" />
                 </SelectTrigger>
                 <SelectContent>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject} value={subject}>{subject}</SelectItem>
+                  {SUBJECT_OPTIONS.map((subject) => (
+                    <SelectItem key={subject.key} value={subject.key}>{subject.label}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

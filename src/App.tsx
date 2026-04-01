@@ -8,6 +8,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/routing/ProtectedRoute";
 import AdminRoute from "@/components/routing/AdminRoute";
+import TeacherRoute from "@/components/routing/TeacherRoute";
+import AppErrorBoundary from "@/components/routing/AppErrorBoundary";
 
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -34,7 +36,15 @@ const JobExams = lazy(() => import("./pages/categories/JobExams"));
 const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const Profile = lazy(() => import("./pages/Profile"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
 
 const RouteFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background font-bengali">
@@ -49,8 +59,9 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
+          <AppErrorBoundary>
+            <Suspense fallback={<RouteFallback />}>
+              <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
@@ -75,9 +86,9 @@ const App = () => (
               <Route
                 path="/teacher-dashboard"
                 element={
-                  <ProtectedRoute>
+                  <TeacherRoute>
                     <TeacherDashboard />
-                  </ProtectedRoute>
+                  </TeacherRoute>
                 }
               />
               <Route path="/question-bank" element={<QuestionBank />} />
@@ -103,8 +114,9 @@ const App = () => (
                 }
               />
               <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
+              </Routes>
+            </Suspense>
+          </AppErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>
     </AuthProvider>

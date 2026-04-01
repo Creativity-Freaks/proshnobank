@@ -3,6 +3,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { leaderboardApi } from "@/lib/api";
+import { usePageMeta } from "@/hooks/usePageMeta";
 import { Trophy, Medal, Crown, TrendingUp, Users, Target, Award, Loader2 } from "lucide-react";
 
 const timeFilters = [
@@ -27,6 +28,11 @@ interface GlobalStats {
 }
 
 const Leaderboard = () => {
+  usePageMeta({
+    title: "লিডারবোর্ড",
+    description: "শীর্ষ পারফর্মারদের র‍্যাংকিং, গড় নির্ভুলতা এবং সময়ভিত্তিক ফলাফল দেখো।",
+  });
+
   const [timeFilter, setTimeFilter] = useState("all");
   const [rankings, setRankings] = useState<RankingEntry[]>([]);
   const [globalStats, setGlobalStats] = useState<GlobalStats | null>(null);

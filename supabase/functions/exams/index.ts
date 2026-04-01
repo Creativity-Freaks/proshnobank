@@ -1,20 +1,50 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+const defaultDevOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
+  .split(",")
+  .map((o: string) => o.trim())
+  .filter(Boolean);
+const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : defaultDevOrigins;
+
+const rateBuckets = new Map<string, { count: number; resetAt: number }>();
+
+const subjectLabelMap: Record<string, string> = {
+  bangla: "বাংলা",
+  english: "ইংরেজি",
+  math: "গণিত",
+  physics: "পদার্থবিজ্ঞান",
+  chemistry: "রসায়ন",
+  biology: "জীববিজ্ঞান",
+  gk: "সাধারণ জ্ঞান",
+  ict: "ICT",
+  science: "বিজ্ঞান",
+  computer: "কম্পিউটার",
+  iq: "বুদ্ধিমত্তা",
 };
 
-function jsonResponse(data: unknown, status = 200) {
+function corsHeaders(req: Request) {
+  const origin = req.headers.get("origin") || "";
+  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "*";
+
+  return {
+    "Access-Control-Allow-Origin": allowOrigin,
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+    "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+    Vary: "Origin",
+  };
+}
+
+function jsonResponse(req: Request, data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: { ...corsHeaders, "Content-Type": "application/json" },
+    headers: { ...corsHeaders(req), "Content-Type": "application/json" },
   });
 }
 
-function errorResponse(message: string, status = 400) {
-  return jsonResponse({ error: message }, status);
+function errorResponse(req: Request, message: string, status = 400) {
+  return jsonResponse(req, { error: message }, status);
 }
 
 function toFiniteNumber(value: unknown, fallback: number): number {
@@ -26,15 +56,52 @@ function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
 
+function parseCsv(value: string | null) {
+  if (!value) return [];
+  return value
+    .split(",")
+    .map((v) => v.trim())
+    .filter(Boolean);
+}
+
+function topicIdFromName(name: string) {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0980-\u09ff\s-]/g, "")
+    .replace(/\s+/g, "-");
+}
+
+function getClientKey(req: Request) {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  const realIp = req.headers.get("x-real-ip");
+  return realIp || "anonymous";
+}
+
+function applyRateLimit(key: string, maxRequests: number, windowMs: number) {
+  const now = Date.now();
+  const record = rateBuckets.get(key);
+
+  if (!record || now >= record.resetAt) {
+    rateBuckets.set(key, { count: 1, resetAt: now + windowMs });
+    return true;
+  }
+
+  if (record.count >= maxRequests) return false;
+
+  record.count += 1;
+  rateBuckets.set(key, record);
+  return true;
+}
+
 async function getUser(req: Request) {
   const authHeader = req.headers.get("Authorization");
   if (!authHeader?.startsWith("Bearer ")) return null;
 
-  const anonClient = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_ANON_KEY")!,
-    { global: { headers: { Authorization: authHeader } } }
-  );
+  const anonClient = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    global: { headers: { Authorization: authHeader } },
+  });
 
   const token = authHeader.replace("Bearer ", "");
   const { data, error } = await anonClient.auth.getUser(token);
@@ -42,26 +109,57 @@ async function getUser(req: Request) {
   return data.user;
 }
 
-function stripCorrectAnswer(question: Record<string, unknown>) {
-  const { correct_answer, ...rest } = question;
-  return rest;
+async function fetchQuestionCount(
+  supabase: unknown,
+  subjects: string[],
+  topics: string[],
+  difficulty: string | null,
+) {
+  type CountQuery = {
+    in: (column: string, values: string[]) => CountQuery;
+    eq: (column: string, value: string) => CountQuery;
+    then: Promise<{ count: number | null }>["then"];
+  };
+
+  const client = supabase as {
+    from: (table: string) => {
+      select: (columns: string, options: { count: "exact"; head: true }) => CountQuery;
+    };
+  };
+
+  let query = client.from("question_bank").select("id", { count: "exact", head: true });
+
+  if (subjects.length > 0) query = query.in("subject", subjects);
+  if (topics.length > 0) query = query.in("topic", topics);
+  if (difficulty && difficulty !== "all") query = query.eq("difficulty", difficulty);
+
+  const { count } = await query;
+  return count || 0;
 }
 
-Deno.serve(async (req) => {
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders(req) });
   }
 
   const url = new URL(req.url);
   const action = url.searchParams.get("action");
+  const requester = getClientKey(req);
 
-  const supabase = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  const isHeavyAction = action === "generate" || req.method === "POST";
+  const rateAllowed = applyRateLimit(
+    `${requester}:exams:${action || req.method.toLowerCase()}`,
+    isHeavyAction ? 25 : 120,
+    60_000,
   );
 
+  if (!rateAllowed) {
+    return errorResponse(req, "Too many requests, please try again later", 429);
+  }
+
+  const supabase = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
   try {
-    // GET ?action=live - List live exam events (public)
     if (req.method === "GET" && action === "live") {
       const { data, error } = await supabase
         .from("live_exam_events")
@@ -70,13 +168,13 @@ Deno.serve(async (req) => {
         )
         .order("start_time", { ascending: true });
 
-      if (error) return errorResponse(error.message, 500);
+      if (error) return errorResponse(req, error.message, 500);
 
       const mapped = (data || []).map((row: unknown) => {
-        const e = (row && typeof row === "object" ? (row as Record<string, unknown>) : {}) as Record<string, unknown>;
-        const t = (e.exam_templates && typeof e.exam_templates === "object"
+        const e = row && typeof row === "object" ? (row as Record<string, unknown>) : {};
+        const t = e.exam_templates && typeof e.exam_templates === "object"
           ? (e.exam_templates as Record<string, unknown>)
-          : null);
+          : null;
 
         return {
           event_id: typeof e.id === "string" ? e.id : null,
@@ -86,12 +184,14 @@ Deno.serve(async (req) => {
           description: t && typeof t.description === "string" ? t.description : null,
           question_count: t && typeof t.question_count === "number" ? t.question_count : null,
           duration_minutes: t && typeof t.duration_minutes === "number" ? t.duration_minutes : null,
-          marks_per_question: t && (typeof t.marks_per_question === "number" || typeof t.marks_per_question === "string")
-            ? Number(t.marks_per_question)
-            : null,
-          negative_marks: t && (typeof t.negative_marks === "number" || typeof t.negative_marks === "string")
-            ? Number(t.negative_marks)
-            : null,
+          marks_per_question:
+            t && (typeof t.marks_per_question === "number" || typeof t.marks_per_question === "string")
+              ? Number(t.marks_per_question)
+              : null,
+          negative_marks:
+            t && (typeof t.negative_marks === "number" || typeof t.negative_marks === "string")
+              ? Number(t.negative_marks)
+              : null,
           difficulty: t && typeof t.difficulty === "string" ? t.difficulty : null,
           subjects: t ? t.subjects : null,
           subjects_breakdown: t ? t.subjects_breakdown : null,
@@ -106,13 +206,12 @@ Deno.serve(async (req) => {
         };
       });
 
-      return jsonResponse({ data: mapped });
+      return jsonResponse(req, { data: mapped });
     }
 
-    // GET ?action=details&id=xxx - Get exam template details (public)
     if (req.method === "GET" && action === "details") {
       const id = url.searchParams.get("id");
-      if (!id) return errorResponse("Missing exam id", 400);
+      if (!id) return errorResponse(req, "Missing exam id", 400);
 
       const { data, error } = await supabase
         .from("exam_templates")
@@ -122,141 +221,189 @@ Deno.serve(async (req) => {
         .eq("id", id)
         .single();
 
-      if (error) return errorResponse("Exam not found", 404);
-      return jsonResponse({ data });
+      if (error) return errorResponse(req, "Exam not found", 404);
+      return jsonResponse(req, { data });
     }
 
-    // GET ?action=generate - Generate random questions for an exam
+    if (req.method === "GET" && action === "catalog") {
+      const { data, error } = await supabase.from("exam_templates").select("category, subjects, topics");
+      if (error) return errorResponse(req, error.message, 500);
+
+      const categoryMap = new Map<string, { id: string; name: string; subjects: Map<string, { id: string; name: string; topics: Set<string> }> }>();
+
+      (data || []).forEach((row: { category: unknown; subjects: unknown; topics: unknown }) => {
+        const categoryId = typeof row.category === "string" ? row.category : "general";
+        const categoryName = categoryId;
+
+        if (!categoryMap.has(categoryId)) {
+          categoryMap.set(categoryId, { id: categoryId, name: categoryName, subjects: new Map() });
+        }
+
+        const category = categoryMap.get(categoryId)!;
+        const subjects = Array.isArray(row.subjects)
+          ? row.subjects.filter((v: unknown): v is string => typeof v === "string")
+          : [];
+        const topics = row.topics && typeof row.topics === "object" ? (row.topics as Record<string, unknown>) : {};
+
+        subjects.forEach((subjectIdRaw: string) => {
+          const subjectId = subjectIdRaw.toLowerCase();
+          const subjectName = subjectLabelMap[subjectId] || subjectIdRaw;
+
+          if (!category.subjects.has(subjectId)) {
+            category.subjects.set(subjectId, { id: subjectId, name: subjectName, topics: new Set<string>() });
+          }
+
+          const subject = category.subjects.get(subjectId)!;
+          const topicList = Array.isArray(topics[subjectIdRaw])
+            ? (topics[subjectIdRaw] as unknown[])
+            : Array.isArray(topics[subjectId])
+              ? (topics[subjectId] as unknown[])
+              : [];
+
+          topicList.forEach((topic) => {
+            if (typeof topic === "string" && topic.trim()) {
+              subject.topics.add(topic.trim());
+            }
+          });
+        });
+      });
+
+      const categories = Array.from(categoryMap.values()).map((category) => ({
+        id: category.id,
+        name: category.name,
+        subjects: Array.from(category.subjects.values()).map((subject) => ({
+          id: subject.id,
+          name: subject.name,
+          topics: Array.from(subject.topics).map((name) => ({ id: topicIdFromName(name), name })),
+        })),
+      }));
+
+      return jsonResponse(req, { data: { categories } });
+    }
+
     if (req.method === "GET" && action === "generate") {
       const user = await getUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
 
       const subject = url.searchParams.get("subject");
       const topic = url.searchParams.get("topic");
-      const topics = url.searchParams.get("topics"); // comma-separated
+      const topicsCsv = url.searchParams.get("topics");
+      const subjectsCsv = url.searchParams.get("subjects");
       const difficulty = url.searchParams.get("difficulty");
-      const count = parseInt(url.searchParams.get("count") || "10");
-      const subjects = url.searchParams.get("subjects"); // comma-separated
+      const count = clamp(Number.parseInt(url.searchParams.get("count") || "10", 10), 1, 200);
 
-      // Do not return correct answers to clients.
-      let query = supabase
+      const subjects = subjectsCsv ? parseCsv(subjectsCsv) : subject && subject !== "all" ? [subject] : [];
+      const topics = topicsCsv ? parseCsv(topicsCsv) : topic ? [topic] : [];
+      const normalizedDifficulty = difficulty && difficulty !== "all" ? difficulty : null;
+
+      let selected: Array<{
+        id: string;
+        subject: string;
+        topic: string;
+        difficulty: string;
+        question_text: string;
+        options: unknown;
+      }> = [];
+
+      let randomQuery = supabase
         .from("question_bank")
         .select("id, subject, topic, difficulty, question_text, options");
 
-      if (subjects) {
-        query = query.in("subject", subjects.split(","));
-      } else if (subject && subject !== "all") {
-        query = query.eq("subject", subject);
-      }
-      if (topics) {
-        const list = topics
-          .split(",")
-          .map((t) => t.trim())
-          .filter(Boolean);
-        if (list.length > 0) query = query.in("topic", list);
-      } else if (topic) {
-        query = query.eq("topic", topic);
-      }
-      if (difficulty && difficulty !== "all") query = query.eq("difficulty", difficulty);
+      if (subjects.length > 0) randomQuery = randomQuery.in("subject", subjects);
+      if (topics.length > 0) randomQuery = randomQuery.in("topic", topics);
+      if (normalizedDifficulty) randomQuery = randomQuery.eq("difficulty", normalizedDifficulty);
 
-      const { data, error } = await query;
-      if (error) return errorResponse(error.message, 500);
+      const { data: randomData, error: randomError } = await randomQuery;
+      if (randomError) return errorResponse(req, randomError.message, 500);
 
-      // Shuffle and pick 'count' questions
-      const shuffled = (data || []).sort(() => Math.random() - 0.5);
-      const selected = shuffled.slice(0, Math.min(count, shuffled.length));
+      const shuffled = (randomData || []).sort(() => Math.random() - 0.5);
+      selected = shuffled.slice(0, Math.min(count, shuffled.length));
 
-      const sanitized = selected.map((q) => ({
-        id: q.id,
-        subject: q.subject,
-        topic: q.topic,
-        difficulty: q.difficulty,
-        question_text: q.question_text,
-        options: q.options,
-      }));
+      const totalAvailable = await fetchQuestionCount(supabase, subjects, topics, normalizedDifficulty);
 
-      return jsonResponse({
-        data: sanitized,
-        total_available: data?.length || 0,
+      return jsonResponse(req, {
+        data: selected,
+        total_available: totalAvailable,
         selected_count: selected.length,
       });
     }
 
-    // GET ?action=attempts - Get user's exam attempts
     if (req.method === "GET" && action === "attempts") {
       const user = await getUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
 
-      const limit = parseInt(url.searchParams.get("limit") || "20");
-      const offset = parseInt(url.searchParams.get("offset") || "0");
+      const limit = clamp(Number.parseInt(url.searchParams.get("limit") || "20", 10), 1, 100);
+      const offset = Math.max(0, Number.parseInt(url.searchParams.get("offset") || "0", 10));
 
       const { data, error, count } = await supabase
         .from("exam_attempts")
-        .select("*", { count: "exact" })
+        .select(
+          "id, user_id, subject, topic, difficulty, total_questions, correct_answers, wrong_answers, skipped, score, max_score, duration_minutes, time_taken_seconds, negative_marking, marks_per_question, negative_marks, answers, created_at",
+          { count: "exact" },
+        )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })
         .range(offset, offset + limit - 1);
 
-      if (error) return errorResponse(error.message, 500);
-      return jsonResponse({ data, total: count, limit, offset });
+      if (error) return errorResponse(req, error.message, 500);
+      return jsonResponse(req, { data, total: count, limit, offset });
     }
 
-    // GET ?action=attempt&id=xxx - Get single attempt
     if (req.method === "GET" && action === "attempt") {
       const user = await getUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
 
       const id = url.searchParams.get("id");
-      if (!id) return errorResponse("Missing attempt id");
+      if (!id) return errorResponse(req, "Missing attempt id", 400);
 
       const { data, error } = await supabase
         .from("exam_attempts")
-        .select("*")
+        .select(
+          "id, user_id, subject, topic, difficulty, total_questions, correct_answers, wrong_answers, skipped, score, max_score, duration_minutes, time_taken_seconds, negative_marking, marks_per_question, negative_marks, answers, created_at",
+        )
         .eq("id", id)
         .eq("user_id", user.id)
         .single();
 
-      if (error) return errorResponse("Attempt not found", 404);
-      return jsonResponse({ data });
+      if (error) return errorResponse(req, "Attempt not found", 404);
+      return jsonResponse(req, { data });
     }
 
-    // GET ?action=stats - Get user's exam statistics
     if (req.method === "GET" && action === "stats") {
       const user = await getUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
 
       const { data: attempts, error } = await supabase
         .from("exam_attempts")
-        .select("*")
+        .select("subject, score, max_score, correct_answers, total_questions, time_taken_seconds")
         .eq("user_id", user.id);
 
-      if (error) return errorResponse(error.message, 500);
+      if (error) return errorResponse(req, error.message, 500);
 
       const totalExams = attempts?.length || 0;
-      const totalScore = attempts?.reduce((sum, a) => sum + Number(a.score), 0) || 0;
-      const totalMaxScore = attempts?.reduce((sum, a) => sum + Number(a.max_score), 0) || 0;
+      const totalScore = attempts?.reduce((sum: number, a: { score: number | string }) => sum + Number(a.score), 0) || 0;
+      const totalMaxScore = attempts?.reduce((sum: number, a: { max_score: number | string }) => sum + Number(a.max_score), 0) || 0;
       const avgScore = totalMaxScore > 0 ? Math.round((totalScore / totalMaxScore) * 100) : 0;
-      const totalCorrect = attempts?.reduce((sum, a) => sum + a.correct_answers, 0) || 0;
-      const totalQuestions = attempts?.reduce((sum, a) => sum + a.total_questions, 0) || 0;
+      const totalCorrect = attempts?.reduce((sum: number, a: { correct_answers: number }) => sum + a.correct_answers, 0) || 0;
+      const totalQuestions = attempts?.reduce((sum: number, a: { total_questions: number }) => sum + a.total_questions, 0) || 0;
       const accuracy = totalQuestions > 0 ? Math.round((totalCorrect / totalQuestions) * 100) : 0;
-      const totalTimeSecs = attempts?.reduce((sum, a) => sum + (a.time_taken_seconds || 0), 0) || 0;
+      const totalTimeSecs = attempts?.reduce((sum: number, a: { time_taken_seconds: number | null }) => sum + (a.time_taken_seconds || 0), 0) || 0;
 
-      // Subject-wise breakdown
       const subjectMap: Record<string, { exams: number; correct: number; total: number }> = {};
-      attempts?.forEach((a) => {
+      attempts?.forEach((a: { subject: string; correct_answers: number; total_questions: number }) => {
         if (!subjectMap[a.subject]) subjectMap[a.subject] = { exams: 0, correct: 0, total: 0 };
-        subjectMap[a.subject].exams++;
+        subjectMap[a.subject].exams += 1;
         subjectMap[a.subject].correct += a.correct_answers;
         subjectMap[a.subject].total += a.total_questions;
       });
 
-      const subjectStats = Object.entries(subjectMap).map(([subject, stats]) => ({
-        subject,
+      const subjectStats = Object.entries(subjectMap).map(([subjectName, stats]) => ({
+        subject: subjectName,
         exams: stats.exams,
         accuracy: stats.total > 0 ? Math.round((stats.correct / stats.total) * 100) : 0,
       }));
 
-      return jsonResponse({
+      return jsonResponse(req, {
         data: {
           total_exams: totalExams,
           avg_score: avgScore,
@@ -267,10 +414,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // POST - Submit exam attempt (server-side score calculation)
     if (req.method === "POST") {
       const user = await getUser(req);
-      if (!user) return errorResponse("Unauthorized", 401);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
 
       const body = await req.json();
       const {
@@ -280,42 +426,47 @@ Deno.serve(async (req) => {
         duration_minutes,
         marks_per_question,
         negative_marks,
+        negative_marking,
         time_taken_seconds,
         answers,
       } = body;
 
       const duration = toFiniteNumber(duration_minutes, NaN);
-      if (!subject || !Number.isFinite(duration) || duration <= 0) return errorResponse("Missing required fields");
-      if (!Array.isArray(answers) || answers.length === 0) return errorResponse("Missing answers");
+      if (!subject || !Number.isFinite(duration) || duration <= 0) {
+        return errorResponse(req, "Missing required fields", 400);
+      }
+
+      if (!Array.isArray(answers) || answers.length === 0) {
+        return errorResponse(req, "Missing answers", 400);
+      }
 
       const normalizedAnswers = answers
         .map((a: unknown) => {
           if (!a || typeof a !== "object") return null;
           const v = a as Record<string, unknown>;
-          const question_id = typeof v.question_id === "string" ? v.question_id : null;
+          const questionId = typeof v.question_id === "string" ? v.question_id : null;
           const selected = toFiniteNumber(v.selected, -1);
-          return question_id ? { question_id, selected: Math.trunc(selected) } : null;
+          return questionId ? { question_id: questionId, selected: Math.trunc(selected) } : null;
         })
         .filter((x): x is { question_id: string; selected: number } => Boolean(x));
 
-      if (normalizedAnswers.length === 0) return errorResponse("Invalid answers");
+      if (normalizedAnswers.length === 0) return errorResponse(req, "Invalid answers", 400);
 
-      // Fetch correct answers from DB (server-side) so client cannot tamper.
       const questionIds = normalizedAnswers.map((a) => a.question_id);
       const { data: rows, error: qErr } = await supabase
         .from("question_bank")
         .select("id, correct_answer")
         .in("id", questionIds);
-      if (qErr) return errorResponse(qErr.message, 500);
+
+      if (qErr) return errorResponse(req, qErr.message, 500);
 
       const correctById = new Map<string, number>();
       (rows || []).forEach((r: { id: string; correct_answer: number }) => {
         correctById.set(r.id, r.correct_answer);
       });
 
-      // If any question is missing, reject (prevents submitting arbitrary ids).
       const missing = questionIds.filter((id: string) => !correctById.has(id));
-      if (missing.length > 0) return errorResponse("Invalid question ids", 400);
+      if (missing.length > 0) return errorResponse(req, "Invalid question ids", 400);
 
       const marks = clamp(toFiniteNumber(marks_per_question, 1), 0, 100);
       const negative = clamp(toFiniteNumber(negative_marks, 0), 0, marks);
@@ -323,73 +474,22 @@ Deno.serve(async (req) => {
       let correct = 0;
       let wrong = 0;
       let skipped = 0;
+
       const gradedAnswers = normalizedAnswers.map((a) => {
         const correctAnswer = correctById.get(a.question_id)!;
         const isSkipped = a.selected < 0;
         const isCorrect = !isSkipped && a.selected === correctAnswer;
-        if (isSkipped) skipped++;
-        else if (isCorrect) correct++;
-        else wrong++;
-        return { question_id: a.question_id, selected: a.selected, is_correct: isCorrect };
+        if (isSkipped) skipped += 1;
+        else if (isCorrect) correct += 1;
+        else wrong += 1;
+
+        return { question_id: a.question_id, selected: a.selected, correct: correctAnswer, is_correct: isCorrect };
       });
 
-      const totalQuestions = normalizedAnswers.length;
+      const totalQuestions = gradedAnswers.length;
       const maxScore = totalQuestions * marks;
       const scoreRaw = correct * marks - wrong * negative;
       const score = Math.max(0, scoreRaw);
-
-      // Validate marks_per_question
-      const mPerQ = Number(marks_per_question) || 1;
-      const negMarks = Number(negative_marks) || 0;
-      const hasNegativeMarking = !!negative_marking;
-
-      // Extract question IDs from submitted answers
-      const questionIds = answers.map((a: { question_id: string }) => a.question_id).filter(Boolean);
-      if (questionIds.length === 0) {
-        return errorResponse("No valid question_id in answers");
-      }
-
-      // Look up correct answers from the database (server is the authority)
-      const { data: dbQuestions, error: qError } = await supabase
-        .from("question_bank")
-        .select("id, correct_answer")
-        .in("id", questionIds);
-
-      if (qError) return errorResponse("Failed to validate questions", 500);
-
-      // Build a map of question_id -> correct_answer
-      const correctMap: Record<string, number> = {};
-      (dbQuestions || []).forEach((q: { id: string; correct_answer: number }) => {
-        correctMap[q.id] = q.correct_answer;
-      });
-
-      // Server-side score calculation
-      let correct = 0;
-      let wrong = 0;
-      let skipped = 0;
-      const gradedAnswers: { question_id: string; selected: number; correct: number; is_correct: boolean }[] = [];
-
-      for (const ans of answers as { question_id: string; selected: number }[]) {
-        const correctAnswer = correctMap[ans.question_id];
-        if (correctAnswer === undefined) continue; // question not found, skip
-
-        if (ans.selected === -1 || ans.selected === undefined || ans.selected === null) {
-          skipped++;
-          gradedAnswers.push({ question_id: ans.question_id, selected: -1, correct: correctAnswer, is_correct: false });
-        } else if (ans.selected === correctAnswer) {
-          correct++;
-          gradedAnswers.push({ question_id: ans.question_id, selected: ans.selected, correct: correctAnswer, is_correct: true });
-        } else {
-          wrong++;
-          gradedAnswers.push({ question_id: ans.question_id, selected: ans.selected, correct: correctAnswer, is_correct: false });
-        }
-      }
-
-      const totalQuestions = gradedAnswers.length;
-      const positiveMarks = correct * mPerQ;
-      const deductedMarks = hasNegativeMarking ? wrong * negMarks : 0;
-      const score = Math.max(0, positiveMarks - deductedMarks);
-      const maxScore = totalQuestions * mPerQ;
 
       const { data, error } = await supabase
         .from("exam_attempts")
@@ -406,36 +506,41 @@ Deno.serve(async (req) => {
           score,
           max_score: maxScore,
           marks_per_question: marks,
-          negative_marking: negative > 0,
+          negative_marking: typeof negative_marking === "boolean" ? negative_marking : negative > 0,
           negative_marks: negative,
           time_taken_seconds: Number.isFinite(toFiniteNumber(time_taken_seconds, NaN))
             ? Math.trunc(toFiniteNumber(time_taken_seconds, NaN))
             : null,
           answers: gradedAnswers,
         })
-        .select()
+        .select(
+          "id, user_id, subject, topic, difficulty, total_questions, correct_answers, wrong_answers, skipped, score, max_score, duration_minutes, time_taken_seconds, negative_marking, marks_per_question, negative_marks, answers, created_at",
+        )
         .single();
 
-      if (error) return errorResponse(error.message, 500);
+      if (error) return errorResponse(req, error.message, 500);
 
-      // Return server-computed results so client can display them
-      return jsonResponse({
-        data,
-        results: {
-          correct,
-          wrong,
-          skipped,
-          score,
-          max_score: maxScore,
-          total_questions: totalQuestions,
-          graded_answers: gradedAnswers,
+      return jsonResponse(
+        req,
+        {
+          data,
+          results: {
+            correct,
+            wrong,
+            skipped,
+            score,
+            max_score: maxScore,
+            total_questions: totalQuestions,
+            graded_answers: gradedAnswers,
+          },
         },
-      }, 201);
+        201,
+      );
     }
 
-    return errorResponse("Invalid action or method", 400);
+    return errorResponse(req, "Invalid action or method", 400);
   } catch (err) {
     console.error("Exams API error:", err);
-    return errorResponse("Internal server error", 500);
+    return errorResponse(req, "Internal server error", 500);
   }
 });

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
@@ -14,149 +15,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  BookOpen,
-  Clock,
-  Award,
-  MinusCircle,
-  Settings,
-  Play,
-  ChevronRight,
-  Layers,
-  Target,
-} from "lucide-react";
+import { examsApi } from "@/lib/api";
+import { usePageMeta } from "@/hooks/usePageMeta";
+import { Loader2, BookOpen, Clock, Award, MinusCircle, Settings, Play, ChevronRight, Layers, Target } from "lucide-react";
 
-// Mock data - will be replaced with DB data
-const categorySubjects: Record<string, { id: string; name: string; topics: { id: string; name: string }[] }[]> = {
-  medical: [
-    { id: "physics", name: "পদার্থবিজ্ঞান", topics: [
-      { id: "mechanics", name: "বলবিদ্যা" },
-      { id: "waves", name: "তরঙ্গ" },
-      { id: "optics", name: "আলোকবিজ্ঞান" },
-      { id: "electricity", name: "তড়িৎ" },
-    ]},
-    { id: "chemistry", name: "রসায়ন", topics: [
-      { id: "organic", name: "জৈব রসায়ন" },
-      { id: "inorganic", name: "অজৈব রসায়ন" },
-      { id: "physical", name: "ভৌত রসায়ন" },
-    ]},
-    { id: "biology", name: "জীববিজ্ঞান", topics: [
-      { id: "botany", name: "উদ্ভিদবিদ্যা" },
-      { id: "zoology", name: "প্রাণিবিদ্যা" },
-      { id: "genetics", name: "জেনেটিক্স" },
-    ]},
-    { id: "english", name: "ইংরেজি", topics: [
-      { id: "grammar", name: "Grammar" },
-      { id: "vocabulary", name: "Vocabulary" },
-    ]},
-    { id: "gk", name: "সাধারণ জ্ঞান", topics: [
-      { id: "bangladesh", name: "বাংলাদেশ" },
-      { id: "international", name: "আন্তর্জাতিক" },
-    ]},
-  ],
-  engineering: [
-    { id: "physics", name: "পদার্থবিজ্ঞান", topics: [
-      { id: "mechanics", name: "বলবিদ্যা" },
-      { id: "waves", name: "তরঙ্গ" },
-      { id: "thermodynamics", name: "তাপগতিবিদ্যা" },
-    ]},
-    { id: "chemistry", name: "রসায়ন", topics: [
-      { id: "organic", name: "জৈব রসায়ন" },
-      { id: "inorganic", name: "অজৈব রসায়ন" },
-    ]},
-    { id: "math", name: "গণিত", topics: [
-      { id: "algebra", name: "বীজগণিত" },
-      { id: "calculus", name: "ক্যালকুলাস" },
-      { id: "trigonometry", name: "ত্রিকোণমিতি" },
-    ]},
-    { id: "english", name: "ইংরেজি", topics: [
-      { id: "grammar", name: "Grammar" },
-      { id: "vocabulary", name: "Vocabulary" },
-    ]},
-  ],
-  ssc: [
-    { id: "bangla", name: "বাংলা", topics: [
-      { id: "grammar", name: "ব্যাকরণ" },
-      { id: "literature", name: "সাহিত্য" },
-    ]},
-    { id: "english", name: "ইংরেজি", topics: [
-      { id: "grammar", name: "Grammar" },
-      { id: "composition", name: "Composition" },
-    ]},
-    { id: "math", name: "গণিত", topics: [
-      { id: "algebra", name: "বীজগণিত" },
-      { id: "geometry", name: "জ্যামিতি" },
-    ]},
-    { id: "science", name: "বিজ্ঞান", topics: [
-      { id: "physics", name: "পদার্থ" },
-      { id: "chemistry", name: "রসায়ন" },
-      { id: "biology", name: "জীববিজ্ঞান" },
-    ]},
-    { id: "gk", name: "সাধারণ জ্ঞান", topics: [
-      { id: "bangladesh", name: "বাংলাদেশ" },
-      { id: "current", name: "সাম্প্রতিক" },
-    ]},
-  ],
-  hsc: [
-    { id: "bangla", name: "বাংলা", topics: [
-      { id: "grammar", name: "ব্যাকরণ" },
-      { id: "literature", name: "সাহিত্য" },
-    ]},
-    { id: "english", name: "ইংরেজি", topics: [
-      { id: "grammar", name: "Grammar" },
-      { id: "literature", name: "Literature" },
-    ]},
-    { id: "ict", name: "ICT", topics: [
-      { id: "programming", name: "প্রোগ্রামিং" },
-      { id: "database", name: "ডাটাবেজ" },
-    ]},
-  ],
-  university: [
-    { id: "bangla", name: "বাংলা", topics: [
-      { id: "grammar", name: "ব্যাকরণ" },
-      { id: "literature", name: "সাহিত্য" },
-    ]},
-    { id: "english", name: "ইংরেজি", topics: [
-      { id: "grammar", name: "Grammar" },
-      { id: "vocabulary", name: "Vocabulary" },
-    ]},
-    { id: "math", name: "গণিত", topics: [
-      { id: "algebra", name: "বীজগণিত" },
-      { id: "arithmetic", name: "পাটিগণিত" },
-    ]},
-    { id: "gk", name: "সাধারণ জ্ঞান", topics: [
-      { id: "bangladesh", name: "বাংলাদেশ" },
-      { id: "international", name: "আন্তর্জাতিক" },
-    ]},
-    { id: "iq", name: "বুদ্ধিমত্তা", topics: [
-      { id: "verbal", name: "Verbal" },
-      { id: "analytical", name: "Analytical" },
-    ]},
-  ],
-  job: [
-    { id: "bangla", name: "বাংলা", topics: [
-      { id: "grammar", name: "ব্যাকরণ" },
-      { id: "literature", name: "সাহিত্য" },
-    ]},
-    { id: "english", name: "ইংরেজি", topics: [
-      { id: "grammar", name: "Grammar" },
-      { id: "vocabulary", name: "Vocabulary" },
-    ]},
-    { id: "math", name: "গণিত", topics: [
-      { id: "arithmetic", name: "পাটিগণিত" },
-      { id: "algebra", name: "বীজগণিত" },
-    ]},
-    { id: "gk", name: "সাধারণ জ্ঞান", topics: [
-      { id: "bangladesh", name: "বাংলাদেশ বিষয়াবলী" },
-      { id: "international", name: "আন্তর্জাতিক বিষয়াবলী" },
-      { id: "current", name: "সাম্প্রতিক" },
-    ]},
-    { id: "computer", name: "কম্পিউটার", topics: [
-      { id: "basics", name: "বেসিক" },
-      { id: "ms-office", name: "MS Office" },
-    ]},
-  ],
-};
+type TopicItem = { id: string; name: string };
+type SubjectItem = { id: string; name: string; topics: TopicItem[] };
+type CategoryItem = { id: string; name: string; subjects: SubjectItem[] };
 
 const difficultyLevels = [
   { id: "easy", name: "সহজ" },
@@ -165,7 +30,7 @@ const difficultyLevels = [
   { id: "all", name: "সব" },
 ];
 
-const categoryNames: Record<string, string> = {
+const fallbackCategoryNames: Record<string, string> = {
   medical: "মেডিকেল",
   engineering: "ইঞ্জিনিয়ারিং",
   ssc: "SSC",
@@ -177,15 +42,31 @@ const categoryNames: Record<string, string> = {
 const ExamSetup = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const category = searchParams.get("category") || "medical";
-  
-  const subjects = categorySubjects[category] || categorySubjects.medical;
+  const categoryFromQuery = searchParams.get("category") || "medical";
 
-  // Selected subjects and topics
+  usePageMeta({
+    title: "কাস্টম এক্সাম সেটআপ",
+    description: "নিজের পছন্দমতো বিষয়, টপিক, সময় ও মার্কিং সেট করে কাস্টম এক্সাম শুরু করো।",
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["exam-catalog"],
+    queryFn: () => examsApi.catalog(),
+  });
+
+  const categories = useMemo<CategoryItem[]>(() => {
+    const rows = data?.data?.categories;
+    return Array.isArray(rows) ? rows : [];
+  }, [data]);
+
+  const activeCategory =
+    categories.find((c) => c.id === categoryFromQuery) || categories[0] || null;
+
+  const subjects = activeCategory?.subjects || [];
+  const categoryName = activeCategory?.name || fallbackCategoryNames[categoryFromQuery] || "এক্সাম";
+
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<Record<string, string[]>>({});
-
-  // Exam configuration
   const [questionCount, setQuestionCount] = useState([25]);
   const [duration, setDuration] = useState([30]);
   const [marksPerQuestion, setMarksPerQuestion] = useState([1]);
@@ -195,45 +76,48 @@ const ExamSetup = () => {
 
   const handleSubjectToggle = (subjectId: string) => {
     if (selectedSubjects.includes(subjectId)) {
-      setSelectedSubjects(selectedSubjects.filter((s) => s !== subjectId));
-      const newTopics = { ...selectedTopics };
-      delete newTopics[subjectId];
-      setSelectedTopics(newTopics);
-    } else {
-      setSelectedSubjects([...selectedSubjects, subjectId]);
+      setSelectedSubjects((prev) => prev.filter((s) => s !== subjectId));
+      setSelectedTopics((prev) => {
+        const next = { ...prev };
+        delete next[subjectId];
+        return next;
+      });
+      return;
     }
+
+    setSelectedSubjects((prev) => [...prev, subjectId]);
   };
 
   const handleTopicToggle = (subjectId: string, topicId: string) => {
     const currentTopics = selectedTopics[subjectId] || [];
     if (currentTopics.includes(topicId)) {
-      setSelectedTopics({
-        ...selectedTopics,
+      setSelectedTopics((prev) => ({
+        ...prev,
         [subjectId]: currentTopics.filter((t) => t !== topicId),
-      });
+      }));
     } else {
-      setSelectedTopics({
-        ...selectedTopics,
+      setSelectedTopics((prev) => ({
+        ...prev,
         [subjectId]: [...currentTopics, topicId],
-      });
+      }));
     }
   };
 
   const selectAllTopics = (subjectId: string) => {
     const subject = subjects.find((s) => s.id === subjectId);
-    if (subject) {
-      setSelectedTopics({
-        ...selectedTopics,
-        [subjectId]: subject.topics.map((t) => t.id),
-      });
-    }
+    if (!subject) return;
+
+    setSelectedTopics((prev) => ({
+      ...prev,
+      [subjectId]: subject.topics.map((t) => t.id),
+    }));
   };
 
   const totalMarks = questionCount[0] * marksPerQuestion[0];
 
   const handleStartExam = () => {
     const config = {
-      category,
+      category: activeCategory?.id || categoryFromQuery,
       subjects: selectedSubjects,
       topics: selectedTopics,
       questionCount: questionCount[0],
@@ -242,8 +126,7 @@ const ExamSetup = () => {
       negativeMarking: negativeMarkingEnabled ? parseFloat(negativeMarkValue) : 0,
       difficulty,
     };
-    
-    // Navigate to exam with config in state
+
     navigate("/exam/custom/take", { state: { config } });
   };
 
@@ -255,24 +138,19 @@ const ExamSetup = () => {
 
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4">
-          {/* Header */}
           <div className="text-center mb-8">
             <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
               <Settings className="w-5 h-5" />
               <span className="font-medium">কাস্টম এক্সাম সেটআপ</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">
-              {categoryNames[category]} - নিজের মতো করে সাজাও
-            </h1>
+            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">{categoryName} - নিজের মতো করে সাজাও</h1>
             <p className="text-muted-foreground max-w-2xl mx-auto">
               বিষয়, টপিক, প্রশ্ন সংখ্যা, সময়, মার্কস - সব কিছু তোমার ইচ্ছামতো সেট করো এবং পরীক্ষা দাও
             </p>
           </div>
 
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Left: Subject & Topic Selection */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Subject Selection */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -284,71 +162,72 @@ const ExamSetup = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {subjects.map((subject) => (
-                    <div
-                      key={subject.id}
-                      className={`border rounded-xl transition-all ${
-                        selectedSubjects.includes(subject.id)
-                          ? "border-primary bg-primary/5"
-                          : "border-border"
-                      }`}
-                    >
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : subjects.length === 0 ? (
+                  <p className="text-muted-foreground">এই ক্যাটাগরিতে এখনো কোনো বিষয় সেট করা হয়নি।</p>
+                ) : (
+                  <div className="space-y-4">
+                    {subjects.map((subject) => (
                       <div
-                        className="flex items-center justify-between p-4 cursor-pointer"
-                        onClick={() => handleSubjectToggle(subject.id)}
+                        key={subject.id}
+                        className={`border rounded-xl transition-all ${
+                          selectedSubjects.includes(subject.id) ? "border-primary bg-primary/5" : "border-border"
+                        }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <Checkbox
-                            checked={selectedSubjects.includes(subject.id)}
-                            onCheckedChange={() => handleSubjectToggle(subject.id)}
-                          />
-                          <span className="font-medium text-foreground">{subject.name}</span>
+                        <div className="flex items-center justify-between p-4 cursor-pointer" onClick={() => handleSubjectToggle(subject.id)}>
+                          <div className="flex items-center gap-3">
+                            <Checkbox
+                              checked={selectedSubjects.includes(subject.id)}
+                              onCheckedChange={() => handleSubjectToggle(subject.id)}
+                            />
+                            <span className="font-medium text-foreground">{subject.name}</span>
+                          </div>
+                          {selectedSubjects.includes(subject.id) && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectAllTopics(subject.id);
+                              }}
+                            >
+                              সব সিলেক্ট
+                            </Button>
+                          )}
                         </div>
+
                         {selectedSubjects.includes(subject.id) && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              selectAllTopics(subject.id);
-                            }}
-                          >
-                            সব সিলেক্ট
-                          </Button>
+                          <div className="px-4 pb-4">
+                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                              <Layers className="w-4 h-4" />
+                              <span>টপিক নির্বাচন (ঐচ্ছিক)</span>
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                              {subject.topics.map((topic) => (
+                                <button
+                                  key={topic.id}
+                                  onClick={() => handleTopicToggle(subject.id, topic.id)}
+                                  className={`px-4 py-2 rounded-lg text-sm transition-all ${
+                                    (selectedTopics[subject.id] || []).includes(topic.id)
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                  }`}
+                                >
+                                  {topic.name}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                         )}
                       </div>
-
-                      {/* Topics */}
-                      {selectedSubjects.includes(subject.id) && (
-                        <div className="px-4 pb-4">
-                          <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                            <Layers className="w-4 h-4" />
-                            <span>টপিক নির্বাচন (ঐচ্ছিক)</span>
-                          </div>
-                          <div className="flex flex-wrap gap-2">
-                            {subject.topics.map((topic) => (
-                              <button
-                                key={topic.id}
-                                onClick={() => handleTopicToggle(subject.id, topic.id)}
-                                className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                                  (selectedTopics[subject.id] || []).includes(topic.id)
-                                    ? "bg-primary text-primary-foreground"
-                                    : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                }`}
-                              >
-                                {topic.name}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Difficulty Selection */}
               <div className="bg-card rounded-2xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -378,7 +257,6 @@ const ExamSetup = () => {
               </div>
             </div>
 
-            {/* Right: Configuration Panel */}
             <div className="lg:col-span-1">
               <div className="bg-card rounded-2xl border border-border p-6 sticky top-24 space-y-6">
                 <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
@@ -386,7 +264,6 @@ const ExamSetup = () => {
                   এক্সাম সেটিংস
                 </h2>
 
-                {/* Question Count */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <Label className="flex items-center gap-2 text-foreground">
@@ -395,21 +272,13 @@ const ExamSetup = () => {
                     </Label>
                     <span className="text-xl font-bold text-primary">{questionCount[0]}</span>
                   </div>
-                  <Slider
-                    value={questionCount}
-                    onValueChange={setQuestionCount}
-                    min={5}
-                    max={100}
-                    step={5}
-                    className="w-full"
-                  />
+                  <Slider value={questionCount} onValueChange={setQuestionCount} min={5} max={100} step={5} className="w-full" />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>৫</span>
                     <span>১০০</span>
                   </div>
                 </div>
 
-                {/* Duration */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <Label className="flex items-center gap-2 text-foreground">
@@ -418,21 +287,13 @@ const ExamSetup = () => {
                     </Label>
                     <span className="text-xl font-bold text-primary">{duration[0]}</span>
                   </div>
-                  <Slider
-                    value={duration}
-                    onValueChange={setDuration}
-                    min={5}
-                    max={180}
-                    step={5}
-                    className="w-full"
-                  />
+                  <Slider value={duration} onValueChange={setDuration} min={5} max={180} step={5} className="w-full" />
                   <div className="flex justify-between text-xs text-muted-foreground mt-1">
                     <span>৫ মি.</span>
                     <span>১৮০ মি.</span>
                   </div>
                 </div>
 
-                {/* Marks per Question */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <Label className="flex items-center gap-2 text-foreground">
@@ -455,17 +316,13 @@ const ExamSetup = () => {
                   </div>
                 </div>
 
-                {/* Negative Marking */}
                 <div className="border-t border-border pt-6">
                   <div className="flex items-center justify-between mb-4">
                     <Label className="flex items-center gap-2 text-foreground">
                       <MinusCircle className="w-4 h-4 text-destructive" />
                       নেগেটিভ মার্কিং
                     </Label>
-                    <Switch
-                      checked={negativeMarkingEnabled}
-                      onCheckedChange={setNegativeMarkingEnabled}
-                    />
+                    <Switch checked={negativeMarkingEnabled} onCheckedChange={setNegativeMarkingEnabled} />
                   </div>
 
                   {negativeMarkingEnabled && (
@@ -482,7 +339,6 @@ const ExamSetup = () => {
                   )}
                 </div>
 
-                {/* Summary */}
                 <div className="bg-muted rounded-xl p-4 space-y-2">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">মোট প্রশ্ন</span>
@@ -508,24 +364,13 @@ const ExamSetup = () => {
                   </div>
                 </div>
 
-                {/* Start Button */}
-                <Button
-                  variant="hero"
-                  size="lg"
-                  className="w-full"
-                  disabled={!canStart}
-                  onClick={handleStartExam}
-                >
+                <Button variant="hero" size="lg" className="w-full" disabled={!canStart} onClick={handleStartExam}>
                   <Play className="w-5 h-5 mr-2" />
                   পরীক্ষা শুরু করো
                   <ChevronRight className="w-5 h-5 ml-1" />
                 </Button>
 
-                {!canStart && (
-                  <p className="text-sm text-center text-muted-foreground">
-                    অন্তত একটি বিষয় সিলেক্ট করো
-                  </p>
-                )}
+                {!canStart && <p className="text-sm text-center text-muted-foreground">অন্তত একটি বিষয় সিলেক্ট করো</p>}
               </div>
             </div>
           </div>

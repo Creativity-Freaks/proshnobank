@@ -1,3 +1,4 @@
+<!-- markdownlint-disable MD033 MD041 MD010 MD034 -->
 <div align="center">
 
 <!-- Animated title (SVG, GitHub-safe) -->
@@ -100,8 +101,8 @@ Create `.env` in the project root:
 
 ## Author / Contact
 
-- Website: https://hcsarker.me
-- GitHub: https://github.com/hcsarker
+- Website: [hcsarker.me](https://hcsarker.me)
+- GitHub: [https://github.com/hcsarker](https://github.com/hcsarker)
 
 ## License
 

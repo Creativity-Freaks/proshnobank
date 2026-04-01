@@ -91,6 +91,28 @@ export const questionsApi = {
 
   get: (id: string) => apiCall<{ data: unknown }>("questions", { id }),
 
+  groups: (filters?: {
+    subject?: string;
+    difficulty?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    apiCall<{
+      data: { subject: string; topic: string; difficulty: string; count: number }[];
+      total_questions: number;
+      total_groups: number;
+      limit: number;
+      offset: number;
+    }>("questions", {
+      action: "groups",
+      subject: filters?.subject,
+      difficulty: filters?.difficulty,
+      search: filters?.search,
+      limit: String(filters?.limit || 120),
+      offset: String(filters?.offset || 0),
+    } as Record<string, string>),
+
   create: (question: {
     subject: string;
     topic: string;
@@ -158,6 +180,18 @@ export const examsApi = {
 
   /** Get exam template details (public) */
   details: (id: string) => apiCall<{ data: unknown }>("exams", { action: "details", id }),
+
+  /** Get category/subject/topic catalog for exam setup */
+  catalog: () =>
+    apiCall<{
+      data: {
+        categories: {
+          id: string;
+          name: string;
+          subjects: { id: string; name: string; topics: { id: string; name: string }[] }[];
+        }[];
+      };
+    }>("exams", { action: "catalog" }),
 
   /** Submit an exam attempt */
   submit: (attempt: {
