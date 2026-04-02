@@ -1,18 +1,18 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useRoleCheck } from "@/hooks/useRoleCheck";
 
-type AdminRouteProps = {
+type StudentRouteProps = {
   children: React.ReactNode;
 };
 
-const AdminRoute = ({ children }: AdminRouteProps) => {
+const StudentRoute = ({ children }: StudentRouteProps) => {
   const { user, isLoading: authLoading } = useAuth();
-  const { isAdmin, isLoading: adminLoading } = useAdminCheck();
+  const { hasRole: isTeacherAccount, isLoading: roleLoading } = useRoleCheck(["admin", "moderator", "teacher"]);
   const location = useLocation();
 
-  if (authLoading || adminLoading) {
+  if (authLoading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background font-bengali">
         <Loader2 className="w-10 h-10 animate-spin text-primary" />
@@ -21,14 +21,14 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
   }
 
   if (!user) {
-    return <Navigate to="/admin/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   }
 
-  if (!isAdmin) {
-    return <Navigate to="/admin/login" replace state={{ from: location.pathname, reason: "unauthorized" }} />;
+  if (isTeacherAccount) {
+    return <Navigate to="/teacher-dashboard" replace />;
   }
 
   return children;
 };
 
-export default AdminRoute;
+export default StudentRoute;

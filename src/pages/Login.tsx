@@ -27,7 +27,7 @@ const Login = () => {
   // Redirect if already logged in
   useEffect(() => {
     if (user && !isLoading) {
-      navigate("/");
+      navigate("/dashboard");
     }
   }, [user, isLoading, navigate]);
 
@@ -65,7 +65,7 @@ const Login = () => {
         title: "সফল!",
         description: "সফলভাবে লগইন হয়েছে",
       });
-      navigate("/");
+      navigate("/dashboard");
     }
     
     setIsSubmitting(false);
@@ -178,7 +178,17 @@ const Login = () => {
             onClick={async () => {
               const { error } = await signInWithGoogle();
               if (error) {
-                toast({ title: "ত্রুটি", description: "Google লগইন করতে সমস্যা হয়েছে", variant: "destructive" });
+                const rawMessage = error.message || "Google লগইন করতে সমস্যা হয়েছে";
+                const lower = rawMessage.toLowerCase();
+
+                let hint = rawMessage;
+                if (lower.includes("provider") || lower.includes("oauth")) {
+                  hint = "Supabase Authentication > Providers থেকে Google enable করে Client ID/Secret সেট করতে হবে।";
+                } else if (lower.includes("redirect")) {
+                  hint = `Supabase Redirect URL list-এ ${window.location.origin}/dashboard যোগ করো।`;
+                }
+
+                toast({ title: "ত্রুটি", description: hint, variant: "destructive" });
               }
             }}
           >
@@ -196,6 +206,12 @@ const Login = () => {
               অ্যাকাউন্ট নেই?{" "}
               <Link to="/register" className="text-primary hover:underline font-medium">
                 রেজিস্ট্রেশন করো
+              </Link>
+            </p>
+            <p className="text-muted-foreground font-bengali text-sm mt-2">
+              শিক্ষক?{" "}
+              <Link to="/teacher-login" className="text-primary hover:underline font-medium">
+                শিক্ষক লগইন
               </Link>
             </p>
           </div>

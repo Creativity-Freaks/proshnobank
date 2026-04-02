@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
-export type AppRole = "admin" | "moderator" | "user";
+export type AppRole = "admin" | "moderator" | "teacher" | "user";
 
 export const useRoleCheck = (allowedRoles: AppRole[]) => {
   const [hasRole, setHasRole] = useState(false);
@@ -33,15 +33,14 @@ export const useRoleCheck = (allowedRoles: AppRole[]) => {
           .from("user_roles")
           .select("role")
           .eq("user_id", session.user.id)
-          .in("role", roles)
-          .limit(1)
-          .maybeSingle();
+          .limit(20);
 
         if (error) {
           console.error("Error checking role status:", error);
           setHasRole(false);
         } else {
-          setHasRole(Boolean(data));
+          const hasAllowedRole = (data ?? []).some((item) => roles.includes(item.role as AppRole));
+          setHasRole(hasAllowedRole);
         }
       } catch (error) {
         console.error("Error checking role status:", error);

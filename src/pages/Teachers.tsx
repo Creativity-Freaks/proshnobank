@@ -89,16 +89,16 @@ const Teachers = () => {
                 বিনামূল্যে শুরু করুন।
               </p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/teacher-dashboard">
+                <Link to="/teacher-login">
                   <Button variant="hero" size="lg">
                     টিচার ড্যাশবোর্ডে যান
                     <ChevronRight className="w-5 h-5 ml-1" />
                   </Button>
                 </Link>
-                <Link to="/register">
+                <Link to="/register?type=teacher">
                   <Button variant="outline" size="lg">
                     <PlayCircle className="w-5 h-5 mr-2" />
-                    রেজিস্ট্রেশন করুন
+                    শিক্ষক রেজিস্ট্রেশন করুন
                   </Button>
                 </Link>
               </div>
@@ -248,9 +248,9 @@ const Teachers = () => {
             <p className="text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
               কোনো ক্রেডিট কার্ড লাগবে না। এখনই রেজিস্ট্রেশন করুন এবং আপনার প্রথম পরীক্ষা তৈরি করুন।
             </p>
-            <Link to="/register">
+            <Link to="/register?type=teacher">
               <Button size="lg" className="bg-white text-primary hover:bg-white/90">
-                বিনামূল্যে রেজিস্ট্রেশন
+                শিক্ষক রেজিস্ট্রেশন
                 <ChevronRight className="w-5 h-5 ml-1" />
               </Button>
             </Link>

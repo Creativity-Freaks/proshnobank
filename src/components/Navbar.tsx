@@ -1,16 +1,24 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, Shield, User } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, UserRound } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
-import { useAdminCheck } from "@/hooks/useAdminCheck";
+import { useRoleCheck } from "@/hooks/useRoleCheck";
 import { useToast } from "@/hooks/use-toast";
 import BrandLogo from "@/components/BrandLogo";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut, isLoading } = useAuth();
-  const { isAdmin } = useAdminCheck();
+  const { hasRole: isTeacher, isLoading: teacherRoleLoading } = useRoleCheck(["admin", "moderator", "teacher"]);
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -29,11 +37,15 @@ const Navbar = () => {
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
     { name: "লিডারবোর্ড", href: "/leaderboard" },
+    { name: "শিক্ষকদের জন্য", href: "/teachers" },
   ];
+
+  const dashboardLink = isTeacher
+    ? { name: "শিক্ষক ড্যাশবোর্ড", href: "/teacher-dashboard" }
+    : { name: "ড্যাশবোর্ড", href: "/dashboard" };
 
   const loggedInNavLinks = [
     { name: "হোম", href: "/" },
-    { name: "ড্যাশবোর্ড", href: "/dashboard" },
     { name: "এক্সাম ব্যাচ", href: "/batches" },
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
@@ -41,6 +53,16 @@ const Navbar = () => {
   ];
 
   const navLinks = user ? loggedInNavLinks : publicNavLinks;
+  const isAuthUiLoading = isLoading || (Boolean(user) && teacherRoleLoading);
+  const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "ব্যবহারকারী";
+  const avatarUrl =
+    typeof user?.user_metadata?.avatar_url === "string" ? user.user_metadata.avatar_url : undefined;
+  const initials = displayName
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part: string) => part.charAt(0).toUpperCase())
+    .join("");
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-card/80 backdrop-blur-lg border-b border-border">
@@ -60,45 +82,58 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="text-muted-foreground hover:text-foreground transition-colors font-bengali text-sm flex items-center gap-1"
-              >
-                <Shield className="w-4 h-4" />
-                অ্যাডমিন
-              </Link>
-            )}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            {isLoading ? (
+            {isAuthUiLoading ? (
               <div className="w-20 h-8 bg-muted animate-pulse rounded" />
             ) : !user ? (
               <>
                 <Link to="/login">
                   <Button variant="ghost" size="sm" className="font-bengali">
-                    লগইন
+                    স্টুডেন্ট লগইন
                   </Button>
                 </Link>
-                <Link to="/register">
-                  <Button variant="hero" size="sm" className="font-bengali">
-                    রেজিস্ট্রেশন
+                <Link to="/teacher-login">
+                  <Button variant="outline" size="sm" className="font-bengali">
+                    শিক্ষক লগইন
                   </Button>
                 </Link>
               </>
             ) : (
               <>
-                <Link to="/profile">
-                  <Button variant="ghost" size="sm" className="gap-2 font-bengali">
-                    <User className="w-4 h-4" />
-                    {user.user_metadata?.full_name || user.email?.split("@")[0]}
-                  </Button>
-                </Link>
-                <Button variant="ghost" size="sm" className="gap-2" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4" />
-                  লগআউট
-                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-2 font-bengali">
+                      <Avatar className="h-7 w-7 border border-border">
+                        <AvatarImage src={avatarUrl} alt={displayName} />
+                        <AvatarFallback className="text-[10px] font-semibold bg-primary/10 text-primary">
+                          {initials || "U"}
+                        </AvatarFallback>
+                      </Avatar>
+                      {displayName}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48 font-bengali">
+                    <DropdownMenuItem asChild>
+                      <Link to="/profile" className="flex items-center gap-2">
+                        <UserRound className="h-4 w-4" />
+                        প্রোফাইল
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to={dashboardLink.href} className="flex items-center gap-2">
+                        <LayoutDashboard className="h-4 w-4" />
+                        {dashboardLink.name}
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      লগআউট
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </>
             )}
           </div>
@@ -122,35 +157,37 @@ const Navbar = () => {
                 {link.name}
               </Link>
             ))}
-            {isAdmin && (
-              <Link
-                to="/admin"
-                className="block text-muted-foreground hover:text-foreground transition-colors font-bengali py-2 flex items-center gap-1"
-                onClick={() => setIsOpen(false)}
-              >
-                <Shield className="w-4 h-4" />
-                অ্যাডমিন
-              </Link>
-            )}
             <div className="flex gap-3 pt-3 border-t border-border">
               {!user ? (
                 <>
                   <Link to="/login" className="flex-1" onClick={() => setIsOpen(false)}>
                     <Button variant="outline" size="sm" className="w-full font-bengali">
-                      লগইন
+                      স্টুডেন্ট লগইন
                     </Button>
                   </Link>
-                  <Link to="/register" className="flex-1" onClick={() => setIsOpen(false)}>
-                    <Button variant="hero" size="sm" className="w-full font-bengali">
-                      রেজিস্ট্রেশন
+                  <Link to="/teacher-login" className="flex-1" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full font-bengali">
+                      শিক্ষক লগইন
                     </Button>
                   </Link>
                 </>
               ) : (
-                <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleLogout}>
-                  <LogOut className="w-4 h-4" />
-                  লগআউট
-                </Button>
+                <div className="w-full space-y-2">
+                  <Link to="/profile" className="block" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full font-bengali">
+                      প্রোফাইল
+                    </Button>
+                  </Link>
+                  <Link to={dashboardLink.href} className="block" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full font-bengali">
+                      {dashboardLink.name}
+                    </Button>
+                  </Link>
+                  <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleLogout}>
+                    <LogOut className="w-4 h-4" />
+                    লগআউট
+                  </Button>
+                </div>
               )}
             </div>
           </div>

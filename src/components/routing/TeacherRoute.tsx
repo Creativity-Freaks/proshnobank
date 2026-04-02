@@ -12,6 +12,7 @@ const TeacherRoute = ({ children }: TeacherRouteProps) => {
   const { hasRole: canAccessTeacherDashboard, isLoading: roleLoading } = useRoleCheck([
     "admin",
     "moderator",
+    "teacher",
   ]);
   const location = useLocation();
 
@@ -24,11 +25,11 @@ const TeacherRoute = ({ children }: TeacherRouteProps) => {
   }
 
   if (!user) {
-    return <Navigate to="/login" replace state={{ from: location.pathname }} />;
+    return <Navigate to="/teacher-login" replace state={{ from: location.pathname }} />;
   }
 
   if (!canAccessTeacherDashboard) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/dashboard" replace />;
   }
 
   return children;
