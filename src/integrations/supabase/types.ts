@@ -77,6 +77,101 @@ export type Database = {
         }
         Relationships: []
       }
+      exam_templates: {
+        Row: {
+          attempts: number
+          category: string
+          created_at: string
+          description: string | null
+          difficulty: string | null
+          duration_minutes: number
+          features: Json
+          id: string
+          marks_per_question: number
+          negative_marks: number
+          question_count: number
+          rating: number | null
+          subjects: Json
+          subjects_breakdown: Json
+          title: string
+          topics: Json
+        }
+        Insert: {
+          attempts?: number
+          category: string
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          duration_minutes?: number
+          features?: Json
+          id?: string
+          marks_per_question?: number
+          negative_marks?: number
+          question_count?: number
+          rating?: number | null
+          subjects?: Json
+          subjects_breakdown?: Json
+          title: string
+          topics?: Json
+        }
+        Update: {
+          attempts?: number
+          category?: string
+          created_at?: string
+          description?: string | null
+          difficulty?: string | null
+          duration_minutes?: number
+          features?: Json
+          id?: string
+          marks_per_question?: number
+          negative_marks?: number
+          question_count?: number
+          rating?: number | null
+          subjects?: Json
+          subjects_breakdown?: Json
+          title?: string
+          topics?: Json
+        }
+        Relationships: []
+      }
+      live_exam_events: {
+        Row: {
+          created_at: string
+          id: string
+          participants: number
+          prize: string | null
+          start_time: string
+          status: string
+          template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          participants?: number
+          prize?: string | null
+          start_time: string
+          status?: string
+          template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          participants?: number
+          prize?: string | null
+          start_time?: string
+          status?: string
+          template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "live_exam_events_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "exam_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       question_bank: {
         Row: {
           correct_answer: number
@@ -148,7 +243,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "moderator" | "user"
+      app_role: "admin" | "moderator" | "user" | "teacher"
       difficulty_level: "easy" | "medium" | "hard"
     }
     CompositeTypes: {
@@ -277,7 +372,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "moderator", "user"],
+      app_role: ["admin", "moderator", "user", "teacher"],
       difficulty_level: ["easy", "medium", "hard"],
     },
   },
