@@ -33,8 +33,16 @@ const MedicalExams = lazy(() => import("./pages/categories/MedicalExams"));
 const EngineeringExams = lazy(() => import("./pages/categories/EngineeringExams"));
 const UniversityExams = lazy(() => import("./pages/categories/UniversityExams"));
 const JobExams = lazy(() => import("./pages/categories/JobExams"));
-const AdminPanel = lazy(() => import("./pages/AdminPanel"));
 const Profile = lazy(() => import("./pages/Profile"));
+
+// Admin pages
+const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
+const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
+const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
+const AdminLiveExams = lazy(() => import("./pages/admin/AdminLiveExams"));
+const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
+const AdminSubjects = lazy(() => import("./pages/admin/AdminSubjects"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -52,6 +60,12 @@ const RouteFallback = () => (
   </div>
 );
 
+const AdminPage = ({ children }: { children: React.ReactNode }) => (
+  <AdminRoute>
+    <AdminLayout>{children}</AdminLayout>
+  </AdminRoute>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -67,30 +81,9 @@ const App = () => (
               <Route path="/register" element={<Register />} />
               <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} />
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Dashboard />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Profile />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/teacher-dashboard"
-                element={
-                  <TeacherRoute>
-                    <TeacherDashboard />
-                  </TeacherRoute>
-                }
-              />
+              <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+              <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+              <Route path="/teacher-dashboard" element={<TeacherRoute><TeacherDashboard /></TeacherRoute>} />
               <Route path="/question-bank" element={<QuestionBank />} />
               <Route path="/batches" element={<ExamBatches />} />
               <Route path="/leaderboard" element={<Leaderboard />} />
@@ -105,14 +98,15 @@ const App = () => (
               <Route path="/category/engineering" element={<EngineeringExams />} />
               <Route path="/category/university" element={<UniversityExams />} />
               <Route path="/category/job" element={<JobExams />} />
-              <Route
-                path="/admin"
-                element={
-                  <AdminRoute>
-                    <AdminPanel />
-                  </AdminRoute>
-                }
-              />
+
+              {/* Admin routes */}
+              <Route path="/admin" element={<AdminPage><AdminOverview /></AdminPage>} />
+              <Route path="/admin/questions" element={<AdminPage><AdminQuestions /></AdminPage>} />
+              <Route path="/admin/templates" element={<AdminPage><AdminTemplates /></AdminPage>} />
+              <Route path="/admin/live-exams" element={<AdminPage><AdminLiveExams /></AdminPage>} />
+              <Route path="/admin/users" element={<AdminPage><AdminUsers /></AdminPage>} />
+              <Route path="/admin/subjects" element={<AdminPage><AdminSubjects /></AdminPage>} />
+
               <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
