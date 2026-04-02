@@ -1,6 +1,6 @@
 import { useRoleCheck } from "@/hooks/useRoleCheck";
 import { useAuth } from "@/contexts/AuthContext";
-import { isConfiguredAdminEmail } from "@/lib/admin-access";
+import { isConfiguredAdminEmail } from "@/lib/admin/admin-access";
 
 export const useAdminCheck = () => {
   const { hasRole, isLoading, userId } = useRoleCheck(["admin"]);

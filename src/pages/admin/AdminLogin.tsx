@@ -9,7 +9,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useToast } from "@/hooks/use-toast";
-import { getConfiguredAdminEmails, isConfiguredAdminEmail } from "@/lib/admin-access";
+import { getConfiguredAdminEmails, isConfiguredAdminEmail } from "@/lib/admin/admin-access";
 
 const AdminLogin = () => {
   usePageMeta({

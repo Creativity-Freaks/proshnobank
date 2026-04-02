@@ -15,7 +15,7 @@ const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
 const TeacherLogin = lazy(() => import("./pages/TeacherLogin"));
-const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const Register = lazy(() => import("./pages/Register"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
@@ -36,15 +36,16 @@ const EngineeringExams = lazy(() => import("./pages/categories/EngineeringExams"
 const UniversityExams = lazy(() => import("./pages/categories/UniversityExams"));
 const JobExams = lazy(() => import("./pages/categories/JobExams"));
 const Profile = lazy(() => import("./pages/Profile"));
-
-// Admin pages
-const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
+const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
 const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
 const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
 const AdminLiveExams = lazy(() => import("./pages/admin/AdminLiveExams"));
 const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
 const AdminSubjects = lazy(() => import("./pages/admin/AdminSubjects"));
+const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
+const AdminBatches = lazy(() => import("./pages/admin/AdminBatches"));
+const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -60,12 +61,6 @@ const RouteFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background font-bengali">
     <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
   </div>
-);
-
-const AdminPage = ({ children }: { children: React.ReactNode }) => (
-  <AdminRoute>
-    <AdminLayout>{children}</AdminLayout>
-  </AdminRoute>
 );
 
 const App = () => (
@@ -131,49 +126,81 @@ const App = () => (
                 <Route
                   path="/admin"
                   element={
-                    <AdminPage>
+                    <AdminRoute>
                       <AdminOverview />
-                    </AdminPage>
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/analytics"
+                  element={
+                    <AdminRoute>
+                      <AdminAnalytics />
+                    </AdminRoute>
                   }
                 />
                 <Route
                   path="/admin/questions"
                   element={
-                    <AdminPage>
+                    <AdminRoute>
                       <AdminQuestions />
-                    </AdminPage>
+                    </AdminRoute>
                   }
                 />
                 <Route
                   path="/admin/templates"
                   element={
-                    <AdminPage>
+                    <AdminRoute>
                       <AdminTemplates />
-                    </AdminPage>
+                    </AdminRoute>
                   }
                 />
                 <Route
                   path="/admin/live-exams"
                   element={
-                    <AdminPage>
+                    <AdminRoute>
                       <AdminLiveExams />
-                    </AdminPage>
+                    </AdminRoute>
                   }
                 />
                 <Route
                   path="/admin/users"
                   element={
-                    <AdminPage>
+                    <AdminRoute>
                       <AdminUsers />
-                    </AdminPage>
+                    </AdminRoute>
                   }
                 />
                 <Route
                   path="/admin/subjects"
                   element={
-                    <AdminPage>
+                    <AdminRoute>
                       <AdminSubjects />
-                    </AdminPage>
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/categories"
+                  element={
+                    <AdminRoute>
+                      <AdminCategories />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/batches"
+                  element={
+                    <AdminRoute>
+                      <AdminBatches />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin/roles"
+                  element={
+                    <AdminRoute>
+                      <AdminRoles />
+                    </AdminRoute>
                   }
                 />
 

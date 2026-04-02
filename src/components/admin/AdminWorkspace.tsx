@@ -53,7 +53,7 @@ import {
   type SubjectRecord,
   type UserRole,
   type UserDirectoryItem,
-} from "@/lib/admin-dashboard-api";
+} from "@/lib/admin/admin-dashboard-api";
 import { SUBJECT_OPTIONS } from "@/lib/subjects";
 
 interface QuestionFormData {
@@ -268,7 +268,7 @@ function normalizeTopics(value: unknown): Record<string, string[]> {
   return normalized;
 }
 
-const AdminPanel = ({ forcedTab }: AdminPanelProps) => {
+const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
@@ -2613,4 +2613,4 @@ const AdminPanel = ({ forcedTab }: AdminPanelProps) => {
   );
 };
 
-export default AdminPanel;
+export default AdminWorkspace;
