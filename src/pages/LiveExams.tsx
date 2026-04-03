@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { examsApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
@@ -73,7 +71,6 @@ const LiveExams = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
 
       <section className="pt-24 pb-12 bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="container mx-auto px-4">
@@ -201,7 +198,6 @@ const LiveExams = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

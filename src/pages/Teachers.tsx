@@ -1,8 +1,8 @@
 import { Link } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import WhyChooseUsSection from "@/components/WhyChooseUsSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
 import { 
   GraduationCap, 
   FileText, 
@@ -13,7 +13,6 @@ import {
   PenTool,
   Upload,
   Share2,
-  Shield,
   ChevronRight,
   PlayCircle
 } from "lucide-react";
@@ -51,15 +50,6 @@ const features = [
   },
 ];
 
-const benefits = [
-  "বিনামূল্যে শুরু করুন",
-  "সীমাহীন প্রশ্ন তৈরি",
-  "স্বয়ংক্রিয় মূল্যায়ন",
-  "মোবাইল ফ্রেন্ডলি",
-  "রিয়েল-টাইম মনিটরিং",
-  "কোনো বিজ্ঞাপন নেই",
-];
-
 const stats = [
   { value: "৫,০০০+", label: "শিক্ষক" },
   { value: "২,০০,০০০+", label: "শিক্ষার্থী" },
@@ -70,8 +60,6 @@ const stats = [
 const Teachers = () => {
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
-      
       {/* Hero Section */}
       <section className="pt-24 pb-16 bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="container mx-auto px-4">
@@ -95,7 +83,7 @@ const Teachers = () => {
                     <ChevronRight className="w-5 h-5 ml-1" />
                   </Button>
                 </Link>
-                <Link to="/register?type=teacher">
+                <Link to="/teacher-register">
                   <Button variant="outline" size="lg">
                     <PlayCircle className="w-5 h-5 mr-2" />
                     শিক্ষক রেজিস্ট্রেশন করুন
@@ -191,52 +179,33 @@ const Teachers = () => {
         </div>
       </section>
 
-      {/* Benefits */}
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4">
-          <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div>
-              <h2 className="text-3xl font-bold text-foreground mb-6">
-                কেন <span className="text-primary">প্রশ্নব্যাংক</span> বেছে নেবেন?
-              </h2>
-              <div className="grid sm:grid-cols-2 gap-4">
-                {benefits.map((benefit, index) => (
-                  <div key={index} className="flex items-center gap-3">
-                    <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center">
-                      <CheckCircle className="w-4 h-4 text-green-600" />
-                    </div>
-                    <span className="text-foreground">{benefit}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+      {/* Why choose us (modern + animated) */}
+      <WhyChooseUsSection
+        eyebrow="কেন আমরা"
+        title="কেন আমাদের বেছে নেবেন?"
+        subtitle="একটা জায়গা থেকেই প্রশ্ন তৈরি, পরীক্ষা নেওয়া, শিডিউল করা এবং মূল্যায়ন—সবকিছু সহজ করুন।"
+        points={[
+          {
+            title: "প্রশ্ন তৈরি দ্রুত",
+            description: "MCQ/সংক্ষিপ্ত/রচনামূলক প্রশ্ন তৈরি করে সাথে সাথে ব্যবহার করুন।",
+          },
+          {
+            title: "প্রশ্নপত্র আপলোড",
+            description: "PDF/Word আপলোড করে প্রশ্নপত্র ম্যানেজ করতে পারবেন।",
+          },
+          {
+            title: "পরীক্ষা শিডিউল",
+            description: "সময় সেট করে অনলাইন এক্সাম চালু করুন এবং মনিটর করুন।",
+          },
+          {
+            title: "রিপোর্ট ও ইনসাইট",
+            description: "শিক্ষার্থীদের পারফরম্যান্স বুঝে দ্রুত উন্নতি করান।",
+          },
+        ]}
+      />
 
-            <div className="bg-card rounded-2xl border border-border p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <Shield className="w-8 h-8 text-primary" />
-                <div>
-                  <h3 className="font-bold text-foreground">নিরাপদ ও বিশ্বস্ত</h3>
-                  <p className="text-sm text-muted-foreground">আপনার ডাটা সম্পূর্ণ নিরাপদ</p>
-                </div>
-              </div>
-              <ul className="space-y-3 text-muted-foreground">
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  এন্ড-টু-এন্ড এনক্রিপশন
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  নিয়মিত ব্যাকআপ
-                </li>
-                <li className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-600" />
-                  GDPR কমপ্লায়েন্ট
-                </li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </section>
+      {/* Testimonials */}
+      <TestimonialsSection title="টেস্টিমোনিয়াল" subtitle="শিক্ষক ও শিক্ষার্থীদের অভিজ্ঞতা" />
 
       {/* CTA */}
       <section className="py-16">
@@ -248,7 +217,7 @@ const Teachers = () => {
             <p className="text-primary-foreground/80 mb-8 max-w-2xl mx-auto">
               কোনো ক্রেডিট কার্ড লাগবে না। এখনই রেজিস্ট্রেশন করুন এবং আপনার প্রথম পরীক্ষা তৈরি করুন।
             </p>
-            <Link to="/register?type=teacher">
+            <Link to="/teacher-register">
               <Button size="lg" className="bg-white text-primary hover:bg-white/90">
                 শিক্ষক রেজিস্ট্রেশন
                 <ChevronRight className="w-5 h-5 ml-1" />
@@ -258,7 +227,6 @@ const Teachers = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

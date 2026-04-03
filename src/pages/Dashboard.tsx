@@ -1,7 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
@@ -76,7 +74,6 @@ const Dashboard = () => {
   if (authLoading || loading) {
     return (
       <div className="min-h-screen bg-background font-bengali">
-        <Navbar />
         <div className="flex items-center justify-center pt-32">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </div>
@@ -91,7 +88,6 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
           {/* Header */}
@@ -306,7 +302,6 @@ const Dashboard = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

@@ -1,10 +1,11 @@
-import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import ExamCategories from "@/components/ExamCategories";
 import LiveExamCard from "@/components/LiveExamCard";
 import FeaturesSection from "@/components/FeaturesSection";
 import StatsSection from "@/components/StatsSection";
-import Footer from "@/components/Footer";
+import WhyChooseUsSection from "@/components/WhyChooseUsSection";
+import TestimonialsSection from "@/components/TestimonialsSection";
+import FaqSection from "@/components/FaqSection";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Index = () => {
@@ -15,13 +16,18 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
       <HeroSection />
       <ExamCategories />
       <LiveExamCard />
       <FeaturesSection />
+      <WhyChooseUsSection
+        eyebrow="কেন প্রশ্নব্যাংক"
+        title="কেন আমরা সেরা?"
+        subtitle="যে কারণে শিক্ষার্থী ও শিক্ষকরা প্রশ্নব্যাংক বেছে নেন—দ্রুত, আধুনিক এবং ফলাফল-কেন্দ্রিক অভিজ্ঞতা।"
+      />
+      <TestimonialsSection />
+      <FaqSection title="FAQ" subtitle="হোমের গুরুত্বপূর্ণ প্রশ্নগুলো" />
       <StatsSection />
-      <Footer />
     </div>
   );
 };

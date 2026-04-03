@@ -113,6 +113,28 @@ export const questionsApi = {
       offset: String(filters?.offset || 0),
     } as Record<string, string>),
 
+  /** Teacher/admin: list only my created questions (includes correct answers) */
+  mine: (filters?: {
+    subject?: string;
+    topic?: string;
+    difficulty?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) =>
+    apiCall<{ data: unknown[]; total: number; limit: number; offset: number }>(
+      "questions",
+      {
+        action: "mine",
+        subject: filters?.subject,
+        topic: filters?.topic,
+        difficulty: filters?.difficulty,
+        search: filters?.search,
+        limit: String(filters?.limit || 50),
+        offset: String(filters?.offset || 0),
+      } as Record<string, string>,
+    ),
+
   create: (question: {
     subject: string;
     topic: string;
@@ -153,6 +175,13 @@ export const examsApi = {
         count: String(config.count || 10),
       } as Record<string, string>
     ),
+
+  /** Generate exam questions from a template (uses template.question_ids when present). */
+  generateTemplate: (id: string) =>
+    apiCall<{ data: unknown[]; total_available: number; selected_count: number }>("exams", {
+      action: "generate_template",
+      id,
+    }),
 
   attempts: (filters?: { limit?: number; offset?: number }) =>
     apiCall<{ data: unknown[]; total: number }>("exams", {

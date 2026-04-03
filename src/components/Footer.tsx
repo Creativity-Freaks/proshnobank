@@ -61,7 +61,7 @@ const Footer = () => {
               <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্ন তৈরী করুন</Link></li>
               <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">OMR মূল্যায়ন</Link></li>
               <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">অনলাইন পরীক্ষা</Link></li>
-              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">টিচার প্যানেল</Link></li>
+              <li><Link to="/teacher-dashboard" className="text-background/70 hover:text-background font-bengali transition-colors">টিচার প্যানেল</Link></li>
             </ul>
           </div>
 
@@ -84,8 +84,20 @@ const Footer = () => {
           </div>
         </div>
 
-        <div className="border-t border-background/20 mt-12 pt-8 text-center text-sm text-background/50 font-bengali">
-          © ২০২৬ প্রশ্নব্যাংক। সর্বস্বত্ব সংরক্ষিত।
+        <div className="border-t border-background/20 mt-12 pt-6">
+          <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-background/70 font-bengali">
+            <Link to="/about" className="hover:text-background transition-colors">About Us</Link>
+            <span className="text-background/30">|</span>
+            <Link to="/privacy-policy" className="hover:text-background transition-colors">Privacy Policy</Link>
+            <span className="text-background/30">|</span>
+            <Link to="/refund-policy" className="hover:text-background transition-colors">Refund Policy</Link>
+            <span className="text-background/30">|</span>
+            <Link to="/terms-and-conditions" className="hover:text-background transition-colors">Terms and Conditions</Link>
+          </div>
+
+          <div className="pt-6 text-center text-sm text-background/50 font-bengali">
+            © ২০২৬ প্রশ্নব্যাংক। সর্বস্বত্ব সংরক্ষিত।
+          </div>
         </div>
       </div>
     </footer>

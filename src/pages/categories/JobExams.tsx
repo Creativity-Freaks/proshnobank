@@ -1,6 +1,4 @@
 import { useState, useMemo } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
 import { Briefcase, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
@@ -76,7 +74,6 @@ const JobExams = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
       
       <section className="pt-24 pb-12 bg-gradient-to-br from-indigo-500/10 to-violet-500/10">
         <div className="container mx-auto px-4">
@@ -181,7 +178,6 @@ const JobExams = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

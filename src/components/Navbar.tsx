@@ -50,6 +50,7 @@ const Navbar = () => {
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
     { name: "লিডারবোর্ড", href: "/leaderboard" },
+    dashboardLink,
   ];
 
   const navLinks = user ? loggedInNavLinks : publicNavLinks;
@@ -121,19 +122,12 @@ const Navbar = () => {
                         প্রোফাইল
                       </Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to={dashboardLink.href} className="flex items-center gap-2">
-                        <LayoutDashboard className="h-4 w-4" />
-                        {dashboardLink.name}
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={handleLogout} className="text-destructive focus:text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      লগআউট
-                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
+                <Button variant="ghost" size="sm" className="gap-2 font-bengali" onClick={handleLogout}>
+                  <LogOut className="h-4 w-4" />
+                  লগআউট
+                </Button>
               </>
             )}
           </div>
@@ -176,11 +170,6 @@ const Navbar = () => {
                   <Link to="/profile" className="block" onClick={() => setIsOpen(false)}>
                     <Button variant="outline" size="sm" className="w-full font-bengali">
                       প্রোফাইল
-                    </Button>
-                  </Link>
-                  <Link to={dashboardLink.href} className="block" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" size="sm" className="w-full font-bengali">
-                      {dashboardLink.name}
                     </Button>
                   </Link>
                   <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleLogout}>

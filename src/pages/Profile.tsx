@@ -1,23 +1,27 @@
-import { useState, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Mail, Lock, Save, ArrowLeft, Loader2, Camera } from "lucide-react";
+import { User, Mail, Lock, Save, ArrowLeft, Loader2, Camera, Phone, MapPin } from "lucide-react";
 
 const Profile = () => {
   const { user, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const loadedUserIdRef = useRef<string | null>(null);
 
   const [fullName, setFullName] = useState(user?.user_metadata?.full_name || "");
+  const [phoneNumber, setPhoneNumber] = useState(user?.user_metadata?.phone_number || "");
+  const [gender, setGender] = useState(user?.user_metadata?.gender || "");
+  const [address, setAddress] = useState(user?.user_metadata?.address || "");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [saving, setSaving] = useState(false);
@@ -25,10 +29,21 @@ const Profile = () => {
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState(user?.user_metadata?.avatar_url || "");
 
+  useEffect(() => {
+    if (!user) return;
+    if (loadedUserIdRef.current === user.id) return;
+
+    loadedUserIdRef.current = user.id;
+    setFullName(user.user_metadata?.full_name || "");
+    setPhoneNumber(user.user_metadata?.phone_number || "");
+    setGender(user.user_metadata?.gender || "");
+    setAddress(user.user_metadata?.address || "");
+    setAvatarUrl(user.user_metadata?.avatar_url || "");
+  }, [user]);
+
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background font-bengali">
-        <Navbar />
         <div className="flex items-center justify-center pt-32">
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
         </div>
@@ -91,7 +106,12 @@ const Profile = () => {
     try {
       setSaving(true);
       const { error } = await supabase.auth.updateUser({
-        data: { full_name: fullName },
+        data: {
+          full_name: fullName,
+          phone_number: phoneNumber,
+          gender,
+          address,
+        },
       });
       if (error) throw error;
       toast({ title: "সফল!", description: "প্রোফাইল আপডেট হয়েছে।" });
@@ -131,7 +151,6 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4 max-w-2xl">
           <Button variant="ghost" className="mb-4 gap-2" onClick={() => navigate(-1)}>
@@ -187,6 +206,42 @@ const Profile = () => {
                 </Label>
                 <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="তোমার নাম লেখো" />
               </div>
+              <div>
+                <Label className="flex items-center gap-2 mb-2">
+                  <Phone className="w-4 h-4 text-primary" /> মোবাইল নম্বর
+                </Label>
+                <Input
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="০১XXXXXXXXX"
+                  inputMode="tel"
+                />
+              </div>
+              <div>
+                <Label className="flex items-center gap-2 mb-2">
+                  <User className="w-4 h-4 text-primary" /> জেন্ডার
+                </Label>
+                <Select value={gender} onValueChange={setGender}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="নির্বাচন করো" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="male">পুরুষ</SelectItem>
+                    <SelectItem value="female">নারী</SelectItem>
+                    <SelectItem value="other">অন্যান্য</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label className="flex items-center gap-2 mb-2">
+                  <MapPin className="w-4 h-4 text-primary" /> ঠিকানা
+                </Label>
+                <Textarea
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="তোমার ঠিকানা লিখো"
+                />
+              </div>
               <Button onClick={handleUpdateProfile} disabled={saving} className="gap-2">
                 {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 আপডেট করো
@@ -216,7 +271,6 @@ const Profile = () => {
           </div>
         </div>
       </main>
-      <Footer />
     </div>
   );
 };

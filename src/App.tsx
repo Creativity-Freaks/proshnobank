@@ -1,4 +1,4 @@
-import { Suspense, lazy } from "react";
+import { lazy } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,13 +10,18 @@ import ProtectedRoute from "@/components/routing/ProtectedRoute";
 import TeacherRoute from "@/components/routing/TeacherRoute";
 import StudentRoute from "@/components/routing/StudentRoute";
 import AdminRoute from "@/components/routing/AdminRoute";
+import PublicLayout from "@/components/routing/PublicLayout";
+import AuthLayout from "@/components/routing/AuthLayout";
+import AdminShell from "@/components/routing/AdminShell";
+import TeacherShell from "@/components/teacher/TeacherShell";
 
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
-const TeacherLogin = lazy(() => import("./pages/TeacherLogin"));
+const TeacherLogin = lazy(() => import("./pages/teacher/TeacherLogin"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const Register = lazy(() => import("./pages/Register"));
+const TeacherRegister = lazy(() => import("./pages/teacher/TeacherRegister"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const QuestionBank = lazy(() => import("./pages/QuestionBank"));
@@ -28,7 +33,11 @@ const ExamDetails = lazy(() => import("./pages/ExamDetails"));
 const ExamSetup = lazy(() => import("./pages/ExamSetup"));
 const Teachers = lazy(() => import("./pages/Teachers"));
 const Dashboard = lazy(() => import("./pages/Dashboard"));
-const TeacherDashboard = lazy(() => import("./pages/TeacherDashboard"));
+const TeacherDashboard = lazy(() => import("./pages/teacher/TeacherDashboard"));
+const AboutUs = lazy(() => import("./pages/AboutUs"));
+const PrivacyPolicy = lazy(() => import("./pages/PrivacyPolicy"));
+const RefundPolicy = lazy(() => import("./pages/RefundPolicy"));
+const TermsAndConditions = lazy(() => import("./pages/TermsAndConditions"));
 const SSCExams = lazy(() => import("./pages/categories/SSCExams"));
 const HSCExams = lazy(() => import("./pages/categories/HSCExams"));
 const MedicalExams = lazy(() => import("./pages/categories/MedicalExams"));
@@ -36,16 +45,6 @@ const EngineeringExams = lazy(() => import("./pages/categories/EngineeringExams"
 const UniversityExams = lazy(() => import("./pages/categories/UniversityExams"));
 const JobExams = lazy(() => import("./pages/categories/JobExams"));
 const Profile = lazy(() => import("./pages/Profile"));
-const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
-const AdminAnalytics = lazy(() => import("./pages/admin/AdminAnalytics"));
-const AdminQuestions = lazy(() => import("./pages/admin/AdminQuestions"));
-const AdminTemplates = lazy(() => import("./pages/admin/AdminTemplates"));
-const AdminLiveExams = lazy(() => import("./pages/admin/AdminLiveExams"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminSubjects = lazy(() => import("./pages/admin/AdminSubjects"));
-const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
-const AdminBatches = lazy(() => import("./pages/admin/AdminBatches"));
-const AdminRoles = lazy(() => import("./pages/admin/AdminRoles"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,12 +56,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const RouteFallback = () => (
-  <div className="min-h-screen flex items-center justify-center bg-background font-bengali">
-    <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-  </div>
-);
-
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -71,15 +64,20 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AppErrorBoundary>
-            <Suspense fallback={<RouteFallback />}>
-              <Routes>
+            <Routes>
+              <Route element={<PublicLayout />}>
                 <Route path="/" element={<Index />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/teacher-login" element={<TeacherLogin />} />
-                <Route path="/admin/login" element={<AdminLogin />} />
-                <Route path="/register" element={<Register />} />
-                <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/question-bank" element={<QuestionBank />} />
+                <Route path="/batches" element={<ExamBatches />} />
+                <Route path="/leaderboard" element={<Leaderboard />} />
+                <Route path="/live-exams" element={<LiveExams />} />
+                <Route path="/exam/setup" element={<ExamSetup />} />
+                <Route path="/exam/:id" element={<ExamDetails />} />
+                <Route path="/teachers" element={<Teachers />} />
+                <Route path="/about" element={<AboutUs />} />
+                <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+                <Route path="/refund-policy" element={<RefundPolicy />} />
+                <Route path="/terms-and-conditions" element={<TermsAndConditions />} />
 
                 <Route
                   path="/dashboard"
@@ -97,6 +95,40 @@ const App = () => (
                     </ProtectedRoute>
                   }
                 />
+
+                <Route path="/category/ssc" element={<SSCExams />} />
+                <Route path="/category/hsc" element={<HSCExams />} />
+                <Route path="/category/medical" element={<MedicalExams />} />
+                <Route path="/category/engineering" element={<EngineeringExams />} />
+                <Route path="/category/university" element={<UniversityExams />} />
+                <Route path="/category/job" element={<JobExams />} />
+              </Route>
+
+              <Route element={<AuthLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/teacher-login" element={<TeacherLogin />} />
+                <Route path="/admin/login" element={<AdminLogin />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/teacher-register" element={<TeacherRegister />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+
+                <Route path="/exam/:id/take" element={<ExamTake />} />
+                <Route path="*" element={<NotFound />} />
+              </Route>
+
+              {/* Admin routes */}
+              <Route
+                path="/admin/*"
+                element={
+                  <AdminRoute>
+                    <AdminShell />
+                  </AdminRoute>
+                }
+              />
+
+              {/* Teacher routes (dedicated full-screen shell) */}
+              <Route element={<TeacherShell />}>
                 <Route
                   path="/teacher-dashboard"
                   element={
@@ -105,108 +137,8 @@ const App = () => (
                     </TeacherRoute>
                   }
                 />
-
-                <Route path="/question-bank" element={<QuestionBank />} />
-                <Route path="/batches" element={<ExamBatches />} />
-                <Route path="/leaderboard" element={<Leaderboard />} />
-                <Route path="/live-exams" element={<LiveExams />} />
-                <Route path="/exam/setup" element={<ExamSetup />} />
-                <Route path="/exam/:id" element={<ExamDetails />} />
-                <Route path="/exam/:id/take" element={<ExamTake />} />
-                <Route path="/teachers" element={<Teachers />} />
-
-                <Route path="/category/ssc" element={<SSCExams />} />
-                <Route path="/category/hsc" element={<HSCExams />} />
-                <Route path="/category/medical" element={<MedicalExams />} />
-                <Route path="/category/engineering" element={<EngineeringExams />} />
-                <Route path="/category/university" element={<UniversityExams />} />
-                <Route path="/category/job" element={<JobExams />} />
-
-                {/* Admin routes */}
-                <Route
-                  path="/admin"
-                  element={
-                    <AdminRoute>
-                      <AdminOverview />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/analytics"
-                  element={
-                    <AdminRoute>
-                      <AdminAnalytics />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/questions"
-                  element={
-                    <AdminRoute>
-                      <AdminQuestions />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/templates"
-                  element={
-                    <AdminRoute>
-                      <AdminTemplates />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/live-exams"
-                  element={
-                    <AdminRoute>
-                      <AdminLiveExams />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/users"
-                  element={
-                    <AdminRoute>
-                      <AdminUsers />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/subjects"
-                  element={
-                    <AdminRoute>
-                      <AdminSubjects />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/categories"
-                  element={
-                    <AdminRoute>
-                      <AdminCategories />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/batches"
-                  element={
-                    <AdminRoute>
-                      <AdminBatches />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin/roles"
-                  element={
-                    <AdminRoute>
-                      <AdminRoles />
-                    </AdminRoute>
-                  }
-                />
-
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </Suspense>
+              </Route>
+            </Routes>
           </AppErrorBoundary>
         </BrowserRouter>
       </TooltipProvider>

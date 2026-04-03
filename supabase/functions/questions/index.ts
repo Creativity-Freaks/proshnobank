@@ -91,7 +91,7 @@ async function getAuthenticatedUser(req: Request) {
   return data.user;
 }
 
-async function isAdmin(supabase: unknown, userId: string): Promise<boolean> {
+async function hasRole(supabase: unknown, userId: string, role: string): Promise<boolean> {
   const client = supabase as {
     from: (table: string) => {
       select: (columns: string) => {
@@ -108,7 +108,7 @@ async function isAdmin(supabase: unknown, userId: string): Promise<boolean> {
     .from("user_roles")
     .select("role")
     .eq("user_id", userId)
-    .eq("role", "admin")
+    .eq("role", role)
     .maybeSingle();
 
   return Boolean(data);
@@ -146,7 +146,8 @@ Deno.serve(async (req: Request) => {
   try {
     if (req.method === "GET") {
       const user = await getAuthenticatedUser(req);
-      const userIsAdmin = user ? await isAdmin(supabase, user.id) : false;
+      const userIsAdmin = user ? await hasRole(supabase, user.id, "admin") : false;
+      const userIsTeacher = user ? await hasRole(supabase, user.id, "teacher") : false;
 
       const subject = url.searchParams.get("subject");
       const topic = url.searchParams.get("topic");
@@ -155,6 +156,33 @@ Deno.serve(async (req: Request) => {
       const limit = parseIntSafe(url.searchParams.get("limit"), 50);
       const offset = parseIntSafe(url.searchParams.get("offset"), 0);
       const id = url.searchParams.get("id");
+
+      if (action === "mine") {
+        if (!user) return errorResponse(req, "Unauthorized", 401);
+        if (!userIsTeacher && !userIsAdmin) return errorResponse(req, "Forbidden", 403);
+
+        const baseSelectMine =
+          "id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at";
+
+        let query = supabase
+          .from("question_bank")
+          .select(baseSelectMine, { count: "exact" })
+          .eq("created_by", user.id)
+          .order("created_at", { ascending: false });
+
+        if (subject && subject !== "all") {
+          const candidates = subjectCandidates(subject);
+          query = candidates.length > 1 ? query.in("subject", candidates) : query.eq("subject", candidates[0]);
+        }
+
+        if (topic) query = query.eq("topic", topic);
+        if (difficulty && difficulty !== "all") query = query.eq("difficulty", difficulty);
+        if (search) query = query.ilike("question_text", `%${search}%`);
+
+        const { data, error, count } = await query.range(offset, offset + limit - 1);
+        if (error) return errorResponse(req, error.message, 500);
+        return jsonResponse(req, { data, total: count, limit, offset });
+      }
 
       const baseSelect = userIsAdmin
         ? "id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at"
@@ -213,7 +241,9 @@ Deno.serve(async (req: Request) => {
     if (req.method === "POST") {
       const user = await getAuthenticatedUser(req);
       if (!user) return errorResponse(req, "Unauthorized", 401);
-      if (!(await isAdmin(supabase, user.id))) return errorResponse(req, "Forbidden: Admin access required", 403);
+      const userIsAdmin = await hasRole(supabase, user.id, "admin");
+      const userIsTeacher = await hasRole(supabase, user.id, "teacher");
+      if (!userIsAdmin && !userIsTeacher) return errorResponse(req, "Forbidden", 403);
 
       const body = await req.json();
       const { subject, topic, difficulty, question_text, options, correct_answer, explanation } = body;
@@ -222,17 +252,20 @@ Deno.serve(async (req: Request) => {
         return errorResponse(req, "Missing required fields: subject, topic, question_text, options, correct_answer");
       }
 
+      const insertPayload = {
+        subject,
+        topic,
+        difficulty: difficulty || "medium",
+        question_text,
+        options,
+        correct_answer,
+        explanation: explanation || null,
+        ...(userIsTeacher ? { created_by: user.id } : {}),
+      };
+
       const { data, error } = await supabase
         .from("question_bank")
-        .insert({
-          subject,
-          topic,
-          difficulty: difficulty || "medium",
-          question_text,
-          options,
-          correct_answer,
-          explanation: explanation || null,
-        })
+        .insert(insertPayload)
         .select("id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at")
         .single();
 
@@ -243,16 +276,26 @@ Deno.serve(async (req: Request) => {
     if (req.method === "PUT") {
       const user = await getAuthenticatedUser(req);
       if (!user) return errorResponse(req, "Unauthorized", 401);
-      if (!(await isAdmin(supabase, user.id))) return errorResponse(req, "Forbidden", 403);
+      const userIsAdmin = await hasRole(supabase, user.id, "admin");
+      const userIsTeacher = await hasRole(supabase, user.id, "teacher");
+      if (!userIsAdmin && !userIsTeacher) return errorResponse(req, "Forbidden", 403);
 
       const body = await req.json();
       const { id, ...updateData } = body;
       if (!id) return errorResponse(req, "Missing question id");
 
-      const { data, error } = await supabase
+      const { created_by: _createdBy, ...safeUpdateData } = updateData as Record<string, unknown>;
+
+      let updateQuery = supabase
         .from("question_bank")
-        .update(updateData)
-        .eq("id", id)
+        .update(safeUpdateData)
+        .eq("id", id);
+
+      if (userIsTeacher && !userIsAdmin) {
+        updateQuery = updateQuery.eq("created_by", user.id);
+      }
+
+      const { data, error } = await updateQuery
         .select("id, subject, topic, difficulty, question_text, options, correct_answer, explanation, created_at")
         .single();
 
@@ -263,12 +306,19 @@ Deno.serve(async (req: Request) => {
     if (req.method === "DELETE") {
       const user = await getAuthenticatedUser(req);
       if (!user) return errorResponse(req, "Unauthorized", 401);
-      if (!(await isAdmin(supabase, user.id))) return errorResponse(req, "Forbidden", 403);
+      const userIsAdmin = await hasRole(supabase, user.id, "admin");
+      const userIsTeacher = await hasRole(supabase, user.id, "teacher");
+      if (!userIsAdmin && !userIsTeacher) return errorResponse(req, "Forbidden", 403);
 
       const id = url.searchParams.get("id");
       if (!id) return errorResponse(req, "Missing question id");
 
-      const { error } = await supabase.from("question_bank").delete().eq("id", id);
+      let deleteQuery = supabase.from("question_bank").delete().eq("id", id);
+      if (userIsTeacher && !userIsAdmin) {
+        deleteQuery = deleteQuery.eq("created_by", user.id);
+      }
+
+      const { error } = await deleteQuery;
       if (error) return errorResponse(req, error.message, 500);
 
       return jsonResponse(req, { success: true });

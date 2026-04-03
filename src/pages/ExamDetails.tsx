@@ -1,7 +1,5 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { examsApi } from "@/lib/api";
@@ -185,7 +183,6 @@ const ExamDetails = () => {
   if (!details) {
     return (
       <div className="min-h-screen bg-background font-bengali">
-        <Navbar />
         <main className="pt-24 pb-16">
           <div className="container mx-auto px-4">
             <div className="bg-card rounded-2xl border border-border p-8 text-center">
@@ -195,7 +192,6 @@ const ExamDetails = () => {
             </div>
           </div>
         </main>
-        <Footer />
       </div>
     );
   }
@@ -208,7 +204,6 @@ const ExamDetails = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
       
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4">
@@ -356,7 +351,6 @@ const ExamDetails = () => {
         </div>
       </main>
 
-      <Footer />
     </div>
   );
 };

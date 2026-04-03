@@ -1,8 +1,6 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -52,8 +50,6 @@ const QuestionBank = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
-
       <section className="pt-24 pb-12 bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="container mx-auto px-4">
           <div className="text-center max-w-3xl mx-auto">
@@ -162,7 +158,6 @@ const QuestionBank = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };

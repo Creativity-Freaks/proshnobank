@@ -64,6 +64,25 @@ function parseCsv(value: string | null) {
     .filter(Boolean);
 }
 
+function toStringArray(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((x): x is string => typeof x === "string" && x.trim().length > 0);
+}
+
+function toTopicsRecord(value: unknown): Record<string, string[]> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  const v = value as Record<string, unknown>;
+  const out: Record<string, string[]> = {};
+  Object.entries(v).forEach(([k, val]) => {
+    out[k] = toStringArray(val);
+  });
+  return out;
+}
+
+function uniqueStrings(values: string[]) {
+  return Array.from(new Set(values.map((v) => v.trim()).filter(Boolean)));
+}
+
 function topicIdFromName(name: string) {
   return name
     .trim()
@@ -319,6 +338,83 @@ Deno.serve(async (req: Request) => {
       const shuffled = (randomData || []).sort(() => Math.random() - 0.5);
       selected = shuffled.slice(0, Math.min(count, shuffled.length));
 
+      const totalAvailable = await fetchQuestionCount(supabase, subjects, topics, normalizedDifficulty);
+
+      return jsonResponse(req, {
+        data: selected,
+        total_available: totalAvailable,
+        selected_count: selected.length,
+      });
+    }
+
+    if (req.method === "GET" && action === "generate_template") {
+      const user = await getUser(req);
+      if (!user) return errorResponse(req, "Unauthorized", 401);
+
+      const id = url.searchParams.get("id");
+      if (!id) return errorResponse(req, "Missing template id", 400);
+
+      const { data: template, error: tErr } = await supabase
+        .from("exam_templates")
+        .select("id, question_count, difficulty, subjects, topics, question_ids")
+        .eq("id", id)
+        .single();
+
+      if (tErr || !template) return errorResponse(req, "Exam template not found", 404);
+
+      const questionIds = toStringArray((template as Record<string, unknown>).question_ids);
+      const subjects = toStringArray((template as Record<string, unknown>).subjects);
+      const topicsRecord = toTopicsRecord((template as Record<string, unknown>).topics);
+      const topics = uniqueStrings(Object.values(topicsRecord).flat());
+      const normalizedDifficulty =
+        typeof (template as Record<string, unknown>).difficulty === "string" &&
+        (template as Record<string, unknown>).difficulty !== "all"
+          ? ((template as Record<string, unknown>).difficulty as string)
+          : null;
+
+      const desiredCountRaw = typeof (template as Record<string, unknown>).question_count === "number"
+        ? ((template as Record<string, unknown>).question_count as number)
+        : 10;
+      const desiredCount = clamp(Math.trunc(desiredCountRaw), 1, 200);
+
+      if (questionIds.length > 0) {
+        const uniqueIds = uniqueStrings(questionIds);
+        const cappedIds = uniqueIds.slice(0, desiredCount);
+
+        const { data: rows, error: qErr } = await supabase
+          .from("question_bank")
+          .select("id, subject, topic, difficulty, question_text, options")
+          .in("id", cappedIds);
+
+        if (qErr) return errorResponse(req, qErr.message, 500);
+
+        const byId = new Map<string, unknown>();
+        (rows || []).forEach((r: { id: string }) => byId.set(r.id, r));
+        const ordered = cappedIds
+          .map((qid) => byId.get(qid))
+          .filter((x): x is Record<string, unknown> => Boolean(x));
+
+        return jsonResponse(req, {
+          data: ordered,
+          total_available: ordered.length,
+          selected_count: ordered.length,
+        });
+      }
+
+      // Fallback: generate randomly using template config
+      let randomQuery = supabase
+        .from("question_bank")
+        .select("id, subject, topic, difficulty, question_text, options");
+
+      if (subjects.length > 0) randomQuery = randomQuery.in("subject", subjects);
+      if (topics.length > 0) randomQuery = randomQuery.in("topic", topics);
+      if (normalizedDifficulty) randomQuery = randomQuery.eq("difficulty", normalizedDifficulty);
+
+      const { data: randomData, error: randomError } = await randomQuery;
+      if (randomError) return errorResponse(req, randomError.message, 500);
+
+      const shuffled = (randomData || []).sort(() => Math.random() - 0.5);
+      const selected = shuffled.slice(0, Math.min(desiredCount, shuffled.length));
       const totalAvailable = await fetchQuestionCount(supabase, subjects, topics, normalizedDifficulty);
 
       return jsonResponse(req, {

@@ -87,17 +87,21 @@ const ExamTake = () => {
   const loadQuestions = useCallback(async () => {
     try {
       setLoadingQuestions(true);
-      const subjects = config.subjects.length > 0 ? config.subjects.join(",") : undefined;
-      const selectedTopics = uniqueStrings(
-        Object.values(config.topics || {}).flatMap((arr) => (Array.isArray(arr) ? arr : [])),
-      );
-      const topics = selectedTopics.length > 0 ? selectedTopics.join(",") : undefined;
-      const res = await examsApi.generate({
-        subjects,
-        topics,
-        difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
-        count: config.questionCount,
-      });
+      const shouldUseTemplate = Boolean(id && id !== "custom");
+
+      const res = shouldUseTemplate
+        ? await examsApi.generateTemplate(id as string)
+        : await examsApi.generate({
+            subjects: config.subjects.length > 0 ? config.subjects.join(",") : undefined,
+            topics: (() => {
+              const selectedTopics = uniqueStrings(
+                Object.values(config.topics || {}).flatMap((arr) => (Array.isArray(arr) ? arr : [])),
+              );
+              return selectedTopics.length > 0 ? selectedTopics.join(",") : undefined;
+            })(),
+            difficulty: config.difficulty !== "all" ? config.difficulty : undefined,
+            count: config.questionCount,
+          });
       const data = Array.isArray(res.data) ? (res.data as unknown[]) : [];
       setQuestions(
         data
@@ -116,7 +120,7 @@ const ExamTake = () => {
     } finally {
       setLoadingQuestions(false);
     }
-  }, [config.difficulty, config.questionCount, config.subjects, config.topics]);
+  }, [config.difficulty, config.questionCount, config.subjects, config.topics, id]);
 
   // Load questions from API
   useEffect(() => {

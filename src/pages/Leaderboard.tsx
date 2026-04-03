@@ -1,6 +1,4 @@
 import { useState, useEffect, useCallback } from "react";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { leaderboardApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -69,8 +67,6 @@ const Leaderboard = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <Navbar />
-
       <section className="pt-24 pb-12 bg-gradient-to-br from-primary/10 via-background to-accent/10">
         <div className="container mx-auto px-4 text-center max-w-3xl">
           <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full mb-6">
@@ -167,7 +163,6 @@ const Leaderboard = () => {
         </div>
       </section>
 
-      <Footer />
     </div>
   );
 };
