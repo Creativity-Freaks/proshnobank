@@ -141,6 +141,7 @@ export type Database = {
           id: string
           is_active: boolean
           name: string
+          parent_id: string | null
           slug: string
           sort_order: number
         }
@@ -150,6 +151,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           name: string
+          parent_id?: string | null
           slug: string
           sort_order?: number
         }
@@ -159,10 +161,19 @@ export type Database = {
           id?: string
           is_active?: boolean
           name?: string
+          parent_id?: string | null
           slug?: string
           sort_order?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "exam_categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "exam_categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       subjects: {
         Row: {
@@ -213,6 +224,7 @@ export type Database = {
           seats: number
           start_date: string | null
           status: string
+          subcategory_id: string | null
           template_id: string | null
           title: string
         }
@@ -226,6 +238,7 @@ export type Database = {
           seats?: number
           start_date?: string | null
           status?: string
+          subcategory_id?: string | null
           template_id?: string | null
           title: string
         }
@@ -239,6 +252,7 @@ export type Database = {
           seats?: number
           start_date?: string | null
           status?: string
+          subcategory_id?: string | null
           template_id?: string | null
           title?: string
         }
@@ -246,6 +260,13 @@ export type Database = {
           {
             foreignKeyName: "exam_batches_category_id_fkey"
             columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "exam_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exam_batches_subcategory_id_fkey"
+            columns: ["subcategory_id"]
             isOneToOne: false
             referencedRelation: "exam_categories"
             referencedColumns: ["id"]

@@ -25,7 +25,13 @@ const TeacherRegister = lazy(() => import("./pages/teacher/TeacherRegister"));
 const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
 const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const QuestionBank = lazy(() => import("./pages/QuestionBank"));
-const ExamBatches = lazy(() => import("./pages/ExamBatches"));
+const QuestionBankPdfCategory = lazy(() => import("./pages/QuestionBankPdfCategory"));
+const ExamBatches = lazy(() => import("./pages/Exambatch/ExamBatches"));
+const SSCExamBatches = lazy(() => import("./pages/Exambatch/SSCExamBatches"));
+const HSCExamBatches = lazy(() => import("./pages/Exambatch/HSCExamBatches"));
+const AdmissionExamBatches = lazy(() => import("./pages/Exambatch/AdmissionExamBatches"));
+const ChakriExamBatches = lazy(() => import("./pages/Exambatch/ChakriExamBatches"));
+const ExamBatchesCategory = lazy(() => import("./pages/Exambatch/ExamBatchesCategory"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const LiveExams = lazy(() => import("./pages/LiveExams"));
 const ExamTake = lazy(() => import("./pages/ExamTake"));
@@ -68,7 +74,13 @@ const App = () => (
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/question-bank" element={<QuestionBank />} />
+                <Route path="/question-bank/pdfs/:category" element={<QuestionBankPdfCategory />} />
                 <Route path="/batches" element={<ExamBatches />} />
+                <Route path="/batches/ssc" element={<SSCExamBatches />} />
+                <Route path="/batches/hsc" element={<HSCExamBatches />} />
+                <Route path="/batches/admission" element={<AdmissionExamBatches />} />
+                <Route path="/batches/chakri" element={<ChakriExamBatches />} />
+                <Route path="/batches/:slug" element={<ExamBatchesCategory />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/live-exams" element={<LiveExams />} />
                 <Route path="/exam/setup" element={<ExamSetup />} />

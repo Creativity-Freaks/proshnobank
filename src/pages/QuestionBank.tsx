@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { questionsApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { SUBJECT_OPTIONS, getSubjectLabel, normalizeSubjectKey } from "@/lib/subjects";
-import { Search, BookOpen, ChevronRight, GraduationCap, Loader2 } from "lucide-react";
+import { Search, BookOpen, ChevronRight, GraduationCap, Briefcase, FileText, Loader2 } from "lucide-react";
 
 const subjectFilters = [{ id: "all", name: "সকল বিষয়" }, ...SUBJECT_OPTIONS.map((x) => ({ id: x.key, name: x.label }))];
 
@@ -17,6 +17,45 @@ const difficultyColor: Record<string, string> = {
   medium: "bg-yellow-100 text-yellow-700",
   hard: "bg-red-100 text-red-700",
 };
+
+type ProshnobankPdfCategory = "ssc" | "hsc" | "admission" | "chakri";
+
+const pdfCategories: Array<{
+  id: ProshnobankPdfCategory;
+  title: string;
+  description: string;
+  icon: ComponentType<{ className?: string }>;
+  gradient: string;
+}> = [
+  {
+    id: "ssc",
+    title: "SSC",
+    description: "এসএসসি প্রশ্নপত্র PDF",
+    icon: GraduationCap,
+    gradient: "from-primary/20 to-accent/10",
+  },
+  {
+    id: "hsc",
+    title: "HSC",
+    description: "এইচএসসি প্রশ্নপত্র PDF",
+    icon: GraduationCap,
+    gradient: "from-accent/20 to-primary/10",
+  },
+  {
+    id: "admission",
+    title: "ভর্তি",
+    description: "ভর্তি প্রস্তুতির PDF",
+    icon: FileText,
+    gradient: "from-primary/10 to-accent/20",
+  },
+  {
+    id: "chakri",
+    title: "চাকরি",
+    description: "চাকরি প্রস্তুতির PDF",
+    icon: Briefcase,
+    gradient: "from-accent/10 to-primary/20",
+  },
+];
 
 function clampInt(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, Math.trunc(value)));
@@ -69,6 +108,45 @@ const QuestionBank = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="py-12">
+        <div className="container mx-auto px-4">
+          <div className="text-center max-w-3xl mx-auto mb-8">
+            <h2 className="text-2xl md:text-3xl font-bold text-foreground mb-2">
+              <span className="text-primary">PDF</span> প্রশ্নব্যাংক
+            </h2>
+            <p className="text-muted-foreground">SSC, HSC, ভর্তি এবং চাকরির প্রশ্নপত্র PDF দেখো</p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {pdfCategories.map((c) => {
+              const Icon = c.icon;
+              return (
+                <Link
+                  key={c.id}
+                  to={`/question-bank/pdfs/${c.id}`}
+                  className="group relative overflow-hidden rounded-2xl border border-border bg-card p-5 text-left transition-all hover:-translate-y-0.5 hover:shadow-card"
+                >
+                  <div className={`pointer-events-none absolute inset-0 bg-gradient-to-br ${c.gradient}`} />
+                  <div className="pointer-events-none absolute -right-10 -top-10 h-24 w-24 rounded-full bg-primary/10 blur-2xl" />
+                  <div className="pointer-events-none absolute -left-10 -bottom-10 h-24 w-24 rounded-full bg-accent/10 blur-2xl" />
+
+                  <div className="flex items-start gap-4">
+                    <div className="relative h-12 w-12 rounded-2xl bg-background/60 border border-border/60 flex items-center justify-center backdrop-blur">
+                      <Icon className="h-6 w-6 text-primary" />
+                    </div>
+                    <div className="relative min-w-0">
+                      <div className="text-base font-semibold text-foreground">{c.title}</div>
+                      <div className="mt-1 text-sm text-muted-foreground">{c.description}</div>
+                      <div className="mt-3 text-sm font-medium text-primary">দেখুন →</div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </section>

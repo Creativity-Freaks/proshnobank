@@ -6,15 +6,15 @@ const Footer = () => {
   return (
     <footer className="bg-foreground text-background py-16">
       <div className="container mx-auto px-4">
-        <div className="grid md:grid-cols-4 gap-12">
+        <div className="grid md:grid-cols-4 gap-12 text-center md:text-left">
           <div className="space-y-4">
-            <Link to="/" className="flex items-center gap-2">
+            <Link to="/" className="flex items-center justify-center md:justify-start gap-2">
               <BrandLogo size="md" textClassName="text-xl text-background" />
             </Link>
             <p className="text-background/70 font-bengali text-sm">
               বাংলাদেশের সেরা অনলাইন পরীক্ষা প্ল্যাটফর্ম। তোমার স্বপ্নের লক্ষ্যে পৌঁছে দিতে আমরা আছি।
             </p>
-            <div className="flex gap-4">
+            <div className="flex justify-center md:justify-start gap-4">
               <a
                 href="https://www.facebook.com/aacwith10ms"
                 target="_blank"
@@ -68,13 +68,13 @@ const Footer = () => {
           <div>
             <h4 className="font-bold font-bengali text-lg mb-4">যোগাযোগ</h4>
             <ul className="space-y-3 text-sm">
-              <li className="flex items-center gap-2 text-background/70">
+              <li className="flex items-center justify-center md:justify-start gap-2 text-background/70">
                 <Mail className="w-4 h-4" />
                 <a href="mailto:info.proshnobank@gmail.com" className="hover:text-background transition-colors">
                   info.proshnobank@gmail.com
                 </a>
               </li>
-              <li className="flex items-center gap-2 text-background/70">
+              <li className="flex items-center justify-center md:justify-start gap-2 text-background/70">
                 <Phone className="w-4 h-4" />
                 <a href="tel:01642948324" className="hover:text-background transition-colors">
                   01642948324

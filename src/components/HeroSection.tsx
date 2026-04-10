@@ -4,7 +4,7 @@ import { Play, Award, Users, BookOpen } from "lucide-react";
 
 const HeroSection = () => {
   return (
-    <section className="relative min-h-screen bg-gradient-hero overflow-hidden pt-16">
+    <section className="relative min-h-[100dvh] bg-gradient-hero overflow-hidden pt-16">
       {/* Background Pattern */}
       <div className="absolute inset-0 opacity-10">
         <div className="absolute top-20 left-10 w-72 h-72 bg-primary rounded-full blur-3xl" />
@@ -14,8 +14,8 @@ const HeroSection = () => {
       <div className="container mx-auto px-4 py-20 relative z-10">
         <div className="grid lg:grid-cols-2 gap-12 items-center min-h-[calc(100vh-12rem)]">
           {/* Left Content */}
-          <div className="space-y-8 animate-fade-in">
-            <div className="inline-flex items-center gap-2 bg-primary/20 text-primary-foreground px-4 py-2 rounded-full text-sm font-bengali">
+          <div className="space-y-8 animate-fade-in text-center lg:text-left flex flex-col items-center lg:items-start">
+            <div className="inline-flex items-center gap-2 bg-primary/20 text-primary-foreground px-4 py-2 rounded-full text-sm font-bengali mx-auto lg:mx-0">
               <Award className="w-4 h-4" />
               বাংলাদেশের #১ অনলাইন পরীক্ষা প্ল্যাটফর্ম
             </div>
@@ -27,12 +27,12 @@ const HeroSection = () => {
               পৌঁছে দিতে আমরা আছি
             </h1>
 
-            <p className="text-lg text-primary-foreground/80 font-bengali max-w-xl">
+            <p className="text-lg text-primary-foreground/80 font-bengali max-w-xl mx-auto lg:mx-0">
               SSC, HSC, মেডিকেল, ইঞ্জিনিয়ারিং, বিশ্ববিদ্যালয় ভর্তি এবং চাকরির পরীক্ষার
               জন্য সম্পূর্ণ প্রস্তুতি নাও। লাইভ এক্সাম, প্রশ্নব্যাংক, লিডারবোর্ড সব এক জায়গায়।
             </p>
 
-            <div className="flex flex-wrap gap-4">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-4">
               <Link to="/register">
                 <Button variant="accent" size="xl">
                   <Play className="w-5 h-5" />
@@ -47,7 +47,7 @@ const HeroSection = () => {
             </div>
 
             {/* Stats */}
-            <div className="flex flex-wrap gap-8 pt-8 border-t border-primary-foreground/20">
+            <div className="flex flex-wrap justify-center lg:justify-start gap-8 pt-8 border-t border-primary-foreground/20 w-full">
               <div className="text-center">
                 <div className="text-3xl font-bold text-primary-foreground">৫০০+</div>
                 <div className="text-sm text-primary-foreground/70 font-bengali">এক্সাম ব্যাচ</div>

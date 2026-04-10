@@ -608,7 +608,7 @@ export default function TeacherDashboard() {
   );
 
   return (
-    <div className="h-screen w-full font-bengali">
+    <div className="min-h-[100dvh] w-full font-bengali">
       <div className="flex h-full w-full">
         <TeacherSidebar
           activeView={activeView}
@@ -669,7 +669,7 @@ export default function TeacherDashboard() {
           </header>
 
           <div className="flex-1 overflow-y-auto bg-muted/30">
-            <div className="w-full p-4 md:p-6">
+            <div className="w-full p-4 md:p-6 max-w-6xl mx-auto">
               {/* Profile banner */}
               <div className="rounded-2xl border border-border bg-gradient-to-r from-primary to-primary/90 text-primary-foreground p-6 md:p-8">
                 <h1 className="text-2xl md:text-3xl font-bold tracking-tight">{displayName}</h1>
