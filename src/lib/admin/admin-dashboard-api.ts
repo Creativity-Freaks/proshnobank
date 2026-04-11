@@ -54,8 +54,11 @@ export type SubjectRecord = Tables<"subjects"> & {
 
 export type BatchStatus = "draft" | "published" | "archived";
 
+export type AdminAccessRole = Enums<"app_role">;
+
 export type ExamBatch = Tables<"exam_batches"> & {
   category_name: string | null;
+  subcategory_name: string | null;
   template_title: string | null;
 };
 
@@ -357,6 +360,30 @@ function getPrimaryRole(roles: Enums<"app_role">[]): Enums<"app_role"> {
 }
 
 export const adminDashboardApi = {
+  settings: {
+    async getAdminAccessRole(): Promise<AdminAccessRole> {
+      const { data, error } = await supabase
+        .from("app_settings")
+        .select("key, value")
+        .eq("key", "admin_access_role")
+        .maybeSingle();
+
+      if (error) throw new Error(error.message);
+      const value = (data?.value || {}) as Record<string, unknown>;
+      const role = value.role;
+      if (role === "admin" || role === "moderator" || role === "teacher" || role === "user") return role;
+      return "admin";
+    },
+    async setAdminAccessRole(role: AdminAccessRole) {
+      const payload: TablesInsert<"app_settings"> = {
+        key: "admin_access_role",
+        value: { role } as unknown as Json,
+      };
+
+      const { error } = await supabase.from("app_settings").upsert(payload, { onConflict: "key" });
+      if (error) throw new Error(error.message);
+    },
+  },
   questions: {
     async list(filters?: QuestionFilters) {
       const response = await questionsApi.list(filters);
@@ -610,7 +637,7 @@ export const adminDashboardApi = {
       const { data, error } = await supabase
         .from("exam_batches")
         .select(
-          "id, title, category_id, template_id, description, price, duration_days, seats, status, start_date, created_at, exam_categories(name), exam_templates(title)",
+          "id, title, category_id, subcategory_id, template_id, description, price, duration_days, seats, status, start_date, created_at, category:exam_categories!exam_batches_category_id_fkey(name), subcategory:exam_categories!exam_batches_subcategory_id_fkey(name), exam_templates(title)",
         )
         .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
@@ -618,11 +645,13 @@ export const adminDashboardApi = {
       const rows = Array.isArray(data) ? data : [];
       return rows.map((row) => {
         const record = row as Record<string, unknown>;
-        const category = record.exam_categories as Record<string, unknown> | null;
+        const category = record.category as Record<string, unknown> | null;
+        const subcategory = record.subcategory as Record<string, unknown> | null;
         const template = record.exam_templates as Record<string, unknown> | null;
         return {
           ...(row as Tables<"exam_batches">),
           category_name: category && typeof category.name === "string" ? category.name : null,
+          subcategory_name: subcategory && typeof subcategory.name === "string" ? subcategory.name : null,
           template_title: template && typeof template.title === "string" ? template.title : null,
         } as ExamBatch;
       });

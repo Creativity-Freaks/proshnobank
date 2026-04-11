@@ -1,6 +1,11 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const defaultDevOrigins = ["http://localhost:5173", "http://127.0.0.1:5173"];
+const defaultDevOrigins = [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173",
+  "http://localhost:8080",
+  "http://127.0.0.1:8080",
+];
 const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
   .split(",")
   .map((o: string) => o.trim())

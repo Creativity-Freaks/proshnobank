@@ -35,6 +35,7 @@ import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useToast } from "@/hooks/use-toast";
 import {
   adminDashboardApi,
+  type AdminAccessRole,
   type AdminAnalytics,
   type AdminOverviewStats,
   type BatchStatus,
@@ -131,7 +132,7 @@ type PanelTab =
   | "subjects"
   | "batches"
   | "users"
-  | "roles";
+  | "settings";
 
 type AdminPanelProps = {
   forcedTab?: PanelTab;
@@ -147,7 +148,7 @@ const TAB_LABELS: Record<PanelTab, string> = {
   subjects: "Subjects",
   batches: "Exam Batches",
   users: "Users",
-  roles: "Access Control",
+  settings: "Settings",
 };
 
 const TAB_ROUTES: Record<PanelTab, string> = {
@@ -160,7 +161,7 @@ const TAB_ROUTES: Record<PanelTab, string> = {
   subjects: "/admin/subjects",
   batches: "/admin/batches",
   users: "/admin/users",
-  roles: "/admin/roles",
+  settings: "/admin/settings",
 };
 
 function tabFromPathname(pathname: string): PanelTab {
@@ -174,7 +175,8 @@ function tabFromPathname(pathname: string): PanelTab {
   if (normalized === "/admin/subjects") return "subjects";
   if (normalized === "/admin/batches") return "batches";
   if (normalized === "/admin/users") return "users";
-  if (normalized === "/admin/roles") return "roles";
+  if (normalized === "/admin/settings") return "settings";
+  if (normalized === "/admin/roles") return "settings";
   return "overview";
 }
 
@@ -240,6 +242,8 @@ const defaultBatchForm: BatchFormState = {
   start_date: "",
 };
 
+const DEFAULT_ADMIN_ACCESS_ROLE: AdminAccessRole = "admin";
+
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -290,6 +294,10 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
   const [batches, setBatches] = useState<ExamBatch[]>([]);
   const [users, setUsers] = useState<UserDirectoryItem[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
+
+  const [adminAccessRole, setAdminAccessRole] = useState<AdminAccessRole>(DEFAULT_ADMIN_ACCESS_ROLE);
+  const [isAdminAccessRoleLoading, setIsAdminAccessRoleLoading] = useState(false);
+  const [isAdminAccessRoleSaving, setIsAdminAccessRoleSaving] = useState(false);
 
   const [isQuestionLoading, setIsQuestionLoading] = useState(false);
   const [isSubjectInsightLoading, setIsSubjectInsightLoading] = useState(false);
@@ -423,6 +431,20 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     }
   }, [toast]);
 
+  const fetchAdminAccessRole = useCallback(async () => {
+    setIsAdminAccessRoleLoading(true);
+    try {
+      const role = await adminDashboardApi.settings.getAdminAccessRole();
+      setAdminAccessRole(role);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Settings লোড করা যায়নি";
+      toast({ title: "Error", description: message, variant: "destructive" });
+      setAdminAccessRole(DEFAULT_ADMIN_ACCESS_ROLE);
+    } finally {
+      setIsAdminAccessRoleLoading(false);
+    }
+  }, [toast]);
+
   const fetchAnalytics = useCallback(async () => {
     setIsOverviewLoading(true);
     try {
@@ -543,6 +565,13 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
       fetchSubjectInsights();
     }
   }, [activeTab, fetchSubjectInsights, isAdmin]);
+
+  useEffect(() => {
+    if (!isAdmin) return;
+    if (activeTab === "settings") {
+      fetchAdminAccessRole();
+    }
+  }, [activeTab, fetchAdminAccessRole, isAdmin]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -826,10 +855,32 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     }
   };
 
+  const handleAdminAccessRoleChange = async (value: string) => {
+    const normalized = value === "admin" || value === "moderator" || value === "teacher" || value === "user" ? value : null;
+    if (!normalized) return;
+
+    const previousRole = adminAccessRole;
+    const nextRole = normalized as AdminAccessRole;
+
+    setAdminAccessRole(nextRole);
+    setIsAdminAccessRoleSaving(true);
+
+    try {
+      await adminDashboardApi.settings.setAdminAccessRole(nextRole);
+      toast({ title: "সফল", description: `Admin access role set to: ${nextRole}` });
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "Settings সেভ করা যায়নি";
+      toast({ title: "Error", description: message, variant: "destructive" });
+      setAdminAccessRole(previousRole);
+    } finally {
+      setIsAdminAccessRoleSaving(false);
+    }
+  };
+
   const handleRoleEdit = (role: UserRole) => {
     setEditingRoleId(role.id);
     setRoleForm({ user_id: role.user_id, role: role.role });
-    navigate(TAB_ROUTES.roles);
+    navigate(TAB_ROUTES.settings);
   };
 
   const handleRoleDelete = async (id: string) => {
@@ -1252,28 +1303,15 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
                 </Button>
                 <Button
                   className={`w-full justify-start hover:bg-background/10 hover:text-background ${
-                    activeTab === "roles" ? "bg-background/10 text-background" : "text-background/80"
+                    activeTab === "settings" ? "bg-background/10 text-background" : "text-background/80"
                   }`}
                   variant="ghost"
-                  onClick={() => navigate(TAB_ROUTES.roles)}
+                  onClick={() => navigate(TAB_ROUTES.settings)}
                 >
-                  <Users className="mr-2 h-4 w-4" />
-                  {TAB_LABELS.roles}
+                  <Shield className="mr-2 h-4 w-4" />
+                  {TAB_LABELS.settings}
                 </Button>
               </div>
-            </div>
-          </div>
-
-          <div className="mt-4 rounded-lg border border-background/10 bg-background/5 p-3 text-xs text-background/80">
-            <p className="mb-2 text-[11px] font-medium uppercase tracking-widest text-background/50">System Snapshot</p>
-            <div className="space-y-1">
-              <p>Questions: {overview?.totalQuestions ?? 0}</p>
-              <p>Categories: {overview?.totalCategories ?? 0}</p>
-              <p>Subjects: {overview?.totalSubjects ?? 0}</p>
-              <p>Templates: {overview?.totalTemplates ?? 0}</p>
-              <p>Batches: {overview?.totalBatches ?? 0}</p>
-              <p>Live Events: {overview?.totalLiveEvents ?? 0}</p>
-              <p>Users: {overview?.totalUsers ?? 0}</p>
             </div>
           </div>
         </div>
@@ -2494,56 +2532,91 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
               </Card>
             )}
 
-            {activeTab === "roles" && (
+            {activeTab === "settings" && (
               <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{editingRoleId ? "Edit Assignment" : "Assign Role"}</CardTitle>
-                    <CardDescription>Admin, teacher, moderator and user access mapping</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <form className="space-y-3" onSubmit={handleRoleSubmit}>
+                <div className="space-y-4">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Admin Dashboard Access</CardTitle>
+                      <CardDescription>কোন role থেকে Admin Dashboard এ ঢুকতে পারবে</CardDescription>
+                    </CardHeader>
+                    <CardContent>
                       <div className="space-y-1">
-                        <Label>User ID (UUID)</Label>
-                        <Input
-                          value={roleForm.user_id}
-                          onChange={(event) => setRoleForm((prev) => ({ ...prev, user_id: event.target.value }))}
-                          required
-                        />
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label>Role</Label>
+                        <Label>Access Role</Label>
                         <Select
-                          value={roleForm.role}
-                          onValueChange={(value: RoleInput["role"]) => setRoleForm((prev) => ({ ...prev, role: value }))}
+                          value={adminAccessRole}
+                          onValueChange={handleAdminAccessRoleChange}
+                          disabled={isAdminAccessRoleLoading || isAdminAccessRoleSaving}
                         >
                           <SelectTrigger>
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="admin">admin</SelectItem>
-                            <SelectItem value="teacher">teacher</SelectItem>
                             <SelectItem value="moderator">moderator</SelectItem>
+                            <SelectItem value="teacher">teacher</SelectItem>
                             <SelectItem value="user">user</SelectItem>
                           </SelectContent>
                         </Select>
-                      </div>
-
-                      <div className="flex gap-2 pt-1">
-                        <Button type="submit" disabled={isRoleSubmitting}>
-                          {isRoleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                          {editingRoleId ? "Update Role" : "Assign Role"}
-                        </Button>
-                        {editingRoleId ? (
-                          <Button type="button" variant="secondary" onClick={resetRoleEditor}>
-                            Cancel Edit
-                          </Button>
+                        {isAdminAccessRoleLoading || isAdminAccessRoleSaving ? (
+                          <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            {isAdminAccessRoleLoading ? "Loading..." : "Saving..."}
+                          </div>
                         ) : null}
                       </div>
-                    </form>
-                  </CardContent>
-                </Card>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>{editingRoleId ? "Edit Assignment" : "Assign Role"}</CardTitle>
+                      <CardDescription>Admin, teacher, moderator and user access mapping</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <form className="space-y-3" onSubmit={handleRoleSubmit}>
+                        <div className="space-y-1">
+                          <Label>User ID (UUID)</Label>
+                          <Input
+                            value={roleForm.user_id}
+                            onChange={(event) => setRoleForm((prev) => ({ ...prev, user_id: event.target.value }))}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <Label>Role</Label>
+                          <Select
+                            value={roleForm.role}
+                            onValueChange={(value: RoleInput["role"]) => setRoleForm((prev) => ({ ...prev, role: value }))}
+                          >
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="admin">admin</SelectItem>
+                              <SelectItem value="teacher">teacher</SelectItem>
+                              <SelectItem value="moderator">moderator</SelectItem>
+                              <SelectItem value="user">user</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex gap-2 pt-1">
+                          <Button type="submit" disabled={isRoleSubmitting}>
+                            {isRoleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                            {editingRoleId ? "Update Role" : "Assign Role"}
+                          </Button>
+                          {editingRoleId ? (
+                            <Button type="button" variant="secondary" onClick={resetRoleEditor}>
+                              Cancel Edit
+                            </Button>
+                          ) : null}
+                        </div>
+                      </form>
+                    </CardContent>
+                  </Card>
+                </div>
 
                 <Card>
                   <CardHeader>

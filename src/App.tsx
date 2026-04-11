@@ -32,6 +32,7 @@ const HSCExamBatches = lazy(() => import("./pages/Exambatch/HSCExamBatches"));
 const AdmissionExamBatches = lazy(() => import("./pages/Exambatch/AdmissionExamBatches"));
 const ChakriExamBatches = lazy(() => import("./pages/Exambatch/ChakriExamBatches"));
 const ExamBatchesCategory = lazy(() => import("./pages/Exambatch/ExamBatchesCategory"));
+const ExamBatchDetails = lazy(() => import("./pages/Exambatch/ExamBatchDetails"));
 const Leaderboard = lazy(() => import("./pages/Leaderboard"));
 const LiveExams = lazy(() => import("./pages/LiveExams"));
 const ExamTake = lazy(() => import("./pages/ExamTake"));
@@ -80,6 +81,7 @@ const App = () => (
                 <Route path="/batches/hsc" element={<HSCExamBatches />} />
                 <Route path="/batches/admission" element={<AdmissionExamBatches />} />
                 <Route path="/batches/chakri" element={<ChakriExamBatches />} />
+                <Route path="/batches/:slug/:batchId" element={<ExamBatchDetails />} />
                 <Route path="/batches/:slug" element={<ExamBatchesCategory />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/live-exams" element={<LiveExams />} />

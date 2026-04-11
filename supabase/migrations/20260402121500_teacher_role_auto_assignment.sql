@@ -14,8 +14,7 @@ BEGIN
   -- Remove email confirmation requirement by auto-confirming newly created users.
   UPDATE auth.users
   SET
-    email_confirmed_at = COALESCE(email_confirmed_at, now()),
-    confirmed_at = COALESCE(confirmed_at, now())
+    email_confirmed_at = COALESCE(email_confirmed_at, now())
   WHERE id = new.id;
 
   requested_role := lower(coalesce(new.raw_user_meta_data ->> 'registration_type', 'student'));
@@ -60,6 +59,5 @@ WHERE NOT EXISTS (
 -- Also confirm existing users who were created before this trigger.
 UPDATE auth.users
 SET
-  email_confirmed_at = COALESCE(email_confirmed_at, now()),
-  confirmed_at = COALESCE(confirmed_at, now())
+  email_confirmed_at = COALESCE(email_confirmed_at, now())
 WHERE email_confirmed_at IS NULL;

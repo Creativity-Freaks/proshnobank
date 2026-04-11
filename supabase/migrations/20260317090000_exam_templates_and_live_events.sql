@@ -40,12 +40,14 @@ ALTER TABLE public.exam_templates ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.live_exam_events ENABLE ROW LEVEL SECURITY;
 
 -- Public read access (safe display data)
+DROP POLICY IF EXISTS "Anyone can view exam templates" ON public.exam_templates;
 CREATE POLICY "Anyone can view exam templates"
 ON public.exam_templates
 FOR SELECT
 TO anon, authenticated
 USING (true);
 
+DROP POLICY IF EXISTS "Anyone can view live exam events" ON public.live_exam_events;
 CREATE POLICY "Anyone can view live exam events"
 ON public.live_exam_events
 FOR SELECT
@@ -53,36 +55,42 @@ TO anon, authenticated
 USING (true);
 
 -- Admin manage (optional; relies on existing has_role)
+DROP POLICY IF EXISTS "Admins can insert exam templates" ON public.exam_templates;
 CREATE POLICY "Admins can insert exam templates"
 ON public.exam_templates
 FOR INSERT
 TO authenticated
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can update exam templates" ON public.exam_templates;
 CREATE POLICY "Admins can update exam templates"
 ON public.exam_templates
 FOR UPDATE
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can delete exam templates" ON public.exam_templates;
 CREATE POLICY "Admins can delete exam templates"
 ON public.exam_templates
 FOR DELETE
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can insert live exam events" ON public.live_exam_events;
 CREATE POLICY "Admins can insert live exam events"
 ON public.live_exam_events
 FOR INSERT
 TO authenticated
 WITH CHECK (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can update live exam events" ON public.live_exam_events;
 CREATE POLICY "Admins can update live exam events"
 ON public.live_exam_events
 FOR UPDATE
 TO authenticated
 USING (public.has_role(auth.uid(), 'admin'));
 
+DROP POLICY IF EXISTS "Admins can delete live exam events" ON public.live_exam_events;
 CREATE POLICY "Admins can delete live exam events"
 ON public.live_exam_events
 FOR DELETE

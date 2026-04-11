@@ -453,15 +453,17 @@ const fallbackBatchesBySlug: Record<string, Array<Pick<ExamBatch, "id" | "title"
 
 type ExamBatchesCategoryProps = {
   forcedSlug?: string;
+  pathSlug?: string;
 };
 
-export default function ExamBatchesCategory({ forcedSlug }: ExamBatchesCategoryProps) {
+export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatchesCategoryProps) {
   const params = useParams();
   const slugFromRoute = typeof params.slug === "string" ? params.slug : "";
   const slug = forcedSlug ?? slugFromRoute;
   const navigate = useNavigate();
 
   const isDedicatedPage = Boolean(forcedSlug);
+  const urlSlug = pathSlug ?? slug;
 
   const ALL_SUBCATEGORIES = "all";
 
@@ -821,8 +823,8 @@ export default function ExamBatchesCategory({ forcedSlug }: ExamBatchesCategoryP
                       </Badge>
                     </div>
 
-                    <Button variant="hero" className="w-full" disabled>
-                      ভর্তি (শীঘ্রই)
+                    <Button variant="hero" className="w-full" asChild>
+                      <Link to={`/batches/${urlSlug}/${batch.id}`}>View Details</Link>
                     </Button>
                   </div>
                 </div>
