@@ -61,8 +61,19 @@ export interface AdminUser {
   created_at: string;
   email: string;
   name: string;
+  phone?: string;
   avatar_url: string;
   last_sign_in: string | null;
+  is_suspended?: boolean;
+  is_restricted?: boolean;
+  purchased_batches?: { id: string; title: string; price: number }[];
+}
+
+export interface AdminCreateUserRequest {
+  name: string;
+  email: string;
+  password: string;
+  role: "admin" | "moderator";
 }
 
 export interface ExamTemplate {
@@ -105,10 +116,11 @@ export const adminApi = {
   stats: () => adminCall<{ data: AdminStats }>({ action: "stats" }),
 
   // Users
-  users: (filters?: { role?: string; limit?: number; offset?: number }) =>
+  users: (filters?: { role?: string; search?: string; limit?: number; offset?: number }) =>
     adminCall<{ data: AdminUser[]; total: number }>({
       action: "users",
       role: filters?.role || "all",
+      search: filters?.search || "",
       limit: String(filters?.limit || 50),
       offset: String(filters?.offset || 0),
     }),
@@ -117,6 +129,24 @@ export const adminApi = {
     adminCall<{ success: boolean }>(
       { action: "role" },
       { method: "PUT", body: { user_id: userId, role, remove } }
+    ),
+
+  updateRestriction: (userId: string, restrict: boolean) =>
+    adminCall<{ success: boolean }>(
+      { action: "restrict" },
+      { method: "PUT", body: { user_id: userId, restrict } }
+    ),
+
+  updateSuspension: (userId: string, suspend: boolean) =>
+    adminCall<{ success: boolean }>(
+      { action: "suspend" },
+      { method: "PUT", body: { user_id: userId, suspend } }
+    ),
+
+  createUser: (payload: AdminCreateUserRequest) =>
+    adminCall<{ data: { user_id: string } }>(
+      { action: "create-user" },
+      { method: "POST", body: payload }
     ),
 
   // Exam Templates

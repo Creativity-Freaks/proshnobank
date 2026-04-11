@@ -20,7 +20,16 @@ import {
   Trash2,
   Users,
   UsersRound,
+  MoreHorizontal,
 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { QuestionList } from "@/components/admin/QuestionList";
 import { Badge } from "@/components/ui/badge";
@@ -33,9 +42,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { useToast } from "@/hooks/use-toast";
+import { adminApi, type AdminCreateUserRequest, type AdminUser } from "@/lib/admin/admin-api";
 import {
   adminDashboardApi,
-  type AdminAccessRole,
   type AdminAnalytics,
   type AdminOverviewStats,
   type BatchStatus,
@@ -138,6 +147,16 @@ type AdminPanelProps = {
   forcedTab?: PanelTab;
 };
 
+type SettingsSection = "access-control" | "user" | "teacher" | "moderator" | "admin";
+
+const SETTINGS_SECTION_ROUTES: Record<SettingsSection, string> = {
+  "access-control": "/admin/settings/access-control",
+  user: "/admin/settings/users",
+  teacher: "/admin/settings/teachers",
+  moderator: "/admin/settings/moderators",
+  admin: "/admin/settings/admins",
+};
+
 const TAB_LABELS: Record<PanelTab, string> = {
   overview: "Overview",
   analytics: "Analytics",
@@ -174,10 +193,26 @@ function tabFromPathname(pathname: string): PanelTab {
   if (normalized === "/admin/categories") return "categories";
   if (normalized === "/admin/subjects") return "subjects";
   if (normalized === "/admin/batches") return "batches";
-  if (normalized === "/admin/users") return "users";
-  if (normalized === "/admin/settings") return "settings";
+  if (normalized === "/admin/users") return "settings";
+  if (normalized === "/admin/settings" || normalized.startsWith("/admin/settings/")) return "settings";
   if (normalized === "/admin/roles") return "settings";
   return "overview";
+}
+
+function settingsSectionFromPathname(pathname: string): SettingsSection {
+  const normalized = pathname.replace(/\/+$/, "");
+  if (normalized === "/admin/settings" || normalized === "/admin/roles") return "access-control";
+  if (normalized === "/admin/users") return "user";
+
+  const match = normalized.match(/^\/admin\/settings\/(.+)$/);
+  const raw = match?.[1] || "";
+
+  if (raw === "access-control") return "access-control";
+  if (raw === "users") return "user";
+  if (raw === "teachers") return "teacher";
+  if (raw === "moderators") return "moderator";
+  if (raw === "admins") return "admin";
+  return "access-control";
 }
 
 type SubjectTopicInsight = {
@@ -242,8 +277,6 @@ const defaultBatchForm: BatchFormState = {
   start_date: "",
 };
 
-const DEFAULT_ADMIN_ACCESS_ROLE: AdminAccessRole = "admin";
-
 function formatDateTime(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
@@ -283,6 +316,8 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
   const [activeTab, setActiveTab] = useState<PanelTab>(resolvedTab);
   const [isBootLoading, setIsBootLoading] = useState(true);
 
+  const [isSettingsMenuOpen, setIsSettingsMenuOpen] = useState(false);
+
   const [overview, setOverview] = useState<AdminOverviewStats | null>(null);
   const [analytics, setAnalytics] = useState<AdminAnalytics | null>(null);
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -295,9 +330,20 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
   const [users, setUsers] = useState<UserDirectoryItem[]>([]);
   const [roles, setRoles] = useState<UserRole[]>([]);
 
-  const [adminAccessRole, setAdminAccessRole] = useState<AdminAccessRole>(DEFAULT_ADMIN_ACCESS_ROLE);
-  const [isAdminAccessRoleLoading, setIsAdminAccessRoleLoading] = useState(false);
-  const [isAdminAccessRoleSaving, setIsAdminAccessRoleSaving] = useState(false);
+  const [settingsUsers, setSettingsUsers] = useState<AdminUser[]>([]);
+  const [settingsUsersTotal, setSettingsUsersTotal] = useState(0);
+  const [isSettingsUsersLoading, setIsSettingsUsersLoading] = useState(false);
+  const [settingsSearch, setSettingsSearch] = useState("");
+
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("access-control");
+
+  const [createUserForm, setCreateUserForm] = useState<AdminCreateUserRequest>({
+    name: "",
+    email: "",
+    password: "",
+    role: "moderator",
+  });
+  const [isCreatingUser, setIsCreatingUser] = useState(false);
 
   const [isQuestionLoading, setIsQuestionLoading] = useState(false);
   const [isSubjectInsightLoading, setIsSubjectInsightLoading] = useState(false);
@@ -431,20 +477,6 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     }
   }, [toast]);
 
-  const fetchAdminAccessRole = useCallback(async () => {
-    setIsAdminAccessRoleLoading(true);
-    try {
-      const role = await adminDashboardApi.settings.getAdminAccessRole();
-      setAdminAccessRole(role);
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Settings লোড করা যায়নি";
-      toast({ title: "Error", description: message, variant: "destructive" });
-      setAdminAccessRole(DEFAULT_ADMIN_ACCESS_ROLE);
-    } finally {
-      setIsAdminAccessRoleLoading(false);
-    }
-  }, [toast]);
-
   const fetchAnalytics = useCallback(async () => {
     setIsOverviewLoading(true);
     try {
@@ -560,6 +592,38 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
   }, [resolvedTab]);
 
   useEffect(() => {
+    const normalized = location.pathname.replace(/\/+$/, "");
+    if (normalized === "/admin/users") {
+      navigate("/admin/settings/users", { replace: true });
+      return;
+    }
+    if (normalized === "/admin/roles") {
+      navigate("/admin/settings/access-control", { replace: true });
+    }
+  }, [location.pathname, navigate]);
+
+  useEffect(() => {
+    if (resolvedTab === "settings") {
+      setIsSettingsMenuOpen(true);
+      const section = settingsSectionFromPathname(location.pathname);
+      setSettingsSection(section);
+      if (section === "admin" || section === "moderator") {
+        setCreateUserForm((prev) => ({ ...prev, role: section }));
+      }
+    } else {
+      setIsSettingsMenuOpen(false);
+    }
+  }, [location.pathname, resolvedTab]);
+
+  const handleSettingsNavigate = (section: SettingsSection) => {
+    setSettingsSection(section);
+    if (section === "admin" || section === "moderator") {
+      setCreateUserForm((prev) => ({ ...prev, role: section }));
+    }
+    navigate(SETTINGS_SECTION_ROUTES[section]);
+  };
+
+  useEffect(() => {
     if (!isAdmin) return;
     if (activeTab === "subjects") {
       fetchSubjectInsights();
@@ -568,10 +632,41 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
 
   useEffect(() => {
     if (!isAdmin) return;
-    if (activeTab === "settings") {
-      fetchAdminAccessRole();
-    }
-  }, [activeTab, fetchAdminAccessRole, isAdmin]);
+    if (activeTab !== "settings") return;
+
+    let isMounted = true;
+    const load = async () => {
+      setIsSettingsUsersLoading(true);
+      setSettingsUsers([]);
+      setSettingsUsersTotal(0);
+      try {
+        const queryRole = settingsSection === "access-control" ? "all" : settingsSection;
+        const res = await adminApi.users({ role: queryRole, limit: 200, offset: 0, search: settingsSearch });
+        if (!isMounted) return;
+        setSettingsUsers(res.data);
+        setSettingsUsersTotal(res.total);
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Users লোড করা যায়নি";
+        toast({ title: "Error", description: message, variant: "destructive" });
+        if (!isMounted) return;
+        setSettingsUsers([]);
+        setSettingsUsersTotal(0);
+      } finally {
+        if (isMounted) {
+          setIsSettingsUsersLoading(false);
+        }
+      }
+    };
+
+    const debounceId = setTimeout(() => {
+      load();
+    }, 500);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(debounceId);
+    };
+  }, [activeTab, isAdmin, settingsSection, settingsSearch, toast]);
 
   useEffect(() => {
     if (!isAdmin) return;
@@ -855,28 +950,6 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     }
   };
 
-  const handleAdminAccessRoleChange = async (value: string) => {
-    const normalized = value === "admin" || value === "moderator" || value === "teacher" || value === "user" ? value : null;
-    if (!normalized) return;
-
-    const previousRole = adminAccessRole;
-    const nextRole = normalized as AdminAccessRole;
-
-    setAdminAccessRole(nextRole);
-    setIsAdminAccessRoleSaving(true);
-
-    try {
-      await adminDashboardApi.settings.setAdminAccessRole(nextRole);
-      toast({ title: "সফল", description: `Admin access role set to: ${nextRole}` });
-    } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : "Settings সেভ করা যায়নি";
-      toast({ title: "Error", description: message, variant: "destructive" });
-      setAdminAccessRole(previousRole);
-    } finally {
-      setIsAdminAccessRoleSaving(false);
-    }
-  };
-
   const handleRoleEdit = (role: UserRole) => {
     setEditingRoleId(role.id);
     setRoleForm({ user_id: role.user_id, role: role.role });
@@ -1105,11 +1178,19 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     }
   };
 
+  const reloadSettingsUsers = async () => {
+    if (activeTab !== "settings") return;
+    const queryRole = settingsSection === "access-control" ? "all" : settingsSection;
+    const res = await adminApi.users({ role: queryRole, limit: 200, offset: 0, search: settingsSearch });
+    setSettingsUsers(res.data);
+    setSettingsUsersTotal(res.total);
+  };
+
   const handleUserPrimaryRole = async (userId: string, nextRole: RoleInput["role"]) => {
     try {
-      await adminDashboardApi.users.assignRole(userId, nextRole);
+      await adminApi.updateRole(userId, nextRole, false);
       toast({ title: "সফল", description: `${userId.slice(0, 8)}... এ ${nextRole} role assign হয়েছে` });
-      await Promise.all([fetchUsers(), fetchRoles(), fetchOverview(), fetchAnalytics()]);
+      await Promise.all([fetchUsers(), fetchRoles(), fetchOverview(), fetchAnalytics(), reloadSettingsUsers()]);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "User role আপডেট করা যায়নি";
       toast({ title: "Error", description: message, variant: "destructive" });
@@ -1153,7 +1234,82 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
       await fetchUsers();
       return;
     }
+    if (activeTab === "settings") {
+      await Promise.all([fetchUsers(), fetchRoles()]);
+      return;
+    }
     await fetchRoles();
+  };
+
+  const handleUserRoleRemove = async (userId: string, role: RoleInput["role"]) => {
+    try {
+      await adminApi.updateRole(userId, role, true);
+      toast({ title: "সফল", description: `${userId.slice(0, 8)}... থেকে ${role} role remove হয়েছে` });
+      await Promise.all([fetchUsers(), fetchRoles(), fetchOverview(), fetchAnalytics(), reloadSettingsUsers()]);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "User role remove করা যায়নি";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }
+  };
+
+  const handleUserRestrictionToggle = async (userId: string, nextRestricted: boolean) => {
+    try {
+      await adminApi.updateRestriction(userId, nextRestricted);
+      toast({
+        title: "সফল",
+        description: `${userId.slice(0, 8)}... account ${nextRestricted ? "restricted" : "unrestricted"} হয়েছে`,
+      });
+      await Promise.all([fetchUsers(), fetchRoles(), fetchOverview(), fetchAnalytics(), reloadSettingsUsers()]);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "User restriction আপডেট করা যায়নি";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }
+  };
+
+  const handleUserSuspensionToggle = async (userId: string, nextSuspended: boolean) => {
+    try {
+      await adminApi.updateSuspension(userId, nextSuspended);
+      toast({
+        title: "সফল",
+        description: `${userId.slice(0, 8)}... account ${nextSuspended ? "suspended" : "unsuspended"} হয়েছে`,
+      });
+      await Promise.all([fetchUsers(), fetchRoles(), fetchOverview(), fetchAnalytics(), reloadSettingsUsers()]);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "User suspension আপডেট করা যায়নি";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    }
+  };
+
+  const handleCreatePrivilegedUser = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsCreatingUser(true);
+
+    try {
+      const payload: AdminCreateUserRequest = {
+        name: createUserForm.name.trim(),
+        email: createUserForm.email.trim().toLowerCase(),
+        password: createUserForm.password,
+        role: createUserForm.role,
+      };
+
+      if (!payload.name || !payload.email || !payload.password) {
+        throw new Error("Name, email, password বাধ্যতামূলক");
+      }
+
+      const res = await adminApi.createUser(payload);
+      toast({
+        title: "সফল",
+        description: `${payload.role} user তৈরি হয়েছে (${res.data.user_id.slice(0, 8)}...)`,
+      });
+
+      setCreateUserForm((prev) => ({ ...prev, name: "", email: "", password: "" }));
+      await Promise.all([fetchUsers(), fetchRoles(), fetchOverview(), fetchAnalytics()]);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : "User create করা যায়নি";
+      toast({ title: "Error", description: message, variant: "destructive" });
+    } finally {
+      setIsCreatingUser(false);
+    }
   };
 
   if (isCheckingAdmin || isBootLoading) {
@@ -1293,24 +1449,81 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
                 </Button>
                 <Button
                   className={`w-full justify-start hover:bg-background/10 hover:text-background ${
-                    activeTab === "users" ? "bg-background/10 text-background" : "text-background/80"
-                  }`}
-                  variant="ghost"
-                  onClick={() => navigate(TAB_ROUTES.users)}
-                >
-                  <UsersRound className="mr-2 h-4 w-4" />
-                  {TAB_LABELS.users}
-                </Button>
-                <Button
-                  className={`w-full justify-start hover:bg-background/10 hover:text-background ${
                     activeTab === "settings" ? "bg-background/10 text-background" : "text-background/80"
                   }`}
                   variant="ghost"
-                  onClick={() => navigate(TAB_ROUTES.settings)}
+                  onClick={() => {
+                    if (activeTab !== "settings") {
+                      handleSettingsNavigate("access-control");
+                      return;
+                    }
+                    setIsSettingsMenuOpen((prev) => !prev);
+                  }}
                 >
                   <Shield className="mr-2 h-4 w-4" />
                   {TAB_LABELS.settings}
                 </Button>
+
+                {isSettingsMenuOpen ? (
+                  <div className="ml-6 space-y-1 border-l border-background/10 pl-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 w-full justify-start text-background/80 hover:bg-background/10 hover:text-background ${
+                        activeTab === "settings" && settingsSection === "access-control"
+                          ? "bg-background/10 text-background"
+                          : ""
+                      }`}
+                      onClick={() => handleSettingsNavigate("access-control")}
+                    >
+                      Access Control
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 w-full justify-start text-background/80 hover:bg-background/10 hover:text-background ${
+                        activeTab === "settings" && settingsSection === "user" ? "bg-background/10 text-background" : ""
+                      }`}
+                      onClick={() => handleSettingsNavigate("user")}
+                    >
+                      Users
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 w-full justify-start text-background/80 hover:bg-background/10 hover:text-background ${
+                        activeTab === "settings" && settingsSection === "teacher"
+                          ? "bg-background/10 text-background"
+                          : ""
+                      }`}
+                      onClick={() => handleSettingsNavigate("teacher")}
+                    >
+                      Teachers
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 w-full justify-start text-background/80 hover:bg-background/10 hover:text-background ${
+                        activeTab === "settings" && settingsSection === "moderator"
+                          ? "bg-background/10 text-background"
+                          : ""
+                      }`}
+                      onClick={() => handleSettingsNavigate("moderator")}
+                    >
+                      Moderators
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className={`h-8 w-full justify-start text-background/80 hover:bg-background/10 hover:text-background ${
+                        activeTab === "settings" && settingsSection === "admin" ? "bg-background/10 text-background" : ""
+                      }`}
+                      onClick={() => handleSettingsNavigate("admin")}
+                    >
+                      Admins
+                    </Button>
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>
@@ -2533,144 +2746,264 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
             )}
 
             {activeTab === "settings" && (
-              <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
-                <div className="space-y-4">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Admin Dashboard Access</CardTitle>
-                      <CardDescription>কোন role থেকে Admin Dashboard এ ঢুকতে পারবে</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="space-y-1">
-                        <Label>Access Role</Label>
-                        <Select
-                          value={adminAccessRole}
-                          onValueChange={handleAdminAccessRoleChange}
-                          disabled={isAdminAccessRoleLoading || isAdminAccessRoleSaving}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">admin</SelectItem>
-                            <SelectItem value="moderator">moderator</SelectItem>
-                            <SelectItem value="teacher">teacher</SelectItem>
-                            <SelectItem value="user">user</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {isAdminAccessRoleLoading || isAdminAccessRoleSaving ? (
-                          <div className="flex items-center gap-2 pt-2 text-sm text-muted-foreground">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            {isAdminAccessRoleLoading ? "Loading..." : "Saving..."}
-                          </div>
-                        ) : null}
-                      </div>
-                    </CardContent>
-                  </Card>
+              <div className="space-y-4">
+                {(() => {
+                    const section =
+                      settingsSection === "admin"
+                        ? { key: "admin" as const, label: "Admins", role: "admin" as const }
+                        : settingsSection === "moderator"
+                          ? { key: "moderator" as const, label: "Moderators", role: "moderator" as const }
+                          : settingsSection === "teacher"
+                            ? { key: "teacher" as const, label: "Teachers", role: "teacher" as const }
+                            : settingsSection === "access-control"
+                              ? { key: "all" as const, label: "All Users / Access Control", role: "all" as const }
+                              : { key: "user" as const, label: "Users", role: "user" as const };
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>{editingRoleId ? "Edit Assignment" : "Assign Role"}</CardTitle>
-                      <CardDescription>Admin, teacher, moderator and user access mapping</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                      <form className="space-y-3" onSubmit={handleRoleSubmit}>
-                        <div className="space-y-1">
-                          <Label>User ID (UUID)</Label>
-                          <Input
-                            value={roleForm.user_id}
-                            onChange={(event) => setRoleForm((prev) => ({ ...prev, user_id: event.target.value }))}
-                            required
-                          />
-                        </div>
+                    const attemptMap = new Map(users.map((u) => [u.user_id, u] as const));
+                    const list = settingsUsers;
+                    const total = settingsUsersTotal;
 
-                        <div className="space-y-1">
-                          <Label>Role</Label>
-                          <Select
-                            value={roleForm.role}
-                            onValueChange={(value: RoleInput["role"]) => setRoleForm((prev) => ({ ...prev, role: value }))}
-                          >
-                            <SelectTrigger>
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="admin">admin</SelectItem>
-                              <SelectItem value="teacher">teacher</SelectItem>
-                              <SelectItem value="moderator">moderator</SelectItem>
-                              <SelectItem value="user">user</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="flex gap-2 pt-1">
-                          <Button type="submit" disabled={isRoleSubmitting}>
-                            {isRoleSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            {editingRoleId ? "Update Role" : "Assign Role"}
-                          </Button>
-                          {editingRoleId ? (
-                            <Button type="button" variant="secondary" onClick={resetRoleEditor}>
-                              Cancel Edit
-                            </Button>
-                          ) : null}
-                        </div>
-                      </form>
-                    </CardContent>
-                  </Card>
-                </div>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Role Assignments</CardTitle>
-                    <CardDescription>Current platform access map</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {isRoleLoading ? (
-                      <div className="flex justify-center py-10">
-                        <Loader2 className="h-7 w-7 animate-spin text-primary" />
-                      </div>
-                    ) : roles.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No role assignments found.</p>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>User ID</TableHead>
-                            <TableHead>Role</TableHead>
-                            <TableHead>Created</TableHead>
-                            <TableHead className="text-right">Action</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {roles.map((role) => (
-                            <TableRow key={role.id}>
-                              <TableCell className="font-mono text-xs">{role.user_id}</TableCell>
-                              <TableCell>
-                                <Badge variant={role.role === "admin" ? "destructive" : "secondary"}>{role.role}</Badge>
-                              </TableCell>
-                              <TableCell>{formatDateTime(role.created_at)}</TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button variant="ghost" size="icon" onClick={() => handleRoleEdit(role)}>
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive hover:text-destructive"
-                                    onClick={() => handleRoleDelete(role.id)}
-                                    disabled={isRoleDeleting === role.id}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                    return (
+                      <div className="space-y-4">
+                        {section.role === "admin" || section.role === "moderator" ? (
+                          <Card>
+                            <CardHeader>
+                              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                                <CardTitle>Create {section.role}</CardTitle>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() =>
+                                    setCreateUserForm({ name: "", email: "", password: "", role: section.role })
+                                  }
+                                >
+                                  Clear
+                                </Button>
+                              </div>
+                              <CardDescription>নাম, ইমেইল, পাসওয়ার্ড দিয়ে direct create (admin-only)</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                              <form className="space-y-3" onSubmit={handleCreatePrivilegedUser}>
+                                <div className="space-y-1">
+                                  <Label>Name</Label>
+                                  <Input
+                                    value={createUserForm.name}
+                                    onChange={(event) =>
+                                      setCreateUserForm((prev) => ({ ...prev, name: event.target.value }))
+                                    }
+                                    required
+                                    disabled={isCreatingUser}
+                                  />
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                  </CardContent>
-                </Card>
+
+                                <div className="space-y-1">
+                                  <Label>Email</Label>
+                                  <Input
+                                    type="email"
+                                    value={createUserForm.email}
+                                    onChange={(event) =>
+                                      setCreateUserForm((prev) => ({ ...prev, email: event.target.value }))
+                                    }
+                                    required
+                                    disabled={isCreatingUser}
+                                  />
+                                </div>
+
+                                <div className="space-y-1">
+                                  <Label>Password</Label>
+                                  <Input
+                                    type="password"
+                                    value={createUserForm.password}
+                                    onChange={(event) =>
+                                      setCreateUserForm((prev) => ({ ...prev, password: event.target.value }))
+                                    }
+                                    required
+                                    disabled={isCreatingUser}
+                                  />
+                                </div>
+
+                                <Button type="submit" disabled={isCreatingUser}>
+                                  {isCreatingUser ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                                  Create
+                                </Button>
+                              </form>
+                            </CardContent>
+                          </Card>
+                        ) : null}
+
+                        <Card>
+                          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+                            <div>
+                              <CardTitle>
+                                {section.label} ({total})
+                              </CardTitle>
+                              <CardDescription>All details + CRUD actions</CardDescription>
+                            </div>
+                            <div className="w-1/3">
+                              <Input
+                                placeholder="Search by name, email or phone..."
+                                value={settingsSearch}
+                                onChange={(e) => setSettingsSearch(e.target.value)}
+                              />
+                            </div>
+                          </CardHeader>
+                          <CardContent>
+                            {isSettingsUsersLoading ? (
+                              <div className="flex justify-center py-10">
+                                <Loader2 className="h-7 w-7 animate-spin text-primary" />
+                              </div>
+                            ) : list.length === 0 ? (
+                              <p className="text-sm text-muted-foreground">No users found.</p>
+                            ) : (
+                              <Table>
+                                <TableHeader>
+                                  <TableRow>
+                                    <TableHead>Avatar</TableHead>
+                                    <TableHead>Name</TableHead>
+                                    <TableHead>Email</TableHead>
+                                    <TableHead>Phone</TableHead>
+                                    <TableHead>Roles</TableHead>
+                                    <TableHead>{section.role === "teacher" ? "Subscription" : "ExamBatch"}</TableHead>
+                                    <TableHead>Joined</TableHead>
+                                    <TableHead>Attempts</TableHead>
+                                    <TableHead>Accuracy</TableHead>
+                                    <TableHead>Last Sign In</TableHead>
+                                    <TableHead className="text-right">Action</TableHead>
+                                  </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                  {list.map((item) => {
+                                    const stats = attemptMap.get(item.user_id);
+                                    return (
+                                      <TableRow key={`${section.key}-${item.user_id}`}>
+                                        <TableCell>
+                                          {item.avatar_url ? (
+                                            <img src={item.avatar_url} alt="Avatar" className="w-8 h-8 rounded-full object-cover" />
+                                          ) : (
+                                            <div className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center text-xs font-semibold">
+                                              {item.name?.charAt(0)?.toUpperCase() || "U"}
+                                            </div>
+                                          )}
+                                        </TableCell>
+                                        <TableCell>{item.name || "-"}</TableCell>
+                                        <TableCell className="text-sm">{item.email || "-"}</TableCell>
+                                        <TableCell className="text-sm">{item.phone || "-"}</TableCell>
+                                        <TableCell>
+                                          <div className="flex flex-wrap gap-1">
+                                            {(item.roles || []).map((role) => (
+                                              <Badge
+                                                key={`${item.user_id}-${role}`}
+                                                variant={role === "admin" ? "destructive" : "secondary"}
+                                              >
+                                                {role}
+                                              </Badge>
+                                            ))}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                            {item.purchased_batches && item.purchased_batches.length > 0 ? (
+                                              item.purchased_batches.map((batch) => (
+                                                <Badge
+                                                  key={`${item.user_id}-batch-${batch.id}`}
+                                                  variant="outline"
+                                                  className="text-xs"
+                                                >
+                                                  {batch.title}
+                                                </Badge>
+                                              ))
+                                            ) : (
+                                              <span className="text-xs text-muted-foreground">-</span>
+                                            )}
+                                          </div>
+                                        </TableCell>
+                                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                          {item.created_at ? formatDateTime(item.created_at) : "-"}
+                                        </TableCell>
+                                        <TableCell>{stats?.attempts ?? 0}</TableCell>
+                                        <TableCell>{stats ? `${stats.avg_accuracy}%` : "0%"}</TableCell>
+                                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                                          {item.last_sign_in ? formatDateTime(item.last_sign_in) : "-"}
+                                        </TableCell>
+                                        <TableCell className="text-right">
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                              <Button variant="ghost" className="h-8 w-8 p-0">
+                                                <span className="sr-only">Open menu</span>
+                                                <MoreHorizontal className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                              <DropdownMenuSeparator />
+                                              {section.role === "all" ? (
+                                                <>
+                                                  {(["admin", "moderator", "teacher"] as const).map((r) => {
+                                                    const hasRole = (item.roles || []).includes(r);
+                                                    return hasRole ? (
+                                                      <DropdownMenuItem
+                                                        key={`rm-${r}`}
+                                                        className="text-destructive hover:bg-destructive/10"
+                                                        onClick={() => handleUserRoleRemove(item.user_id, r)}
+                                                      >
+                                                        Remove {r} Role
+                                                      </DropdownMenuItem>
+                                                    ) : (
+                                                      <DropdownMenuItem
+                                                        key={`add-${r}`}
+                                                        onClick={() => handleUserPrimaryRole(item.user_id, r)}
+                                                      >
+                                                        Add {r} Role
+                                                      </DropdownMenuItem>
+                                                    );
+                                                  })}
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <DropdownMenuItem onClick={() => handleUserPrimaryRole(item.user_id, section.role)}>
+                                                    Add {section.role} Role
+                                                  </DropdownMenuItem>
+                                                  {section.role !== "user" ? (
+                                                    <DropdownMenuItem
+                                                      className="text-destructive hover:bg-destructive/10"
+                                                      onClick={() => handleUserRoleRemove(item.user_id, section.role)}
+                                                    >
+                                                      Remove {section.role} Role
+                                                    </DropdownMenuItem>
+                                                  ) : null}
+                                                </>
+                                              )}
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem
+                                                onClick={() =>
+                                                  handleUserRestrictionToggle(item.user_id, !(item.is_restricted ?? false))
+                                                }
+                                              >
+                                                {item.is_restricted ? "Unrestrict Account" : "Restrict Account"}
+                                              </DropdownMenuItem>
+                                              <DropdownMenuItem
+                                                className="text-destructive hover:bg-destructive/10"
+                                                onClick={() =>
+                                                  handleUserSuspensionToggle(item.user_id, !(item.is_suspended ?? false))
+                                                }
+                                              >
+                                                {item.is_suspended ? "Unsuspend Account" : "Suspend Account"}
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </TableCell>
+                                      </TableRow>
+                                    );
+                                  })}
+                                </TableBody>
+                              </Table>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </div>
+                    );
+                  })()
+                }
               </div>
             )}
 

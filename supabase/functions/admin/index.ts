@@ -50,14 +50,42 @@ async function getUser(req: Request) {
 async function requireAdmin(req: Request, supabase: ReturnType<typeof createClient>) {
   const user = await getUser(req);
   if (!user) return { user: null, error: err(req, "Unauthorized", 401) };
-  const { data } = await supabase
+
+  // 1. Check if user is among VITE_ADMIN_EMAILS
+  const adminEmails = (Deno.env.get("VITE_ADMIN_EMAILS") || Deno.env.get("VITE_ADMIN_MAIL") || "")
+    .split(",")
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean);
+  if (user.email && adminEmails.includes(user.email.toLowerCase())) {
+     return { user, error: null };
+  }
+
+  // 2. Fetch all user_roles for the user
+  const { data: rolesData } = await supabase
     .from("user_roles")
     .select("role")
-    .eq("user_id", user.id)
-    .eq("role", "admin")
+    .eq("user_id", user.id);
+  
+  const roles = (rolesData || []).map(r => r.role);
+  if (roles.includes("admin")) {
+    return { user, error: null };
+  }
+
+  // 3. Fallback to app_settings configured admin access role
+  const { data: settings } = await supabase
+    .from("app_settings")
+    .select("value")
+    .eq("key", "admin_access_role")
     .maybeSingle();
-  if (!data) return { user: null, error: err(req, "Forbidden", 403) };
-  return { user, error: null };
+
+  const requiredRole = (settings?.value as Record<string, string>)?.role || "admin";
+  if (roles.includes(requiredRole)) {
+    return { user, error: null };
+  }
+
+  // Include context in the 403 so the frontend knows exactly why it was rejected
+  const reason = `Email: ${user.email}, Roles: ${roles.join(",")}, Required: ${requiredRole}`;
+  return { user: null, error: err(req, "Forbidden. Details: " + reason, 403) };
 }
 
 Deno.serve(async (req: Request) => {
@@ -128,6 +156,7 @@ Deno.serve(async (req: Request) => {
       const limit = Math.min(Number(url.searchParams.get("limit") || "50"), 200);
       const offset = Math.max(0, Number(url.searchParams.get("offset") || "0"));
       const roleFilter = url.searchParams.get("role");
+      const search = url.searchParams.get("search")?.toLowerCase() || "";
 
       // Get all roles
       let rolesQuery = supabase.from("user_roles").select("user_id, role, created_at");
@@ -149,27 +178,54 @@ Deno.serve(async (req: Request) => {
       });
 
       const allUsers = Array.from(userMap.values());
-      const paged = allUsers.slice(offset, offset + limit);
 
-      // Get user metadata from auth
-      const userDetails = await Promise.all(
-        paged.map(async (u) => {
+      // Get user metadata from auth and batch enrollments in parallel
+      const mappedUsers = await Promise.all(
+        allUsers.map(async (u) => {
           try {
-            const { data } = await supabase.auth.admin.getUserById(u.user_id);
+            const [{ data: authData }, { data: enrollments }] = await Promise.all([
+              supabase.auth.admin.getUserById(u.user_id),
+              supabase
+                .from("exam_batch_enrollments")
+                .select("batch_id, exam_batches(id, title, price)")
+                .eq("user_id", u.user_id)
+            ]);
+            
+            const user = authData?.user;
+            const purchased_batches = (enrollments || []).map((e: any) => ({
+                id: e.exam_batches?.id,
+                title: e.exam_batches?.title,
+                price: e.exam_batches?.price
+            })).filter((b: any) => b.id);
+
             return {
               ...u,
-              email: data?.user?.email || "",
-              name: data?.user?.user_metadata?.full_name || data?.user?.user_metadata?.name || "",
-              avatar_url: data?.user?.user_metadata?.avatar_url || "",
-              last_sign_in: data?.user?.last_sign_in_at || null,
+              email: user?.email || "",
+              phone: user?.phone || user?.user_metadata?.phone || "",
+              name: user?.user_metadata?.full_name || user?.user_metadata?.name || "",
+              avatar_url: user?.user_metadata?.avatar_url || "",
+              last_sign_in: user?.last_sign_in_at || null,
+              is_suspended: !!user?.banned_until,
+              is_restricted: !!user?.user_metadata?.is_restricted,
+              purchased_batches
             };
           } catch {
-            return { ...u, email: "", name: "", avatar_url: "", last_sign_in: null };
+            return { ...u, email: "", phone: "", name: "", avatar_url: "", last_sign_in: null, is_suspended: false, is_restricted: false, purchased_batches: [] };
           }
         })
       );
 
-      return json(req, { data: userDetails, total: allUsers.length });
+      // Now filter by search query (name, email, phone)
+      const filteredUsers = mappedUsers.filter(u => {
+        if (!search) return true;
+        return (u.name || "").toLowerCase().includes(search) || 
+               (u.email || "").toLowerCase().includes(search) ||
+               (u.phone || "").toLowerCase().includes(search);
+      });
+
+      const paged = filteredUsers.slice(offset, offset + limit);
+
+      return json(req, { data: paged, total: filteredUsers.length });
     }
 
     // ======================== UPDATE ROLE ========================
@@ -198,6 +254,74 @@ Deno.serve(async (req: Request) => {
       }
 
       return json(req, { success: true });
+    }
+
+    
+    // ======================== RESTRICT USER ========================
+    if (req.method === "PUT" && action === "restrict") {
+      const body = await req.json();
+      const { user_id: targetUserId, restrict } = body;
+      if (!targetUserId) return err(req, "Missing user_id");
+
+      const { data: userObj, error: uErr } = await supabase.auth.admin.getUserById(targetUserId);
+      if (uErr) return err(req, uErr.message, 500);
+
+      const metadata = userObj.user.user_metadata || {};
+      const { data, error } = await supabase.auth.admin.updateUserById(targetUserId, {
+        user_metadata: { ...metadata, is_restricted: restrict === true }
+      });
+      if (error) return err(req, error.message, 500);
+      return json(req, { success: true });
+    }
+
+    // ======================== SUSPEND USER ========================
+    if (req.method === "PUT" && action === "suspend") {
+      const body = await req.json();
+      const { user_id: targetUserId, suspend } = body;
+      if (!targetUserId) return err(req, "Missing user_id");
+      
+      const { data, error } = await supabase.auth.admin.updateUserById(targetUserId, {
+        ban_duration: suspend ? "876000h" : "none"
+      });
+      if (error) return err(req, error.message, 500);
+      return json(req, { success: true });
+    }
+
+    // ======================== CREATE USER (ADMIN/MODERATOR) ========================
+    if (req.method === "POST" && action === "create-user") {
+      const body = await req.json();
+      const email = String((body as Record<string, unknown>)?.email || "").trim().toLowerCase();
+      const password = String((body as Record<string, unknown>)?.password || "");
+      const name = String((body as Record<string, unknown>)?.name || "").trim();
+      const role = String((body as Record<string, unknown>)?.role || "").trim();
+
+      if (!email || !password || !name) return err(req, "Missing name, email or password");
+      if (role !== "admin" && role !== "moderator") return err(req, "Role must be admin or moderator");
+      if (password.length < 6) return err(req, "Password must be at least 6 characters");
+
+      const { data: created, error: createErr } = await supabase.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { full_name: name, name },
+      });
+
+      if (createErr) return err(req, createErr.message, 400);
+      const createdUserId = created?.user?.id;
+      if (!createdUserId) return err(req, "User creation failed", 500);
+
+      const { error: roleErr } = await supabase
+        .from("user_roles")
+        .upsert(
+          [
+            { user_id: createdUserId, role: "user" },
+            { user_id: createdUserId, role },
+          ],
+          { onConflict: "user_id,role" },
+        );
+      if (roleErr) return err(req, roleErr.message, 500);
+
+      return json(req, { data: { user_id: createdUserId } }, 201);
     }
 
     // ======================== EXAM TEMPLATES CRUD ========================
