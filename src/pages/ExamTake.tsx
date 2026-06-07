@@ -8,8 +8,9 @@ import { useAuth } from "@/contexts/AuthContext";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Clock, ChevronLeft, ChevronRight, Flag, CheckCircle,
-  AlertCircle, BookOpen, X, Loader2,
+  AlertCircle, BookOpen, Bookmark, X, Loader2,
 } from "lucide-react";
+import { useBookmarks } from "@/hooks/useBookmarks";
 
 interface ExamConfig {
   category: string;
@@ -72,6 +73,8 @@ const ExamTake = () => {
     const state = location.state as { config?: ExamConfig } | null | undefined;
     return state?.config ?? defaultConfig;
   }, [defaultConfig, location.state]);
+
+  const { isBookmarked, toggle: toggleBookmark, saving: bookmarkSaving } = useBookmarks();
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loadingQuestions, setLoadingQuestions] = useState(true);
@@ -266,9 +269,30 @@ const ExamTake = () => {
           <div className="bg-card rounded-2xl border border-border p-6 md:p-8 mt-6">
             <div className="flex items-center justify-between mb-6">
               <Badge variant="outline">প্রশ্ন {currentQuestion + 1}/{questions.length}</Badge>
-              <Button variant={flagged.includes(currentQuestion) ? "destructive" : "ghost"} size="sm" onClick={toggleFlag} className="gap-1">
-                <Flag className="w-4 h-4" /> {flagged.includes(currentQuestion) ? "ফ্ল্যাগড" : "ফ্ল্যাগ"}
-              </Button>
+              <div className="flex items-center gap-1">
+                <Button
+                  variant={isBookmarked(q.id) ? "secondary" : "ghost"}
+                  size="sm"
+                  disabled={bookmarkSaving}
+                  onClick={() =>
+                    toggleBookmark({
+                      id: q.id,
+                      question_text: q.question_text,
+                      options: q.options,
+                      subject: q.subject,
+                      topic: q.topic,
+                      difficulty: q.difficulty,
+                    })
+                  }
+                  className="gap-1"
+                >
+                  <Bookmark className={`w-4 h-4 ${isBookmarked(q.id) ? "fill-current" : ""}`} />
+                  {isBookmarked(q.id) ? "সেভড" : "সেভ"}
+                </Button>
+                <Button variant={flagged.includes(currentQuestion) ? "destructive" : "ghost"} size="sm" onClick={toggleFlag} className="gap-1">
+                  <Flag className="w-4 h-4" /> {flagged.includes(currentQuestion) ? "ফ্ল্যাগড" : "ফ্ল্যাগ"}
+                </Button>
+              </div>
             </div>
             <h2 className="text-xl font-bold text-foreground mb-6">{q.question_text}</h2>
             <div className="space-y-3">
