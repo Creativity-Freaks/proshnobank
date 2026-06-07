@@ -29,6 +29,24 @@ import { questionsApi } from "@/lib/api";
 import { supabase } from "@/integrations/supabase/client";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { TeacherSidebar, type TeacherView as SidebarTeacherView } from "@/components/teacher/TeacherSidebar";
+import ContactPanel from "@/components/teacher/panels/ContactPanel";
+import FeedbackPanel from "@/components/teacher/panels/FeedbackPanel";
+import InstitutionPanel from "@/components/teacher/panels/InstitutionPanel";
+import OmrEvaluatorPanel from "@/components/teacher/panels/OmrEvaluatorPanel";
+import OmrGraderPanel from "@/components/teacher/panels/OmrGraderPanel";
+import OmrSheetPanel from "@/components/teacher/panels/OmrSheetPanel";
+import OmrTokenPanel from "@/components/teacher/panels/OmrTokenPanel";
+import ReadyQuestionsPanel from "@/components/teacher/panels/ReadyQuestionsPanel";
+import ReportsPanel from "@/components/teacher/panels/ReportsPanel";
+import SharePanel from "@/components/teacher/panels/SharePanel";
+import StudentsPanel from "@/components/teacher/panels/StudentsPanel";
+import SubscriptionPanel from "@/components/teacher/panels/SubscriptionPanel";
+import {
+  buildQuestionPaperHtml,
+  openPrintWindow,
+  readInstitutionProfile,
+  type PaperQuestion,
+} from "@/lib/teacherPaper";
 
 type TeacherView = SidebarTeacherView;
 
@@ -39,6 +57,7 @@ type QuestionRow = {
   difficulty: string;
   question_text: string;
   options: string[];
+  correct_answer?: number;
 };
 
 type TeacherPaperRow = {
@@ -110,26 +129,6 @@ function viewTitle(view: TeacherView) {
   }
 }
 
-function ComingSoonPanel({ title }: { title: string }) {
-  return (
-    <div className="mt-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>{title}</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <p className="text-sm text-muted-foreground">
-            এই ফিচারটি এই মুহূর্তে ড্যাশবোর্ডে দেখানো হচ্ছে, তবে এখনও সম্পূর্ণভাবে চালু হয়নি।
-          </p>
-          <Button variant="outline" disabled>
-            শীঘ্রই আসছে
-          </Button>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 export default function TeacherDashboard() {
   const { user, signOut } = useAuth();
   const { toast } = useToast();
@@ -151,6 +150,11 @@ export default function TeacherDashboard() {
   const [templateMarksPer, setTemplateMarksPer] = useState("1");
   const [templateNegativeMarks, setTemplateNegativeMarks] = useState("0");
   const [templateDifficulty, setTemplateDifficulty] = useState("medium");
+
+  const [paperSubject, setPaperSubject] = useState("");
+  const [paperSetCode, setPaperSetCode] = useState("");
+  const [paperColumns, setPaperColumns] = useState<"1" | "2">("2");
+  const [paperIncludeAnswerKey, setPaperIncludeAnswerKey] = useState(false);
 
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
@@ -381,55 +385,41 @@ export default function TeacherDashboard() {
       return;
     }
 
-    const html = `<!doctype html>
-<html lang="bn">
-<head>
-  <meta charset="utf-8" />
-  <title>${(templateTitle || "question-paper").replace(/</g, "&lt;")}</title>
-  <style>
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; padding: 24px; }
-    h1 { font-size: 20px; margin: 0 0 12px; }
-    .meta { color: #555; font-size: 12px; margin-bottom: 16px; }
-    .q { margin: 16px 0; }
-    .q-title { font-weight: 600; margin-bottom: 8px; }
-    .opts { margin: 0; padding-left: 18px; }
-    .opts li { margin: 4px 0; }
-    @media print { button { display: none; } }
-  </style>
-</head>
-<body>
-  <h1>${(templateTitle || "প্রশ্নপত্র").replace(/</g, "&lt;")}</h1>
-  <div class="meta">মোট প্রশ্ন: ${selectedQuestions.length}</div>
-  ${selectedQuestions
-    .map((q, idx) => {
-      const safeText = q.question_text.replace(/</g, "&lt;");
-      const opts = q.options.map((o) => o.replace(/</g, "&lt;"));
-      return `
-        <div class="q">
-          <div class="q-title">${idx + 1}. ${safeText}</div>
-          <ol class="opts" type="A">
-            ${opts.map((o) => `<li>${o}</li>`).join("")}
-          </ol>
-        </div>
-      `;
-    })
-    .join("\n")}
-  <script>window.onload = () => window.print();</script>
-</body>
-</html>`;
+    const marksPer = Number(templateMarksPer) || 1;
+    const totalMarks = selectedQuestions.length * marksPer;
+    const subject = paperSubject.trim() || uniqueStrings(selectedQuestions.map((q) => q.subject)).join(", ");
 
-    const w = window.open("", "_blank");
-    if (!w) {
+    const questions: PaperQuestion[] = selectedQuestions.map((q) => ({
+      question_text: q.question_text,
+      options: q.options,
+      correct_answer: q.correct_answer,
+    }));
+
+    const html = buildQuestionPaperHtml(
+      {
+        examName: templateTitle.trim() || "প্রশ্নপত্র",
+        subject,
+        className: "",
+        timeText: `${Math.max(1, Math.trunc(Number(templateDuration) || 30))} মিনিট`,
+        fullMarks: String(totalMarks),
+        setCode: paperSetCode.trim(),
+        columns: paperColumns === "1" ? 1 : 2,
+        fontSize: 14,
+        instructions: templateDescription.trim(),
+        includeAnswerKey: paperIncludeAnswerKey,
+        watermark: readInstitutionProfile(user?.user_metadata).name,
+        institution: readInstitutionProfile(user?.user_metadata),
+      },
+      questions,
+    );
+
+    if (!openPrintWindow(html)) {
       toast({
         title: "ত্রুটি",
         description: "পপ-আপ ব্লকড। Pop-up allow করে আবার চেষ্টা করুন।",
         variant: "destructive",
       });
-      return;
     }
-    w.document.open();
-    w.document.write(html);
-    w.document.close();
   };
 
   const handleCreateEvent = async () => {
@@ -1062,6 +1052,52 @@ export default function TeacherDashboard() {
                         </Select>
                       </div>
 
+                      <Separator />
+
+                      <div className="text-sm font-semibold">প্রশ্নপত্র (PDF) অপশন</div>
+
+                      <div>
+                        <Label>বিষয় (হেডারে দেখাবে)</Label>
+                        <Input
+                          className="mt-2"
+                          value={paperSubject}
+                          onChange={(e) => setPaperSubject(e.target.value)}
+                          placeholder="খালি রাখলে সিলেক্টেড প্রশ্নের বিষয় বসবে"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>সেট কোড</Label>
+                          <Input
+                            className="mt-2"
+                            value={paperSetCode}
+                            onChange={(e) => setPaperSetCode(e.target.value)}
+                            placeholder="যেমন: A"
+                          />
+                        </div>
+                        <div>
+                          <Label>কলাম</Label>
+                          <Select value={paperColumns} onValueChange={(v) => setPaperColumns(v === "1" ? "1" : "2")}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="1">১ কলাম</SelectItem>
+                              <SelectItem value="2">২ কলাম</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <label className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={paperIncludeAnswerKey}
+                          onCheckedChange={(v) => setPaperIncludeAnswerKey(v === true)}
+                        />
+                        উত্তরমালা (Answer Key) যুক্ত করুন
+                      </label>
+
                       <div className="flex gap-3">
                         <Button
                           variant="outline"
@@ -1256,19 +1292,32 @@ export default function TeacherDashboard() {
                 </div>
               ) : null}
 
-              {/* Coming soon placeholders */}
-              {activeView === "ready_questions" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "reports" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "share" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "students" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "institution" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "subscription" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "omr_evaluator" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "omr_create" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "omr_token" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "omr_grade" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "contact" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
-              {activeView === "feedback" ? <ComingSoonPanel title={viewTitle(activeView)} /> : null}
+              {activeView === "ready_questions" ? (
+                <ReadyQuestionsPanel
+                  templates={myTemplatesData || []}
+                  loading={myTemplatesLoading}
+                  onCreateNew={() => setActiveView("builder")}
+                />
+              ) : null}
+              {activeView === "reports" ? (
+                <ReportsPanel
+                  questionCount={myQuestionCountRes?.total ?? 0}
+                  templates={myTemplatesData || []}
+                  events={myEventsData || []}
+                  paperCount={(myPapersData || []).length}
+                  loading={myQuestionCountLoading || myTemplatesLoading}
+                />
+              ) : null}
+              {activeView === "share" ? <SharePanel /> : null}
+              {activeView === "students" ? <StudentsPanel /> : null}
+              {activeView === "institution" ? <InstitutionPanel /> : null}
+              {activeView === "subscription" ? <SubscriptionPanel /> : null}
+              {activeView === "omr_evaluator" ? <OmrEvaluatorPanel /> : null}
+              {activeView === "omr_create" ? <OmrSheetPanel /> : null}
+              {activeView === "omr_token" ? <OmrTokenPanel /> : null}
+              {activeView === "omr_grade" ? <OmrGraderPanel /> : null}
+              {activeView === "contact" ? <ContactPanel /> : null}
+              {activeView === "feedback" ? <FeedbackPanel /> : null}
             </div>
           </div>
         </div>
