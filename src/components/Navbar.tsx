@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, LayoutDashboard, UserRound } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, UserRound, Bookmark } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +122,14 @@ const Navbar = () => {
                         প্রোফাইল
                       </Link>
                     </DropdownMenuItem>
+                    {!isTeacher && (
+                      <DropdownMenuItem asChild>
+                        <Link to="/bookmarks" className="flex items-center gap-2">
+                          <Bookmark className="h-4 w-4" />
+                          সেভ করা প্রশ্ন
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                   </DropdownMenuContent>
                 </DropdownMenu>
                 <Button variant="ghost" size="sm" className="gap-2 font-bengali" onClick={handleLogout}>
@@ -172,6 +180,13 @@ const Navbar = () => {
                       প্রোফাইল
                     </Button>
                   </Link>
+                  {!isTeacher && (
+                    <Link to="/bookmarks" className="block" onClick={() => setIsOpen(false)}>
+                      <Button variant="outline" size="sm" className="w-full font-bengali">
+                        সেভ করা প্রশ্ন
+                      </Button>
+                    </Link>
+                  )}
                   <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleLogout}>
                     <LogOut className="w-4 h-4" />
                     লগআউট
