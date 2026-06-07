@@ -158,6 +158,11 @@ const Dashboard = () => {
                     <BarChart3 className="w-5 h-5 text-primary" />
                     সাম্প্রতিক এক্সাম
                   </h2>
+                  <Link to="/exam-history">
+                    <Button variant="ghost" size="sm" className="gap-1">
+                      সম্পূর্ণ ইতিহাস <ChevronRight className="w-4 h-4" />
+                    </Button>
+                  </Link>
                 </div>
                 {attempts.length === 0 ? (
                   <div className="text-center py-8 text-muted-foreground">

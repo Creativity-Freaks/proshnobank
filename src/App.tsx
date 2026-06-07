@@ -52,6 +52,7 @@ const EngineeringExams = lazy(() => import("./pages/categories/EngineeringExams"
 const UniversityExams = lazy(() => import("./pages/categories/UniversityExams"));
 const JobExams = lazy(() => import("./pages/categories/JobExams"));
 const Profile = lazy(() => import("./pages/Profile"));
+const ExamHistory = lazy(() => import("./pages/ExamHistory"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -107,6 +108,14 @@ const App = () => (
                     <ProtectedRoute>
                       <Profile />
                     </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/exam-history"
+                  element={
+                    <StudentRoute>
+                      <ExamHistory />
+                    </StudentRoute>
                   }
                 />
 
