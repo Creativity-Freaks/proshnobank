@@ -200,49 +200,52 @@ export default function ExamBatchDetails() {
 
       if (resolvedBatch.category_id) {
         tasks.push(
-          supabase
-            .from("exam_categories")
-            .select("name")
-            .eq("id", resolvedBatch.category_id)
-            .maybeSingle()
-            .then(({ data }) => {
+          (async () => {
+            try {
+              const { data } = await supabase
+                .from("exam_categories")
+                .select("name")
+                .eq("id", resolvedBatch.category_id)
+                .maybeSingle();
               result.categoryName = (data as { name?: string } | null)?.name ?? null;
-            })
-            .catch(() => {
+            } catch {
               result.categoryName = null;
-            }),
+            }
+          })(),
         );
       }
 
       if (resolvedBatch.subcategory_id) {
         tasks.push(
-          supabase
-            .from("exam_categories")
-            .select("name")
-            .eq("id", resolvedBatch.subcategory_id)
-            .maybeSingle()
-            .then(({ data }) => {
+          (async () => {
+            try {
+              const { data } = await supabase
+                .from("exam_categories")
+                .select("name")
+                .eq("id", resolvedBatch.subcategory_id)
+                .maybeSingle();
               result.subcategoryName = (data as { name?: string } | null)?.name ?? null;
-            })
-            .catch(() => {
+            } catch {
               result.subcategoryName = null;
-            }),
+            }
+          })(),
         );
       }
 
       if (resolvedBatch.template_id) {
         tasks.push(
-          supabase
-            .from("exam_templates")
-            .select("title")
-            .eq("id", resolvedBatch.template_id)
-            .maybeSingle()
-            .then(({ data }) => {
+          (async () => {
+            try {
+              const { data } = await supabase
+                .from("exam_templates")
+                .select("title")
+                .eq("id", resolvedBatch.template_id)
+                .maybeSingle();
               result.templateTitle = (data as { title?: string } | null)?.title ?? null;
-            })
-            .catch(() => {
+            } catch {
               result.templateTitle = null;
-            }),
+            }
+          })(),
         );
       }
 
@@ -422,7 +425,7 @@ export default function ExamBatchDetails() {
                       return;
                     }
 
-                    if (data && typeof data === "object" && (data as any).ok === true) {
+                    if (data && typeof data === "object" && (data as { ok?: boolean }).ok === true) {
                       toast({
                         title: "ভর্তি সফল",
                         description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",

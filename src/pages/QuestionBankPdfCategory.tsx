@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { ArrowLeft, Briefcase, FileText, GraduationCap, Loader2 } from "lucide-react";
 
 type ProshnobankPdfCategory = "ssc" | "hsc" | "admission" | "chakri";
@@ -69,7 +70,7 @@ export default function QuestionBankPdfCategory() {
     queryKey: ["proshnobank-pdfs", category],
     enabled: Boolean(category),
     queryFn: async () => {
-      const query = (supabase as unknown as any)
+      const query = (supabase as unknown as SupabaseClient)
         .from("proshnobank_pdfs")
         .select("id,title,category,storage_path,file_name,created_at")
         .eq("category", category)
