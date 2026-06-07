@@ -192,11 +192,15 @@ Deno.serve(async (req: Request) => {
             ]);
             
             const user = authData?.user;
-            const purchased_batches = (enrollments || []).map((e: any) => ({
+            type EnrollmentRow = {
+              batch_id?: string;
+              exam_batches?: { id?: string; title?: string; price?: number } | null;
+            };
+            const purchased_batches = ((enrollments || []) as EnrollmentRow[]).map((e) => ({
                 id: e.exam_batches?.id,
                 title: e.exam_batches?.title,
                 price: e.exam_batches?.price
-            })).filter((b: any) => b.id);
+            })).filter((b) => b.id);
 
             return {
               ...u,

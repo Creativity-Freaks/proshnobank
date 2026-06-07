@@ -54,8 +54,9 @@ export const useAdminCheck = () => {
         setSelectedAccessRole("admin");
         setUserRoles([]);
       } finally {
-        if (!isMounted) return;
-        setIsLoading(false);
+        if (isMounted) {
+          setIsLoading(false);
+        }
       }
     };
 

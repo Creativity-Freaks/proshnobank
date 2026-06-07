@@ -34,7 +34,11 @@ dist-ssr
 *.tgz
 
 # Yarn Integrity file
-.yarn-integrity 
+.yarn-integrity
+
+# Supabase CLI local state
+supabase/.temp/
+supabase/.branches/ 
 
 # dotenv environment variable files
 .env
