@@ -84,10 +84,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithGoogle = async () => {
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/dashboard`
+      : process.env.VITE_APP_URL ? `${process.env.VITE_APP_URL}/dashboard` : '';
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: redirectUrl,
         queryParams: {
           prompt: 'select_account',
         },
@@ -97,10 +101,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signInWithFacebook = async () => {
+    const redirectUrl = typeof window !== 'undefined' 
+      ? `${window.location.origin}/dashboard`
+      : process.env.VITE_APP_URL ? `${process.env.VITE_APP_URL}/dashboard` : '';
+    
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'facebook',
       options: {
-        redirectTo: `${window.location.origin}/dashboard`,
+        redirectTo: redirectUrl,
       },
     });
     return { error };
