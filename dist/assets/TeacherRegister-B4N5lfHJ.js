@@ -1,0 +1,1 @@
+import{C as a,r as s,j as c}from"./index-BgWUamdq.js";import o from"./Register-1M2lG-YE.js";import"./usePageMeta-dPbayidw.js";import"./user-BPBEBmDC.js";function u(){const[t,e]=a(),r=t.get("type");return s.useEffect(()=>{r!=="teacher"&&e({type:"teacher"},{replace:!0})},[r,e]),c.jsx(o,{})}export{u as default};
