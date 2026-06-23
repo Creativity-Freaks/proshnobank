@@ -456,7 +456,6 @@ const ExamSetup = () => {
           </div>
         </div>
       </main>
-
     </div>
   );
 };
