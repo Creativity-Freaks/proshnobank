@@ -144,41 +144,19 @@ export default function AdminCategoriesNew() {
 
                   {/* Action Buttons */}
                   <div className="flex gap-2 pt-3">
-                    <Dialog open={isEditDialogOpen && selectedCategory?.id === category.id}>
-                      <DialogTrigger asChild>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="flex-1 gap-2"
-                          onClick={() => {
-                            setSelectedCategory(category as any);
-                            setFormData({ id: category.id, name: category.name });
-                            setIsEditDialogOpen(true);
-                          }}
-                        >
-                          <Edit2 className="w-3 h-3" />
-                          সম্পাদনা
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>ক্যাটেগরি সম্পাদনা</DialogTitle>
-                        </DialogHeader>
-                        <div className="space-y-4">
-                          <div>
-                            <Label htmlFor="edit-category-name">ক্যাটেগরি নাম *</Label>
-                            <Input
-                              id="edit-category-name"
-                              value={formData.name}
-                              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                            />
-                          </div>
-                          <Button onClick={handleEditCategory} className="w-full">
-                            সংরক্ষণ করুন
-                          </Button>
-                        </div>
-                      </DialogContent>
-                    </Dialog>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="flex-1 gap-2"
+                      onClick={() => {
+                        setSelectedCategory(category as any);
+                        setFormData({ id: category.id, name: category.name });
+                        setIsEditDialogOpen(true);
+                      }}
+                    >
+                      <Edit2 className="w-3 h-3" />
+                      সম্পাদনা
+                    </Button>
                     <Button
                       size="sm"
                       variant="destructive"
@@ -204,6 +182,28 @@ export default function AdminCategoriesNew() {
             </CardContent>
           </Card>
         )}
+
+        {/* Edit Dialog - Outside Loop */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>ক্যাটেগরি সম্পাদনা</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="edit-category-name">ক্যাটেগরি নাম *</Label>
+                <Input
+                  id="edit-category-name"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
+              <Button onClick={handleEditCategory} className="w-full">
+                সংরক্ষণ করুন
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
