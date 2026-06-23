@@ -1,4 +1,4 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,10 @@ import AuthLayout from "@/components/routing/AuthLayout";
 import AdminShell from "@/components/routing/AdminShell";
 import TeacherShell from "@/components/teacher/TeacherShell";
 
+// Eager imports for critical auth pages to avoid dynamic loading issues
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
+
 const Index = lazy(() => import("./pages/Index"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Login = lazy(() => import("./pages/Login"));
@@ -22,8 +26,6 @@ const TeacherLogin = lazy(() => import("./pages/teacher/TeacherLogin"));
 const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
 const Register = lazy(() => import("./pages/Register"));
 const TeacherRegister = lazy(() => import("./pages/teacher/TeacherRegister"));
-const ForgotPassword = lazy(() => import("./pages/ForgotPassword"));
-const ResetPassword = lazy(() => import("./pages/ResetPassword"));
 const QuestionBank = lazy(() => import("./pages/QuestionBank"));
 const QuestionBankPdfCategory = lazy(() => import("./pages/QuestionBankPdfCategory"));
 const ExamBatches = lazy(() => import("./pages/Exambatch/ExamBatches"));
@@ -63,6 +65,15 @@ const queryClient = new QueryClient({
   },
 });
 
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center min-h-screen">
+    <div className="text-center">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+      <p>Loading...</p>
+    </div>
+  </div>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -71,7 +82,8 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AppErrorBoundary>
-            <Routes>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
               <Route element={<PublicLayout />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/question-bank" element={<QuestionBank />} />
@@ -152,12 +164,13 @@ const App = () => (
                   }
                 />
               </Route>
-            </Routes>
-          </AppErrorBoundary>
-        </BrowserRouter>
-      </TooltipProvider>
-    </AuthProvider>
-  </QueryClientProvider>
-);
+              </Routes>
+            </Suspense>
+            </AppErrorBoundary>
+          </BrowserRouter>
+        </TooltipProvider>
+      </AuthProvider>
+    </QueryClientProvider>
+  );
 
 export default App;
