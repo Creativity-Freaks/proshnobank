@@ -26,6 +26,7 @@
  */
 
 import { supabase } from "@/integrations/supabase/client";
+import { examCatalog } from "./exam-catalog";
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
@@ -212,15 +213,11 @@ export const examsApi = {
 
   /** Get category/subject/topic catalog for exam setup */
   catalog: () =>
-    apiCall<{
+    Promise.resolve({
       data: {
-        categories: {
-          id: string;
-          name: string;
-          subjects: { id: string; name: string; topics: { id: string; name: string }[] }[];
-        }[];
-      };
-    }>("exams", { action: "catalog" }),
+        categories: examCatalog,
+      },
+    }),
 
   /** Submit an exam attempt */
   submit: (attempt: {
