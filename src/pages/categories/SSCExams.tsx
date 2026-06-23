@@ -3,6 +3,7 @@ import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackButton } from "@/components/BackButton";
 
 const subjects = [
   { id: "ssc_bangla_1", name: "বাংলা ১ম পত্র" },
@@ -91,6 +92,7 @@ const SSCExams = () => {
       {/* Hero Section */}
       <section className="pt-24 pb-12 bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
         <div className="container mx-auto px-4">
+          <BackButton className="mb-6" />
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
@@ -130,7 +132,7 @@ const SSCExams = () => {
             <div className="bg-card rounded-xl p-4 border border-border">
               <Clock className="w-6 h-6 text-primary mb-2" />
               <p className="text-2xl font-bold text-foreground">২৪/৭</p>
-              <p className="text-sm text-muted-foreground">অ্যাক্সেস</p>
+              <p className="text-sm text-muted-foreground">অ্য���ক্সেস</p>
             </div>
           </div>
         </div>

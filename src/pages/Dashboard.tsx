@@ -5,6 +5,7 @@ import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
 import { examsApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
+import { BackButton } from "@/components/BackButton";
 import {
   BookOpen, Trophy, Clock, Target, TrendingUp, Calendar,
   Award, ChevronRight, Play, CheckCircle2, XCircle, BarChart3,
@@ -107,6 +108,8 @@ const Dashboard = () => {
               </Button>
             </Link>
           </div>
+
+          <BackButton className="mb-8" />
 
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

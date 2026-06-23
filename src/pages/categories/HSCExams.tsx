@@ -3,6 +3,7 @@ import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackButton } from "@/components/BackButton";
 
 const subjects = [
   { id: "hsc_bangla", name: "বাংলা" },

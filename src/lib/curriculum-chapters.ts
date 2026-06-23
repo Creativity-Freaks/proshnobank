@@ -1,5 +1,8 @@
 // Bangladesh Curriculum Chapters for Each Subject
 // Based on HSC and SSC Official Syllabus
+// Primary source: Supabase database | Fallback: Local data
+
+import { getChaptersFromDatabase } from "./api-chapters";
 
 export interface Chapter {
   id: string;
@@ -7,6 +10,9 @@ export interface Chapter {
   name: string;
   topics: string[];
 }
+
+// Cache for chapters to avoid repeated database calls
+const chaptersCache = new Map<string, Chapter[]>();
 
 export interface SubjectCurriculum {
   subjectId: string;
@@ -198,7 +204,7 @@ const hscChemistryChapters: Chapter[] = [
     id: "hsc_chemistry_04",
     number: 4,
     name: "ভারসাম্য",
-    topics: ["রাসায়নিক ভারসাম্য", "সাম্যস্থিরাঙ্ক", "লেশাতেলিয়ার নীতি"],
+    topics: ["রাসায়নিক ভারসাম্য", "সাম্য��্থিরাঙ্ক", "লেশাতেলিয়ার নীতি"],
   },
   {
     id: "hsc_chemistry_05",
@@ -314,6 +320,45 @@ const curriculumMap: Record<string, SubjectCurriculum> = {
   hsc_biology: { subjectId: "hsc_biology", subjectName: "জীববিজ্ঞান", chapters: hscBiologyChapters },
 };
 
+/**
+ * Get chapters for a subject - Database first, fallback to local data
+ * This ensures all panels (admin, teacher, student) see the same chapters
+ */
+export async function getChaptersForSubjectFromDB(
+  subjectId: string
+): Promise<Chapter[]> {
+  // Check cache first
+  if (chaptersCache.has(subjectId)) {
+    return chaptersCache.get(subjectId)!;
+  }
+
+  try {
+    // Try to fetch from database
+    const dbChapters = await getChaptersFromDatabase(subjectId);
+    if (dbChapters.length > 0) {
+      const convertedChapters: Chapter[] = dbChapters.map((ch: any) => ({
+        id: ch.id,
+        number: ch.chapter_number,
+        name: ch.chapter_name_bn,
+        topics: ch.topics?.map((t: any) => t.topic_name_bn) || [],
+      }));
+      chaptersCache.set(subjectId, convertedChapters);
+      return convertedChapters;
+    }
+  } catch (error) {
+    console.log("[v0] Database unavailable, using local curriculum");
+  }
+
+  // Fallback to local data
+  const localChapters = curriculumMap[subjectId]?.chapters || [];
+  chaptersCache.set(subjectId, localChapters);
+  return localChapters;
+}
+
+/**
+ * Synchronous version for backward compatibility - returns local data only
+ * Use getChaptersForSubjectFromDB for database-driven data
+ */
 export function getChaptersForSubject(subjectId: string): Chapter[] {
   return curriculumMap[subjectId]?.chapters || [];
 }
@@ -324,4 +369,11 @@ export function getCurriculumBySubject(subjectId: string): SubjectCurriculum | n
 
 export function getAllCurriculums(): SubjectCurriculum[] {
   return Object.values(curriculumMap);
+}
+
+/**
+ * Clear chapters cache (useful for admin operations)
+ */
+export function clearChaptersCache(): void {
+  chaptersCache.clear();
 }
