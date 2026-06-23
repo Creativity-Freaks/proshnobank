@@ -5,29 +5,28 @@ import { Briefcase, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from 
 import { Link } from "react-router-dom";
 
 const subjects = [
-  { id: "bcs", name: "BCS" },
-  { id: "bank", name: "ব্যাংক" },
-  { id: "primary", name: "প্রাইমারি" },
-  { id: "ntrca", name: "NTRCA" },
-  { id: "bangla", name: "বাংলা" },
-  { id: "english", name: "ইংরেজি" },
-  { id: "math", name: "গণিত" },
-  { id: "gk", name: "সাধারণ জ্ঞান" },
+  { id: "job_bangla", name: "বাংলা" },
+  { id: "job_english", name: "ইংরেজি" },
+  { id: "job_math", name: "গণিত" },
+  { id: "job_gk", name: "সাধারণ জ্ঞান" },
+  { id: "job_ict", name: "ICT" },
+  { id: "job_mental_ability", name: "মানসিক দক্ষতা" },
+  { id: "job_logical", name: "Logical Reasoning" },
 ];
 
 const exams = [
-  { id: 1, title: "BCS প্রিলিমিনারি - বাংলা", subject: "bcs", questions: 35, duration: 35, attempts: 8250 },
-  { id: 2, title: "BCS প্রিলিমিনারি - ইংরেজি", subject: "bcs", questions: 35, duration: 35, attempts: 7980 },
-  { id: 3, title: "BCS প্রিলিমিনারি - সাধারণ জ্ঞান", subject: "bcs", questions: 50, duration: 50, attempts: 9450 },
-  { id: 4, title: "BCS প্রিলিমিনারি - গণিত", subject: "bcs", questions: 15, duration: 20, attempts: 6120 },
-  { id: 5, title: "ব্যাংক নিয়োগ পরীক্ষা - সম্পূর্ণ", subject: "bank", questions: 80, duration: 60, attempts: 5890 },
-  { id: 6, title: "প্রাইমারি শিক্ষক নিয়োগ", subject: "primary", questions: 80, duration: 80, attempts: 7340 },
-  { id: 7, title: "NTRCA শিক্ষক নিবন্ধন", subject: "ntrca", questions: 100, duration: 60, attempts: 4150 },
-  { id: 8, title: "BCS মডেল টেস্ট - ১", subject: "bcs", questions: 200, duration: 120, attempts: 10670 },
-  { id: 9, title: "বিগত বছরের প্রশ্ন - ৪৫তম BCS", subject: "bcs", questions: 200, duration: 120, attempts: 12890 },
-  { id: 10, title: "ব্যাংক - বাংলা", subject: "bank", questions: 30, duration: 30, attempts: 4560 },
-  { id: 11, title: "ব্যাংক - ইংরেজি", subject: "bank", questions: 30, duration: 30, attempts: 4890 },
-  { id: 12, title: "প্রাইমারি - গণিত", subject: "primary", questions: 25, duration: 25, attempts: 5670 },
+  { id: 1, title: "BCS প্রিলিমিনারি - বাংলা", subject: "job_bangla", questions: 35, duration: 35, attempts: 8250 },
+  { id: 2, title: "BCS প্রিলিমিনারি - ইংরেজি", subject: "job_english", questions: 35, duration: 35, attempts: 7980 },
+  { id: 3, title: "BCS প্রিলিমিনারি - সাধারণ জ্ঞান", subject: "job_gk", questions: 50, duration: 50, attempts: 9450 },
+  { id: 4, title: "BCS প্রিলিমিনারি - গণিত", subject: "job_math", questions: 15, duration: 20, attempts: 6120 },
+  { id: 5, title: "ব্যাংক নিয়োগ - সম্পূর্ণ", subject: "job_bangla", questions: 80, duration: 60, attempts: 5890 },
+  { id: 6, title: "প্রাইমারি শিক্ষক নিয়োগ", subject: "job_bangla", questions: 80, duration: 80, attempts: 7340 },
+  { id: 7, title: "জাতীয় পরীক্ষা - বাংলা", subject: "job_bangla", questions: 100, duration: 60, attempts: 4150 },
+  { id: 8, title: "চাকরি পরীক্ষা মডেল - ১", subject: "job_gk", questions: 200, duration: 120, attempts: 10670 },
+  { id: 9, title: "বিগত বছরের প্রশ্ন - ৪৫তম BCS", subject: "job_gk", questions: 200, duration: 120, attempts: 12890 },
+  { id: 10, title: "মানসিক দক্ষতা - IQ", subject: "job_mental_ability", questions: 30, duration: 30, attempts: 4560 },
+  { id: 11, title: "Logical Reasoning", subject: "job_logical", questions: 30, duration: 30, attempts: 4890 },
+  { id: 12, title: "ICT - প্রাথমিক", subject: "job_ict", questions: 25, duration: 25, attempts: 5670 },
 ];
 
 const JobExams = () => {
