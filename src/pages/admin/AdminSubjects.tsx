@@ -1,5 +1,5 @@
-import AdminWorkspace from "@/components/admin/AdminWorkspace";
+import AdminSubjectsNew from "./AdminSubjectsNew";
 
 export default function AdminSubjects() {
-  return <AdminWorkspace forcedTab="subjects" />;
+  return <AdminSubjectsNew />;
 }
