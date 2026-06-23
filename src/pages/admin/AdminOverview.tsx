@@ -1,5 +1,5 @@
-import { AdminDashboard } from "@/components/admin/AdminDashboard";
+import { Navigate } from "react-router-dom";
 
 export default function AdminOverview() {
-  return <AdminDashboard />;
+  return <Navigate to="/admin/categories" replace />;
 }
