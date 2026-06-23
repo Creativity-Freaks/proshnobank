@@ -1,5 +1,5 @@
-import AdminWorkspace from "@/components/admin/AdminWorkspace";
+import AdminCategoriesNew from "./AdminCategoriesNew";
 
 export default function AdminCategories() {
-  return <AdminWorkspace forcedTab="categories" />;
+  return <AdminCategoriesNew />;
 }

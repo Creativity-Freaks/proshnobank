@@ -1,5 +1,5 @@
-import AdminWorkspace from "@/components/admin/AdminWorkspace";
+import { AdminDashboard } from "@/components/admin/AdminDashboard";
 
 export default function AdminOverview() {
-  return <AdminWorkspace forcedTab="overview" />;
+  return <AdminDashboard />;
 }
