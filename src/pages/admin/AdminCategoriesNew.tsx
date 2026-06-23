@@ -1,10 +1,9 @@
 import { useState } from "react";
-import { Plus, Edit2, Trash2, ChevronDown, X } from "lucide-react";
+import { Plus, Edit2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { BackButton } from "@/components/BackButton";
 import { examCatalog } from "@/lib/exam-catalog";
 import { Badge } from "@/components/ui/badge";
@@ -12,14 +11,13 @@ import { Badge } from "@/components/ui/badge";
 interface CategoryFormData {
   id: string;
   name: string;
-  description?: string;
 }
 
 export default function AdminCategoriesNew() {
   const [categories, setCategories] = useState(examCatalog.categories);
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryFormData | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [formData, setFormData] = useState<CategoryFormData>({ id: "", name: "" });
 
   const handleAddCategory = () => {
@@ -31,20 +29,20 @@ export default function AdminCategoriesNew() {
       };
       setCategories([...categories, newCategory as any]);
       setFormData({ id: "", name: "" });
-      setIsAddDialogOpen(false);
+      setShowAddForm(false);
     }
   };
 
   const handleEditCategory = () => {
-    if (formData.name.trim() && selectedCategory) {
+    if (formData.name.trim() && selectedCategoryId) {
       setCategories(
         categories.map((cat) =>
-          cat.id === selectedCategory.id ? { ...cat, name: formData.name } : cat
+          cat.id === selectedCategoryId ? { ...cat, name: formData.name } : cat
         )
       );
       setFormData({ id: "", name: "" });
-      setSelectedCategory(null);
-      setIsEditDialogOpen(false);
+      setSelectedCategoryId(null);
+      setShowEditForm(false);
     }
   };
 
@@ -52,6 +50,12 @@ export default function AdminCategoriesNew() {
     if (confirm("কি এই ক্যাটেগরি মুছে দিতে চান?")) {
       setCategories(categories.filter((cat) => cat.id !== categoryId));
     }
+  };
+
+  const openEditForm = (category: any) => {
+    setSelectedCategoryId(category.id);
+    setFormData({ id: category.id, name: category.name });
+    setShowEditForm(true);
   };
 
   return (
@@ -66,17 +70,21 @@ export default function AdminCategoriesNew() {
 
         {/* Add Category Button */}
         <div className="mb-6">
-          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-            <DialogTrigger asChild>
-              <Button className="gap-2 bg-primary hover:bg-primary/90">
-                <Plus className="w-4 h-4" />
-                নতুন ক্যাটেগরি যোগ করুন
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>নতুন ক্যাটেগরি যোগ করুন</DialogTitle>
-              </DialogHeader>
+          {!showAddForm && (
+            <Button onClick={() => setShowAddForm(true)} className="gap-2 bg-primary hover:bg-primary/90">
+              <Plus className="w-4 h-4" />
+              নতুন ক্যাটেগরি যোগ করুন
+            </Button>
+          )}
+        </div>
+
+        {/* Add Form */}
+        {showAddForm && (
+          <Card className="mb-6 bg-muted/50">
+            <CardHeader>
+              <CardTitle className="text-lg">নতুন ক্যাটেগরি যোগ করুন</CardTitle>
+            </CardHeader>
+            <CardContent>
               <div className="space-y-4">
                 <div>
                   <Label htmlFor="category-name">ক্যাটেগরি নাম *</Label>
@@ -96,13 +104,18 @@ export default function AdminCategoriesNew() {
                     onChange={(e) => setFormData({ ...formData, id: e.target.value })}
                   />
                 </div>
-                <Button onClick={handleAddCategory} className="w-full">
-                  ক্যাটেগরি যোগ করুন
-                </Button>
+                <div className="flex gap-2">
+                  <Button onClick={handleAddCategory} className="flex-1">
+                    ক্যাটেগরি যোগ করুন
+                  </Button>
+                  <Button onClick={() => setShowAddForm(false)} variant="outline" className="flex-1">
+                    বাতিল করুন
+                  </Button>
+                </div>
               </div>
-            </DialogContent>
-          </Dialog>
-        </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Categories Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -112,18 +125,16 @@ export default function AdminCategoriesNew() {
                 <div className="flex items-start justify-between">
                   <div>
                     <CardTitle className="text-lg">{category.name}</CardTitle>
-                    <CardDescription className="text-xs mt-1">ID: {category.id}</CardDescription>
                   </div>
                   <Badge variant="outline">{category.subjects.length} বিষয়</Badge>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {/* Subject List */}
                   <div>
                     <p className="text-sm font-medium mb-2">বিষয়সমূহ:</p>
                     <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {category.subjects.slice(0, 5).map((subject) => (
+                      {category.subjects.slice(0, 5).map((subject: any) => (
                         <div
                           key={subject.id}
                           className="text-xs bg-muted p-2 rounded flex items-center justify-between"
@@ -142,17 +153,12 @@ export default function AdminCategoriesNew() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
                   <div className="flex gap-2 pt-3">
                     <Button
                       size="sm"
                       variant="outline"
                       className="flex-1 gap-2"
-                      onClick={() => {
-                        setSelectedCategory(category as any);
-                        setFormData({ id: category.id, name: category.name });
-                        setIsEditDialogOpen(true);
-                      }}
+                      onClick={() => openEditForm(category)}
                     >
                       <Edit2 className="w-3 h-3" />
                       সম্পাদনা
@@ -178,32 +184,47 @@ export default function AdminCategoriesNew() {
           <Card className="text-center py-12">
             <CardContent>
               <p className="text-muted-foreground mb-4">কোনো ক্যাটেগরি নেই। শুরু করতে একটি যোগ করুন।</p>
-              <Button onClick={() => setIsAddDialogOpen(true)}>প্রথম ক্যাটেগরি যোগ করুন</Button>
+              <Button onClick={() => setShowAddForm(true)}>প্রথম ক্যাটেগরি যোগ করুন</Button>
             </CardContent>
           </Card>
         )}
 
-        {/* Edit Dialog - Outside Loop */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>ক্যাটেগরি সম্পাদনা</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="edit-category-name">ক্যাটেগরি নাম *</Label>
-                <Input
-                  id="edit-category-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                />
+        {/* Edit Form */}
+        {showEditForm && (
+          <Card className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:transform md:-translate-x-1/2 md:-translate-y-1/2 md:w-96 bg-background z-50 shadow-2xl">
+            <CardHeader>
+              <CardTitle className="text-lg">ক্যাটেগরি সম্পাদনা</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="edit-category-name">ক্যাটেগরি নাম *</Label>
+                  <Input
+                    id="edit-category-name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <Button onClick={handleEditCategory} className="flex-1">
+                    সংরক্ষণ করুন
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setShowEditForm(false);
+                      setFormData({ id: "", name: "" });
+                      setSelectedCategoryId(null);
+                    }}
+                    variant="outline"
+                    className="flex-1"
+                  >
+                    বাতিল করুন
+                  </Button>
+                </div>
               </div>
-              <Button onClick={handleEditCategory} className="w-full">
-                সংরক্ষণ করুন
-              </Button>
-            </div>
-          </DialogContent>
-        </Dialog>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   );
