@@ -10,6 +10,12 @@ export default defineConfig(() => ({
     hmr: {
       overlay: false,
     },
+    allowedHosts: [
+      "localhost",
+      "127.0.0.1",
+      "sb-7084db1hbx0q.vercel.run",
+      ".vercel.run",
+    ],
   },
   plugins: [react()],
   resolve: {

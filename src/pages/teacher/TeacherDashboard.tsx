@@ -30,7 +30,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { QuestionForm } from "@/components/admin/QuestionForm";
 import { TeacherSidebar, type TeacherView as SidebarTeacherView } from "@/components/teacher/TeacherSidebar";
 import ContactPanel from "@/components/teacher/panels/ContactPanel";
-import ExamSchedulePanel from "@/components/teacher/panels/ExamSchedulePanel";
 import FeedbackPanel from "@/components/teacher/panels/FeedbackPanel";
 import InstitutionPanel from "@/components/teacher/panels/InstitutionPanel";
 import OmrEvaluatorPanel from "@/components/teacher/panels/OmrEvaluatorPanel";
@@ -160,7 +159,12 @@ export default function TeacherDashboard() {
   const [creatingQuestion, setCreatingQuestion] = useState(false);
   const [showQuestionForm, setShowQuestionForm] = useState(false);
   const [creatingTemplate, setCreatingTemplate] = useState(false);
+  const [creatingEvent, setCreatingEvent] = useState(false);
   const [uploadingPaper, setUploadingPaper] = useState(false);
+
+  const [eventTemplateId, setEventTemplateId] = useState<string>("");
+  const [eventStartTime, setEventStartTime] = useState<string>("");
+  const [eventPrize, setEventPrize] = useState<string>("");
 
   const [paperTitle, setPaperTitle] = useState<string>("");
   const [paperFile, setPaperFile] = useState<File | null>(null);
@@ -238,7 +242,7 @@ export default function TeacherDashboard() {
       if (!user?.id) return [];
       const res = await supabase
         .from("live_exam_events" as never)
-        .select("id, template_id, start_time, status, participants, prize")
+        .select("id, template_id, start_time, status")
         .eq("created_by", user.id)
         .order("start_time", { ascending: true })
         .limit(50);
@@ -248,8 +252,6 @@ export default function TeacherDashboard() {
         template_id: string;
         start_time: string;
         status: string;
-        participants: number | null;
-        prize: string | null;
       }>;
     },
   });
@@ -417,6 +419,42 @@ export default function TeacherDashboard() {
         description: "পপ-আপ ব্লকড। Pop-up allow করে আবার চেষ্টা করুন।",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleCreateEvent = async () => {
+    if (!eventTemplateId) {
+      toast({ title: "ত্রুটি", description: "টেমপ্লেট সিলেক্ট করুন।", variant: "destructive" });
+      return;
+    }
+    if (!eventStartTime) {
+      toast({ title: "ত্রুটি", description: "শুরুর সময় দিন।", variant: "destructive" });
+      return;
+    }
+
+    try {
+      setCreatingEvent(true);
+      const start = new Date(eventStartTime);
+      if (Number.isNaN(start.getTime())) throw new Error("Invalid start time");
+
+      const res = await supabase.from("live_exam_events" as never).insert({
+        template_id: eventTemplateId,
+        start_time: start.toISOString(),
+        status: "upcoming",
+        participants: 0,
+        prize: eventPrize.trim() || null,
+      } as unknown as never);
+      if (res.error) throw res.error;
+
+      toast({ title: "সফল!", description: "লাইভ এক্সাম শিডিউল হয়েছে।" });
+      setEventStartTime("");
+      setEventPrize("");
+      queryClient.invalidateQueries({ queryKey: ["teacher-events"] });
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "শিডিউল করতে সমস্যা হয়েছে।";
+      toast({ title: "ত্রুটি", description: message, variant: "destructive" });
+    } finally {
+      setCreatingEvent(false);
     }
   };
 
@@ -1106,12 +1144,85 @@ export default function TeacherDashboard() {
 
               {/* Schedule */}
               {activeView === "schedule" ? (
-                <ExamSchedulePanel
-                  templates={myTemplatesData || []}
-                  templatesLoading={myTemplatesLoading}
-                  events={myEventsData || []}
-                  eventsLoading={myEventsLoading}
-                />
+                <div className="mt-6 grid gap-6 lg:grid-cols-2">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>লাইভ এক্সাম শিডিউল</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      <div>
+                        <Label>টেমপ্লেট</Label>
+                        {myTemplatesLoading ? (
+                          <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
+                            <Loader2 className="w-4 h-4 animate-spin" /> লোড হচ্ছে...
+                          </div>
+                        ) : (
+                          <Select value={eventTemplateId} onValueChange={setEventTemplateId}>
+                            <SelectTrigger className="mt-2">
+                              <SelectValue placeholder="টেমপ্লেট সিলেক্ট" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {(myTemplatesData || []).map((t) => (
+                                <SelectItem key={t.id} value={t.id}>
+                                  {t.title}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+
+                      <div>
+                        <Label>শুরুর সময়</Label>
+                        <Input
+                          className="mt-2"
+                          type="datetime-local"
+                          value={eventStartTime}
+                          onChange={(e) => setEventStartTime(e.target.value)}
+                        />
+                      </div>
+
+                      <div>
+                        <Label>প্রাইজ (ঐচ্ছিক)</Label>
+                        <Input
+                          className="mt-2"
+                          value={eventPrize}
+                          onChange={(e) => setEventPrize(e.target.value)}
+                          placeholder="যেমন: ১ম পুরস্কার"
+                        />
+                      </div>
+
+                      <Button onClick={handleCreateEvent} disabled={creatingEvent}>
+                        {creatingEvent ? "শিডিউল হচ্ছে..." : "শিডিউল করুন"}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">শিডিউল করার পর এটি “লাইভ এক্সাম” পেজে দেখাবে।</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>আমার শিডিউল</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {myEventsLoading ? (
+                        <div className="flex items-center justify-center py-8">
+                          <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                        </div>
+                      ) : (myEventsData || []).length === 0 ? (
+                        <div className="text-sm text-muted-foreground">কোনো শিডিউলড এক্সাম নেই।</div>
+                      ) : (
+                        <div className="space-y-3">
+                          {(myEventsData || []).map((e) => (
+                            <div key={e.id} className="rounded-xl border border-border p-3">
+                              <div className="text-sm font-medium text-foreground">{e.status}</div>
+                              <div className="text-xs text-muted-foreground mt-1">{new Date(e.start_time).toLocaleString()}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
               ) : null}
 
               {/* Upload */}
