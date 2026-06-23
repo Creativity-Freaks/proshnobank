@@ -52,7 +52,6 @@ const EngineeringExams = lazy(() => import("./pages/categories/EngineeringExams"
 const UniversityExams = lazy(() => import("./pages/categories/UniversityExams"));
 const JobExams = lazy(() => import("./pages/categories/JobExams"));
 const Profile = lazy(() => import("./pages/Profile"));
-const Bookmarks = lazy(() => import("./pages/Bookmarks"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -108,14 +107,6 @@ const App = () => (
                     <ProtectedRoute>
                       <Profile />
                     </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/bookmarks"
-                  element={
-                    <StudentRoute>
-                      <Bookmarks />
-                    </StudentRoute>
                   }
                 />
 
