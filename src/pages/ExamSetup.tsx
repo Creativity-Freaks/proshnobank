@@ -15,7 +15,8 @@ import {
 } from "@/components/ui/select";
 import { examsApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { Loader2, BookOpen, Clock, Award, MinusCircle, Settings, Play, ChevronRight, Layers, Target, ArrowLeft, ChevronDown } from "lucide-react";
+import { Loader2, BookOpen, Clock, Award, MinusCircle, Settings, Play, ChevronRight, Layers, Target, ChevronDown } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
 import { getChaptersForSubject } from "@/lib/curriculum-chapters";
 
 type TopicItem = { id: string; name: string };
@@ -161,13 +162,7 @@ const ExamSetup = () => {
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4">
           <div className="mb-6 md:mb-8">
-            <button
-              onClick={() => navigate(-1)}
-              className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors mb-4 md:mb-6"
-            >
-              <ArrowLeft className="w-5 h-5" />
-              <span className="text-sm md:text-base">ফিরে যান</span>
-            </button>
+            <BackButton className="mb-4 md:mb-6" />
             
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 mb-4 text-primary">

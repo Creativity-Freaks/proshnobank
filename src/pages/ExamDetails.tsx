@@ -1,6 +1,7 @@
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/BackButton";
 import { Badge } from "@/components/ui/badge";
 import { examsApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -207,6 +208,7 @@ const ExamDetails = () => {
       
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4">
+          <BackButton className="mb-6" />
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
