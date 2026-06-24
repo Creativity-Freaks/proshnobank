@@ -1,13 +1,14 @@
 import { supabase } from "@/integrations/supabase/client";
 
-// ============ SUBCATEGORIES ============
+// ============ SUBCATEGORIES (Exam Categories with parent_id) ============
 export async function getSubcategoriesByCategory(categoryId: string) {
   try {
     const { data } = await supabase
-      .from("category_subcategories")
-      .select("*")
-      .eq("category_id", categoryId)
-      .order("order_index", { ascending: true });
+      .from("exam_categories")
+      .select("id, name, slug, description, is_active, sort_order, parent_id, created_at")
+      .eq("parent_id", categoryId)
+      .order("sort_order", { ascending: true })
+      .order("name", { ascending: true });
     return data || [];
   } catch (error) {
     console.error("[v0] Failed to fetch subcategories:", error);
@@ -19,12 +20,18 @@ export async function createSubcategory(
   categoryId: string,
   name: string,
   description?: string,
-  iconName?: string
+  slug?: string
 ) {
   try {
     const { data } = await supabase
-      .from("category_subcategories")
-      .insert([{ category_id: categoryId, name, description, icon_name: iconName }])
+      .from("exam_categories")
+      .insert([{ 
+        parent_id: categoryId, 
+        name, 
+        description,
+        slug: slug || name.toLowerCase().replace(/\s+/g, '-'),
+        is_active: true
+      }])
       .select()
       .single();
     return data;
@@ -40,7 +47,7 @@ export async function updateSubcategory(
 ) {
   try {
     const { data } = await supabase
-      .from("category_subcategories")
+      .from("exam_categories")
       .update(updates)
       .eq("id", subcategoryId)
       .select()
@@ -55,7 +62,7 @@ export async function updateSubcategory(
 export async function deleteSubcategory(subcategoryId: string) {
   try {
     await supabase
-      .from("category_subcategories")
+      .from("exam_categories")
       .delete()
       .eq("id", subcategoryId);
   } catch (error) {

@@ -547,6 +547,7 @@ export const adminDashboardApi = {
       const { data, error } = await supabase
         .from("exam_categories")
         .select("id, name, slug, description, is_active, sort_order, created_at")
+        .is("parent_id", null)
         .order("sort_order", { ascending: true })
         .order("name", { ascending: true });
       if (error) throw new Error(error.message);
