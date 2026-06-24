@@ -296,8 +296,9 @@ export default function ExamBatchDetails() {
 
                     toast({
                       title: "ভর্তি সফল",
-                      description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
+                      description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
                     });
+                    navigate("/dashboard#my-batches");
                   } catch (e: unknown) {
                     const message = e instanceof Error ? e.message : "ভর্তি করতে সমস্যা হয়েছে।";
                     toast({ title: "ত্রুটি", description: message, variant: "destructive" });
