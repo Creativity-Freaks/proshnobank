@@ -37,26 +37,26 @@ WHERE parent_id IS NULL;
 -- Exam subcategories (parent_id IS NOT NULL)
 SELECT 'Exam Categories (Parent ID NOT NULL)' as category_type,
   COUNT(*) as total,
-  STRING_AGG(DISTINCT name, ', ' ORDER BY name LIMIT 10) as examples
+  STRING_AGG(DISTINCT name, ', ') as examples
 FROM exam_categories
 WHERE parent_id IS NOT NULL;
 
 -- Subjects
 SELECT 'Subjects' as entity_type,
   COUNT(*) as total,
-  STRING_AGG(DISTINCT text, ', ' ORDER BY text LIMIT 10) as examples
+  STRING_AGG(DISTINCT text, ', ') as examples
 FROM subjects;
 
 -- Chapters
 SELECT 'Chapters' as entity_type,
   COUNT(*) as total,
-  STRING_AGG(DISTINCT name, ', ' ORDER BY name LIMIT 10) as examples
+  STRING_AGG(DISTINCT name, ', ') as examples
 FROM chapters;
 
 -- Questions
 SELECT 'Questions' as entity_type,
   COUNT(*) as total,
-  STRING_AGG(DISTINCT SUBSTRING(question_text FROM 1 FOR 30), ', ' LIMIT 5) as examples
+  COUNT(*) as total_count
 FROM question_bank;
 
 -- ============================================
