@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Menu, X, LogOut, LayoutDashboard, UserRound } from "lucide-react";
+import { Menu, X, LogOut, LayoutDashboard, UserRound, BookOpen, CreditCard } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -115,11 +115,23 @@ const Navbar = () => {
                       {displayName}
                     </Button>
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48 font-bengali">
+                  <DropdownMenuContent align="end" className="w-52 font-bengali">
                     <DropdownMenuItem asChild>
                       <Link to="/profile" className="flex items-center gap-2">
                         <UserRound className="h-4 w-4" />
                         প্রোফাইল
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard#my-batches" className="flex items-center gap-2">
+                        <BookOpen className="h-4 w-4" />
+                        আমার ব্যাচ
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/dashboard#subscription" className="flex items-center gap-2">
+                        <CreditCard className="h-4 w-4" />
+                        আমার সাবস্ক্রিপশন
                       </Link>
                     </DropdownMenuItem>
                   </DropdownMenuContent>
@@ -168,8 +180,21 @@ const Navbar = () => {
               ) : (
                 <div className="w-full space-y-2">
                   <Link to="/profile" className="block" onClick={() => setIsOpen(false)}>
-                    <Button variant="outline" size="sm" className="w-full font-bengali">
+                    <Button variant="outline" size="sm" className="w-full font-bengali gap-2">
+                      <UserRound className="w-4 h-4" />
                       প্রোফাইল
+                    </Button>
+                  </Link>
+                  <Link to="/dashboard#my-batches" className="block" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full font-bengali gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      আমার ব্যাচ
+                    </Button>
+                  </Link>
+                  <Link to="/dashboard#subscription" className="block" onClick={() => setIsOpen(false)}>
+                    <Button variant="outline" size="sm" className="w-full font-bengali gap-2">
+                      <CreditCard className="w-4 h-4" />
+                      আমার সাবস্ক্রিপশন
                     </Button>
                   </Link>
                   <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleLogout}>

@@ -20,23 +20,29 @@ CREATE TABLE IF NOT EXISTS public.batch_enrollments (
 -- Enable RLS
 ALTER TABLE public.batch_enrollments ENABLE ROW LEVEL SECURITY;
 
+-- Drop existing policies before recreating
+DROP POLICY IF EXISTS "Users can view own enrollments" ON public.batch_enrollments;
+DROP POLICY IF EXISTS "Users can enroll themselves" ON public.batch_enrollments;
+DROP POLICY IF EXISTS "Users can update own enrollments" ON public.batch_enrollments;
+DROP POLICY IF EXISTS "Admins manage all enrollments" ON public.batch_enrollments;
+
 -- Users can see their own enrollments
-CREATE POLICY IF NOT EXISTS "Users can view own enrollments"
+CREATE POLICY "Users can view own enrollments"
   ON public.batch_enrollments FOR SELECT
   USING (auth.uid() = user_id);
 
--- Users can insert their own enrollments (edge function handles auth check)
-CREATE POLICY IF NOT EXISTS "Users can enroll themselves"
+-- Users can insert their own enrollments
+CREATE POLICY "Users can enroll themselves"
   ON public.batch_enrollments FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own enrollments (cancel)
-CREATE POLICY IF NOT EXISTS "Users can update own enrollments"
+CREATE POLICY "Users can update own enrollments"
   ON public.batch_enrollments FOR UPDATE
   USING (auth.uid() = user_id);
 
 -- Admins can do everything
-CREATE POLICY IF NOT EXISTS "Admins manage all enrollments"
+CREATE POLICY "Admins manage all enrollments"
   ON public.batch_enrollments FOR ALL
   USING (
     EXISTS (

@@ -286,11 +286,11 @@ export default function ExamBatchDetails() {
                       return;
                     }
 
-                    if (data && typeof data === "object" && (data as { ok?: boolean }).ok === true) {
-                      toast({
-                        title: "ভর্তি সফল",
-                        description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
-                      });
+                    toast({
+                      title: "ভর্তি সফল",
+                      description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
+                    });
+                    navigate("/dashboard#my-batches");
                       return;
                     }
 
