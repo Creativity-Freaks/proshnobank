@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,6 +27,8 @@ import {
   BookOpen,
   AlertCircle,
   Star,
+  ImagePlus,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface DoubtAnswer {
@@ -34,6 +36,7 @@ interface DoubtAnswer {
   doubt_id: string;
   answerer_id: string;
   answer_text: string;
+  image_url?: string | null;
   is_best_answer: boolean;
   helpful_count: number;
   created_at: string;
@@ -44,6 +47,7 @@ interface Doubt {
   id: string;
   title: string;
   description: string;
+  image_url?: string | null;
   subject: string;
   topic?: string;
   priority: string;
@@ -82,6 +86,64 @@ const PRIORITY_COLORS: Record<string, string> = {
   low: "bg-green-100 text-green-700",
 };
 
+async function uploadDoubtImage(file: File, folder: string): Promise<string> {
+  const ext = file.name.split(".").pop();
+  const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const { error } = await supabase.storage.from("doubt-images").upload(path, file, { upsert: false });
+  if (error) throw new Error(error.message);
+  const { data } = supabase.storage.from("doubt-images").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+function ImageUploadButton({
+  onImageSelected,
+  imagePreview,
+  onClear,
+  uploading,
+}: {
+  onImageSelected: (file: File) => void;
+  imagePreview: string | null;
+  onClear: () => void;
+  uploading: boolean;
+}) {
+  const ref = useRef<HTMLInputElement>(null);
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        ref={ref}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={e => { const f = e.target.files?.[0]; if (f) onImageSelected(f); }}
+      />
+      {imagePreview ? (
+        <div className="relative inline-block">
+          <img src={imagePreview} alt="preview" className="h-16 w-16 object-cover rounded-lg border border-border" />
+          <button
+            type="button"
+            onClick={onClear}
+            className="absolute -top-1.5 -right-1.5 bg-destructive text-destructive-foreground rounded-full w-4 h-4 flex items-center justify-center text-xs"
+          >
+            <X className="w-2.5 h-2.5" />
+          </button>
+        </div>
+      ) : (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="gap-1.5 text-xs"
+          onClick={() => ref.current?.click()}
+          disabled={uploading}
+        >
+          {uploading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <ImagePlus className="w-3.5 h-3.5" />}
+          ছবি যোগ করুন
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export default function Doubts() {
   usePageMeta({
     title: "ডাউট সমাধান",
@@ -106,6 +168,8 @@ export default function Doubts() {
   const [loadingAnswers, setLoadingAnswers] = useState(false);
   const [answerText, setAnswerText] = useState("");
   const [submittingAnswer, setSubmittingAnswer] = useState(false);
+  const [answerImageFile, setAnswerImageFile] = useState<File | null>(null);
+  const [answerImagePreview, setAnswerImagePreview] = useState<string | null>(null);
 
   // Ask form
   const [showAskForm, setShowAskForm] = useState(false);
@@ -117,8 +181,12 @@ export default function Doubts() {
     topic: "",
     priority: "medium" as "low" | "medium" | "high",
   });
+  const [doubtImageFile, setDoubtImageFile] = useState<File | null>(null);
+  const [doubtImagePreview, setDoubtImagePreview] = useState<string | null>(null);
+  const [uploadingDoubtImage, setUploadingDoubtImage] = useState(false);
+  const [uploadingAnswerImage, setUploadingAnswerImage] = useState(false);
 
-  // Monthly usage tracking
+  // Monthly usage
   const [monthlyDoubtCount, setMonthlyDoubtCount] = useState(0);
 
   const fetchDoubts = useCallback(async () => {
@@ -140,8 +208,6 @@ export default function Doubts() {
         answer_count: d.doubt_answers?.[0]?.count ?? 0,
       }));
       setDoubts(mapped);
-
-      // Build subject list
       const allSubjects = [...new Set(mapped.map((d: Doubt) => d.subject).filter(Boolean))];
       setSubjects(allSubjects as string[]);
     } catch (e: any) {
@@ -164,15 +230,10 @@ export default function Doubts() {
     setMonthlyDoubtCount(count ?? 0);
   }, [user]);
 
-  useEffect(() => {
-    fetchDoubts();
-  }, [fetchDoubts]);
+  useEffect(() => { fetchDoubts(); }, [fetchDoubts]);
+  useEffect(() => { fetchMonthlyUsage(); }, [fetchMonthlyUsage]);
 
-  useEffect(() => {
-    fetchMonthlyUsage();
-  }, [fetchMonthlyUsage]);
-
-  const openThread = async (doubt: Doubt) => {
+  const openThread = useCallback(async (doubt: Doubt) => {
     setSelectedDoubt(doubt);
     setLoadingAnswers(true);
     try {
@@ -184,33 +245,52 @@ export default function Doubts() {
         .order("helpful_count", { ascending: false });
       if (error) throw error;
       setAnswers(data || []);
-      // Increment views
       await supabase.from("doubts").update({ views: (doubt.views || 0) + 1 }).eq("id", doubt.id);
     } catch (e: any) {
       toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
     } finally {
       setLoadingAnswers(false);
     }
-  };
+  }, [toast]);
 
   const closeThread = () => {
     setSelectedDoubt(null);
     setAnswers([]);
     setAnswerText("");
+    setAnswerImageFile(null);
+    setAnswerImagePreview(null);
+  };
+
+  const handleDoubtImageSelected = (file: File) => {
+    setDoubtImageFile(file);
+    setDoubtImagePreview(URL.createObjectURL(file));
+  };
+
+  const handleAnswerImageSelected = (file: File) => {
+    setAnswerImageFile(file);
+    setAnswerImagePreview(URL.createObjectURL(file));
   };
 
   const handleSubmitDoubt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) { navigate("/login"); return; }
     if (max_doubts_per_month !== null && monthlyDoubtCount >= max_doubts_per_month) {
-      toast({ title: "সীমা শেষ", description: `আপনার প্ল্যানে মাসে সর্বোচ্চ ${max_doubts_per_month}টি প্রশ্ন করা যায়।`, variant: "destructive" });
+      toast({ title: "সীমা শেষ", description: `আপনার প্ল্যানে মাসে সর্বোচ্চ ${max_doubts_per_month}টি প্রশ্ন।`, variant: "destructive" });
       return;
     }
     setSubmittingDoubt(true);
     try {
-      await doubtApi.createDoubt(newDoubt);
+      let image_url: string | undefined;
+      if (doubtImageFile) {
+        setUploadingDoubtImage(true);
+        image_url = await uploadDoubtImage(doubtImageFile, `doubts/${user.id}`);
+        setUploadingDoubtImage(false);
+      }
+      await doubtApi.createDoubt({ ...newDoubt, image_url } as any);
       toast({ title: "সাফল্য", description: "আপনার প্রশ্ন জমা দেওয়া হয়েছে" });
       setNewDoubt({ title: "", description: "", subject: "", topic: "", priority: "medium" });
+      setDoubtImageFile(null);
+      setDoubtImagePreview(null);
       setShowAskForm(false);
       fetchDoubts();
       fetchMonthlyUsage();
@@ -218,22 +298,41 @@ export default function Doubts() {
       toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
     } finally {
       setSubmittingDoubt(false);
+      setUploadingDoubtImage(false);
     }
   };
 
   const handleSubmitAnswer = async () => {
     if (!user) { navigate("/login"); return; }
-    if (!answerText.trim() || !selectedDoubt) return;
+    if (!answerText.trim() && !answerImageFile) return;
+    if (!selectedDoubt) return;
     setSubmittingAnswer(true);
     try {
-      await doubtApi.answerDoubt(selectedDoubt.id, answerText.trim());
+      let image_url: string | undefined;
+      if (answerImageFile) {
+        setUploadingAnswerImage(true);
+        image_url = await uploadDoubtImage(answerImageFile, `answers/${user.id}`);
+        setUploadingAnswerImage(false);
+      }
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) throw new Error("Not authenticated");
+      const { error } = await supabase.from("doubt_answers").insert({
+        doubt_id: selectedDoubt.id,
+        answerer_id: authUser.id,
+        answer_text: answerText.trim() || " ",
+        image_url: image_url || null,
+      });
+      if (error) throw error;
       toast({ title: "সাফল্য", description: "উত্তর পোস্ট হয়েছে" });
       setAnswerText("");
+      setAnswerImageFile(null);
+      setAnswerImagePreview(null);
       openThread(selectedDoubt);
     } catch (e: any) {
       toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
     } finally {
       setSubmittingAnswer(false);
+      setUploadingAnswerImage(false);
     }
   };
 
@@ -326,16 +425,15 @@ export default function Doubts() {
             {subjects.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
 
-          {/* Ask button */}
           {!user ? (
             <Button onClick={() => navigate("/login")}>লগইন করুন</Button>
           ) : !plan && !subLoading ? (
-            <Button variant="outline" onClick={() => navigate("/pricing")} className="gap-2 border-amber-400 text-amber-700 hover:bg-amber-50">
+            <Button variant="outline" onClick={() => navigate("/pricing")} className="gap-2 border-amber-400 text-amber-700 hover:bg-amber-50 shrink-0">
               <Lock className="w-4 h-4" />
               প্ল্যান নিন
             </Button>
           ) : doubtLimitReached ? (
-            <Button variant="outline" onClick={() => navigate("/pricing")} className="gap-2 border-amber-400 text-amber-700">
+            <Button variant="outline" onClick={() => navigate("/pricing")} className="gap-2 border-amber-400 text-amber-700 shrink-0">
               <AlertCircle className="w-4 h-4" />
               সীমা শেষ
             </Button>
@@ -383,13 +481,27 @@ export default function Doubts() {
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">বিস্তারিত বর্ণনা <span className="text-red-500">*</span></label>
                 <Textarea
-                  placeholder="আপনার প্রশ্নের বিস্তারিত লিখুন, যত বেশি তথ্য দেবেন তত ভালো উত্তর পাবেন"
+                  placeholder="আপনার প্রশ্নের বিস্তারিত লিখুন..."
                   value={newDoubt.description}
                   onChange={e => setNewDoubt({ ...newDoubt, description: e.target.value })}
                   rows={4}
                   required
                 />
               </div>
+
+              {/* Image upload */}
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">
+                  ছবি সংযুক্ত করুন (ঐচ্ছিক)
+                </label>
+                <ImageUploadButton
+                  onImageSelected={handleDoubtImageSelected}
+                  imagePreview={doubtImagePreview}
+                  onClear={() => { setDoubtImageFile(null); setDoubtImagePreview(null); }}
+                  uploading={uploadingDoubtImage}
+                />
+              </div>
+
               <div className="flex items-center gap-4">
                 <div className="flex-1">
                   <label className="block text-sm font-medium text-foreground mb-1">অগ্রাধিকার</label>
@@ -447,6 +559,11 @@ export default function Doubts() {
                       <span className={`text-xs px-2 py-0.5 rounded-full ${PRIORITY_COLORS[doubt.priority] || ""}`}>
                         {PRIORITY_LABELS[doubt.priority]}
                       </span>
+                      {doubt.image_url && (
+                        <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                          <ImageIcon className="w-3 h-3" /> ছবি
+                        </span>
+                      )}
                     </div>
                     <h3 className="font-semibold text-foreground mb-1 leading-snug">{doubt.title}</h3>
                     <p className="text-sm text-muted-foreground line-clamp-2">{doubt.description}</p>
@@ -504,6 +621,14 @@ export default function Doubts() {
               {/* Original question */}
               <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{selectedDoubt.description}</p>
+                {selectedDoubt.image_url && (
+                  <img
+                    src={selectedDoubt.image_url}
+                    alt="প্রশ্নের ছবি"
+                    className="mt-3 max-h-64 rounded-lg border border-border object-contain cursor-pointer"
+                    onClick={() => window.open(selectedDoubt.image_url!, "_blank")}
+                  />
+                )}
                 <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
                   <span>{new Date(selectedDoubt.created_at).toLocaleString("bn-BD")}</span>
                   <button
@@ -530,14 +655,21 @@ export default function Doubts() {
                         সেরা উত্তর
                       </div>
                     )}
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{ans.answer_text}</p>
+                    {ans.answer_text.trim() && (
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{ans.answer_text}</p>
+                    )}
+                    {ans.image_url && (
+                      <img
+                        src={ans.image_url}
+                        alt="উত্তরের ছবি"
+                        className="mt-2 max-h-56 rounded-lg border border-border object-contain cursor-pointer"
+                        onClick={() => window.open(ans.image_url!, "_blank")}
+                      />
+                    )}
                     <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                       <span className="font-medium text-foreground">{ans.answerer?.full_name || "শিক্ষক"}</span>
                       <span>{new Date(ans.created_at).toLocaleDateString("bn-BD")}</span>
-                      <span className="flex items-center gap-1">
-                        <ThumbsUp className="w-3 h-3" />
-                        {ans.helpful_count}
-                      </span>
+                      <span className="flex items-center gap-1"><ThumbsUp className="w-3 h-3" />{ans.helpful_count}</span>
                     </div>
                   </div>
                 ))
@@ -546,10 +678,10 @@ export default function Doubts() {
 
             {/* Answer input */}
             {user && selectedDoubt.status !== "closed" && (
-              <div className="border-t border-border p-4 shrink-0">
+              <div className="border-t border-border p-4 shrink-0 space-y-2">
                 <div className="flex gap-2">
                   <Textarea
-                    placeholder="উত্তর লিখুন..."
+                    placeholder="উত্তর লিখুন... (টেক্সট, ছবি বা উভয়)"
                     value={answerText}
                     onChange={e => setAnswerText(e.target.value)}
                     rows={2}
@@ -557,13 +689,19 @@ export default function Doubts() {
                   />
                   <Button
                     onClick={handleSubmitAnswer}
-                    disabled={!answerText.trim() || submittingAnswer}
+                    disabled={(!answerText.trim() && !answerImageFile) || submittingAnswer}
                     className="self-end"
                     size="icon"
                   >
                     {submittingAnswer ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                   </Button>
                 </div>
+                <ImageUploadButton
+                  onImageSelected={handleAnswerImageSelected}
+                  imagePreview={answerImagePreview}
+                  onClear={() => { setAnswerImageFile(null); setAnswerImagePreview(null); }}
+                  uploading={uploadingAnswerImage}
+                />
               </div>
             )}
           </div>

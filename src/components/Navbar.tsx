@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Menu, X, LogOut, LayoutDashboard, UserRound, BookOpen, CreditCard } from "lucide-react";
 import {
@@ -36,6 +36,7 @@ const Navbar = () => {
     { name: "এক্সাম ব্যাচ", href: "/batches" },
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
+    { name: "ডাউট", href: "/doubts", highlight: true },
     { name: "লিডারবোর্ড", href: "/leaderboard" },
     { name: "শিক্ষকদের জন্য", href: "/teachers" },
   ];
@@ -49,7 +50,7 @@ const Navbar = () => {
     { name: "এক্সাম ব্যাচ", href: "/batches" },
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
-    { name: "ডাউট", href: "/doubts" },
+    { name: "ডাউট", href: "/doubts", highlight: true },
     { name: "লিডারবোর্ড", href: "/leaderboard" },
     dashboardLink,
   ];
@@ -75,15 +76,33 @@ const Navbar = () => {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                to={link.href}
-                className="text-muted-foreground hover:text-foreground transition-colors font-bengali text-sm"
-              >
-                {link.name}
-              </Link>
-            ))}
+            {navLinks.map((link) =>
+              (link as any).highlight ? (
+                <NavLink
+                  key={link.name}
+                  to={link.href}
+                  className={({ isActive }) =>
+                    `relative font-bengali text-sm font-medium transition-colors ${
+                      isActive ? "text-primary" : "text-primary/80 hover:text-primary"
+                    }`
+                  }
+                >
+                  {link.name}
+                  <span className="absolute -top-1.5 -right-3 flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-60" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+                  </span>
+                </NavLink>
+              ) : (
+                <Link
+                  key={link.name}
+                  to={link.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors font-bengali text-sm"
+                >
+                  {link.name}
+                </Link>
+              )
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -158,10 +177,17 @@ const Navbar = () => {
               <Link
                 key={link.name}
                 to={link.href}
-                className="block text-muted-foreground hover:text-foreground transition-colors font-bengali py-2"
+                className={`block transition-colors font-bengali py-2 text-sm ${
+                  (link as any).highlight
+                    ? "text-primary font-semibold flex items-center gap-2"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
                 onClick={() => setIsOpen(false)}
               >
                 {link.name}
+                {(link as any).highlight && (
+                  <span className="text-[10px] bg-primary text-primary-foreground px-1.5 py-0.5 rounded-full font-medium">নতুন</span>
+                )}
               </Link>
             ))}
             <div className="flex gap-3 pt-3 border-t border-border">

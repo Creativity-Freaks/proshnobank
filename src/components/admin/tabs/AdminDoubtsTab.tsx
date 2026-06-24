@@ -34,6 +34,7 @@ interface DoubtAnswer {
   doubt_id: string;
   answerer_id: string;
   answer_text: string;
+  image_url?: string | null;
   is_best_answer: boolean;
   helpful_count: number;
   created_at: string;
@@ -44,6 +45,7 @@ interface Doubt {
   id: string;
   title: string;
   description: string;
+  image_url?: string | null;
   subject: string;
   topic?: string;
   priority: string;
@@ -387,6 +389,14 @@ export default function AdminDoubtsTab() {
               {/* Question */}
               <div className="bg-primary/5 border border-primary/20 rounded-xl p-4">
                 <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{selectedDoubt.description}</p>
+                {selectedDoubt.image_url && (
+                  <img
+                    src={selectedDoubt.image_url}
+                    alt="প্রশ্নের ছবি"
+                    className="mt-3 max-h-64 rounded-lg border border-border object-contain cursor-pointer"
+                    onClick={() => window.open(selectedDoubt.image_url!, "_blank")}
+                  />
+                )}
                 <div className="flex items-center gap-3 mt-2 text-xs text-muted-foreground">
                   <span><Clock className="w-3 h-3 inline mr-1" />{new Date(selectedDoubt.created_at).toLocaleString("bn-BD")}</span>
                   <span><Eye className="w-3 h-3 inline mr-1" />{selectedDoubt.views} বার দেখা হয়েছে</span>
@@ -419,7 +429,17 @@ export default function AdminDoubtsTab() {
                         </Button>
                       )}
                     </div>
-                    <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{ans.answer_text}</p>
+                    {ans.answer_text.trim() && (
+                      <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">{ans.answer_text}</p>
+                    )}
+                    {ans.image_url && (
+                      <img
+                        src={ans.image_url}
+                        alt="উত্তরের ছবি"
+                        className="mt-2 max-h-56 rounded-lg border border-border object-contain cursor-pointer"
+                        onClick={() => window.open(ans.image_url!, "_blank")}
+                      />
+                    )}
                   </div>
                 ))
               )}

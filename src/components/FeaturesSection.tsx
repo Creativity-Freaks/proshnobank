@@ -7,7 +7,8 @@ import {
   Target,
   ScanLine,
   FileQuestion,
-  Users
+  Users,
+  MessageCircleQuestion,
 } from "lucide-react";
 
 const studentFeatures = [
@@ -40,6 +41,11 @@ const studentFeatures = [
     icon: Target,
     title: "পার্সোনালাইজড এক্সাম",
     description: "নিজের পছন্দ মতো বিষয় ও অধ্যায় বেছে নিয়ে এক্সাম দাও",
+  },
+  {
+    icon: MessageCircleQuestion,
+    title: "ডাউট সমাধান",
+    description: "যেকোনো প্রশ্ন বা সমস্যা টেক্সট বা ছবি দিয়ে পাঠাও, শিক্ষক উত্তর দেবেন",
   },
 ];
 
