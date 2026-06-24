@@ -1,57 +1,82 @@
 import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
+import { BackButton } from "@/components/BackButton";
 import {
+  BookOpen,
   Clock,
   Users,
-  BookOpen,
   Trophy,
   ArrowRight,
   Settings,
-  type LucideIcon,
+  Loader2,
 } from "lucide-react";
-import { Link } from "react-router-dom";
 import { useExamTemplates } from "@/hooks/useExamTemplates";
-import { Skeleton } from "@/components/ui/skeleton";
-import { BackButton } from "@/components/BackButton";
+import type { LucideIcon } from "lucide-react";
 
-export type CategoryConfig = {
-  /** category slug stored in exam_templates.category */
-  category: string;
+export interface CategoryConfig {
+  slug: string;
   title: string;
   subtitle: string;
-  icon: LucideIcon;
-  /** tailwind gradient stops e.g. "from-blue-500 to-cyan-500" */
+  Icon: LucideIcon;
+  /** Tailwind gradient classes for hero and icon bg, e.g. "from-blue-500 to-cyan-500" */
   gradient: string;
-  /** softer gradient for hero bg e.g. "from-blue-500/10 to-cyan-500/10" */
   heroGradient: string;
-  /** subject filter chips: id is matched against template.subjects names */
-  subjects: { id: string; name: string }[];
-  stats?: { exams?: string; students?: string; successRate?: string };
-};
+  /** Stats shown in the 4-card row. Falls back to computed counts where live data is unavailable. */
+  examCount: string;
+  studentCount: string;
+  successRate: string;
+}
 
-const CategoryExamsPage = ({ config }: { config: CategoryConfig }) => {
+interface Props {
+  config: CategoryConfig;
+}
+
+const CategoryExamsPage = ({ config }: Props) => {
+  const {
+    slug,
+    title,
+    subtitle,
+    Icon,
+    gradient,
+    heroGradient,
+    examCount,
+    studentCount,
+    successRate,
+  } = config;
+
+  const { data: templates = [], isLoading } = useExamTemplates(slug);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("all");
   const [sortBy, setSortBy] = useState("popular");
 
-  const { data: exams = [], isLoading } = useExamTemplates(config.category);
-  const Icon = config.icon;
+  // Build subject list dynamically from the loaded templates
+  const subjects = useMemo(() => {
+    const seen = new Set<string>();
+    const result: { id: string; name: string }[] = [];
+    for (const t of templates) {
+      for (const s of t.subjects) {
+        if (!seen.has(s)) {
+          seen.add(s);
+          result.push({ id: s, name: s });
+        }
+      }
+    }
+    return result;
+  }, [templates]);
 
-  const filteredAndSortedExams = useMemo(() => {
-    let result = [...exams];
+  const filtered = useMemo(() => {
+    let result = [...templates];
 
     if (selectedSubject !== "all") {
-      const subjectName = config.subjects.find((s) => s.id === selectedSubject)?.name;
-      if (subjectName) {
-        result = result.filter((exam) => exam.subjects.includes(subjectName));
-      }
+      result = result.filter((t) => t.subjects.includes(selectedSubject));
     }
 
     if (searchQuery) {
-      result = result.filter((exam) =>
-        exam.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      );
+      const q = searchQuery.toLowerCase();
+      result = result.filter((t) => t.title.toLowerCase().includes(q));
     }
 
     switch (sortBy) {
@@ -59,7 +84,7 @@ const CategoryExamsPage = ({ config }: { config: CategoryConfig }) => {
         result.sort((a, b) => b.attempts - a.attempts);
         break;
       case "newest":
-        result.sort((a, b) => b.title.localeCompare(a.title));
+        // newest by insertion order (stable sort preserves DB ordering)
         break;
       case "questions-high":
         result.sort((a, b) => b.question_count - a.question_count);
@@ -76,26 +101,29 @@ const CategoryExamsPage = ({ config }: { config: CategoryConfig }) => {
     }
 
     return result;
-  }, [exams, searchQuery, selectedSubject, sortBy, config.subjects]);
+  }, [templates, searchQuery, selectedSubject, sortBy]);
+
+  const displayCount = isLoading ? "..." : `${filtered.length}+`;
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-      <section className={`pt-24 pb-12 bg-gradient-to-br ${config.heroGradient}`}>
+      {/* Hero */}
+      <section className={`pt-24 pb-12 bg-gradient-to-br ${heroGradient}`}>
         <div className="container mx-auto px-4">
           <BackButton className="mb-6" />
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div className="flex items-center gap-4">
               <div
-                className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${config.gradient} flex items-center justify-center`}
+                className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center`}
               >
                 <Icon className="w-8 h-8 text-white" />
               </div>
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground">{config.title}</h1>
-                <p className="text-muted-foreground">{config.subtitle}</p>
+                <h1 className="text-3xl md:text-4xl font-bold text-foreground">{title}</h1>
+                <p className="text-muted-foreground">{subtitle}</p>
               </div>
             </div>
-            <Link to={`/exam/setup?category=${config.category}`}>
+            <Link to={`/exam/setup?category=${slug}`}>
               <Button variant="hero" size="lg" className="w-full md:w-auto">
                 <Settings className="w-5 h-5 mr-2" />
                 কাস্টম এক্সাম সেটআপ
@@ -106,17 +134,17 @@ const CategoryExamsPage = ({ config }: { config: CategoryConfig }) => {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
             <div className="bg-card rounded-xl p-4 border border-border">
               <BookOpen className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">{exams.length}+</p>
+              <p className="text-2xl font-bold text-foreground">{examCount}</p>
               <p className="text-sm text-muted-foreground">মোট এক্সাম</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
               <Users className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">{config.stats?.students ?? "১০০০০+"}</p>
+              <p className="text-2xl font-bold text-foreground">{studentCount}</p>
               <p className="text-sm text-muted-foreground">শিক্ষার্থী</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
               <Trophy className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">{config.stats?.successRate ?? "৯০%"}</p>
+              <p className="text-2xl font-bold text-foreground">{successRate}</p>
               <p className="text-sm text-muted-foreground">সাফল্যের হার</p>
             </div>
             <div className="bg-card rounded-xl p-4 border border-border">
@@ -128,10 +156,11 @@ const CategoryExamsPage = ({ config }: { config: CategoryConfig }) => {
         </div>
       </section>
 
+      {/* Exam grid */}
       <section className="py-12">
         <div className="container mx-auto px-4">
           <ExamFilters
-            subjects={config.subjects}
+            subjects={subjects}
             selectedSubject={selectedSubject}
             onSubjectChange={setSelectedSubject}
             searchQuery={searchQuery}
@@ -145,28 +174,28 @@ const CategoryExamsPage = ({ config }: { config: CategoryConfig }) => {
               <h2 className="text-2xl font-bold text-foreground">
                 {selectedSubject === "all"
                   ? "সব এক্সাম"
-                  : config.subjects.find((s) => s.id === selectedSubject)?.name}
+                  : subjects.find((s) => s.id === selectedSubject)?.name ?? selectedSubject}
               </h2>
               <span className="text-sm text-muted-foreground">
-                {filteredAndSortedExams.length}টি এক্সাম পাওয়া গেছে
+                {isLoading ? "লোড হচ্ছে..." : `${filtered.length}টি এক্সাম পাওয়া গেছে`}
               </span>
             </div>
 
             {isLoading ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <Skeleton key={i} className="h-36 rounded-xl" />
-                ))}
+              <div className="flex justify-center py-20">
+                <Loader2 className="w-10 h-10 animate-spin text-primary" />
               </div>
-            ) : filteredAndSortedExams.length > 0 ? (
+            ) : filtered.length > 0 ? (
               <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAndSortedExams.map((exam) => (
+                {filtered.map((exam) => (
                   <Link
                     key={exam.id}
                     to={`/exam/${exam.id}`}
                     className="bg-card rounded-xl p-5 border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
                   >
-                    <h3 className="text-lg font-semibold text-card-foreground mb-3">{exam.title}</h3>
+                    <h3 className="text-lg font-semibold text-card-foreground mb-3">
+                      {exam.title}
+                    </h3>
                     <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
                       <span className="flex items-center gap-1">
                         <BookOpen className="w-4 h-4" />

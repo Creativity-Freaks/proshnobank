@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
-type AdminTab = "dashboard" | "categories" | "subjects" | "questions" | "users" | "templates" | "live-events" | "analytics";
+type AdminTab = "dashboard" | "categories" | "subcategories" | "subjects" | "chapters" | "questions" | "users" | "templates" | "live-events" | "analytics" | "content";
 
 interface AdminContextType {
   currentTab: AdminTab;

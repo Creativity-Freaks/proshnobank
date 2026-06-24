@@ -29,6 +29,7 @@ import AdminUsersTab from "./tabs/AdminUsersTab";
 import AdminTemplatesTab from "./tabs/AdminTemplatesTab";
 import AdminLiveEventsTab from "./tabs/AdminLiveEventsTab";
 import AdminAnalyticsTab from "./tabs/AdminAnalyticsTab";
+import AdminContentTab from "./tabs/AdminContentTab";
 
 const TAB_CONFIG = [
   { id: "dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard },
@@ -41,6 +42,7 @@ const TAB_CONFIG = [
   { id: "users", label: "ব্যবহারকারী", icon: Users },
   { id: "templates", label: "টেমপ্লেট", icon: FilePenLine },
   { id: "live-events", label: "লাইভ ইভেন্ট", icon: CalendarClock },
+  { id: "content", label: "সাইট কন্টেন্ট", icon: FileText },
 ];
 
 const TAB_COMPONENTS = {
@@ -54,6 +56,7 @@ const TAB_COMPONENTS = {
   users: AdminUsersTab,
   templates: AdminTemplatesTab,
   "live-events": AdminLiveEventsTab,
+  content: AdminContentTab,
 };
 
 export default function AdminDashboard() {
