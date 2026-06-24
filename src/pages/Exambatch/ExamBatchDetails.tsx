@@ -11,136 +11,7 @@ import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
 
 type ExamBatch = Tables<"exam_batches">;
 
-const fallbackBatchesBySlug: Record<string, ExamBatch[]> = {
-  ssc: [
-    {
-      id: "fallback-batch-ssc-1",
-      title: "SSC 2026 সম্পূর্ণ প্রস্তুতি",
-      description: "SSC পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি - সকল বিষয়",
-      duration_days: 180,
-      start_date: null,
-      seats: 0,
-      price: 599,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-ssc",
-      subcategory_id: "fallback-ssc-2026",
-      template_id: null,
-    },
-  ],
-  hsc: [
-    {
-      id: "fallback-batch-hsc-1",
-      title: "HSC 2026 Science Batch",
-      description: "HSC বিজ্ঞান বিভাগের সম্পূর্ণ প্রস্তুতি",
-      duration_days: 365,
-      start_date: null,
-      seats: 0,
-      price: 799,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-hsc",
-      subcategory_id: "fallback-hsc-science",
-      template_id: null,
-    },
-  ],
-  admission: [
-    {
-      id: "fallback-batch-admission-1",
-      title: "ভর্তি পরীক্ষা - কম্বো ব্যাচ",
-      description: "মেডিকেল/ইঞ্জিনিয়ারিং/বিশ্ববিদ্যালয় ভর্তি প্রস্তুতি",
-      duration_days: 240,
-      start_date: null,
-      seats: 0,
-      price: 999,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-admission",
-      subcategory_id: "fallback-admission-university",
-      template_id: null,
-    },
-  ],
-  medical: [
-    {
-      id: "fallback-batch-medical-1",
-      title: "মেডিকেল ভর্তি ২০২৬",
-      description: "MBBS ভর্তি পরীক্ষার জন্য সেরা প্রস্তুতি",
-      duration_days: 240,
-      start_date: null,
-      seats: 0,
-      price: 1299,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-medical",
-      subcategory_id: "fallback-medical-mat",
-      template_id: null,
-    },
-  ],
-  engineering: [
-    {
-      id: "fallback-batch-engineering-1",
-      title: "ইঞ্জিনিয়ারিং ভর্তি ২০২৬",
-      description: "BUET, CUET, KUET সহ সকল ইঞ্জিনিয়ারিং ভর্তি",
-      duration_days: 240,
-      start_date: null,
-      seats: 0,
-      price: 1099,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-engineering",
-      subcategory_id: "fallback-engineering-2026",
-      template_id: null,
-    },
-  ],
-  university: [
-    {
-      id: "fallback-batch-university-1",
-      title: "বিশ্ববিদ্যালয় ভর্তি - ক ইউনিট",
-      description: "ঢাবি, জাবি, রাবি ক ইউনিট সম্পূর্ণ প্রস্তুতি",
-      duration_days: 180,
-      start_date: null,
-      seats: 0,
-      price: 899,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-university",
-      subcategory_id: "fallback-university-2026",
-      template_id: null,
-    },
-  ],
-  job: [
-    {
-      id: "fallback-batch-job-1",
-      title: "BCS প্রিলিমিনারি ২০২৬",
-      description: "৪৭তম BCS প্রিলিমিনারি সম্পূর্ণ প্রস্তুতি",
-      duration_days: 365,
-      start_date: null,
-      seats: 0,
-      price: 1499,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-job",
-      subcategory_id: null,
-      template_id: null,
-    },
-  ],
-  chakri: [
-    {
-      id: "fallback-batch-job-1",
-      title: "BCS প্রিলিমিনারি ২০২৬",
-      description: "৪৭তম BCS প্রিলিমিনারি সম্পূর্ণ প্রস্তুতি",
-      duration_days: 365,
-      start_date: null,
-      seats: 0,
-      price: 1499,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-job",
-      subcategory_id: null,
-      template_id: null,
-    },
-  ],
-};
+const fallbackBatchesBySlug: Record<string, ExamBatch[]> = {};
 
 type BatchExtra = {
   categoryName: string | null;
@@ -165,15 +36,13 @@ export default function ExamBatchDetails() {
 
   const backTo = slug ? `/batches/${slug}` : "/batches";
 
-  const fallbackBatch = (fallbackBatchesBySlug[slug] || []).find((b) => b.id === batchId) || null;
-
   const {
     data: batch,
     isLoading,
     isError,
   } = useQuery({
     queryKey: ["exam-batch-details", batchId],
-    enabled: Boolean(batchId) && !fallbackBatch,
+    enabled: Boolean(batchId),
     queryFn: async () => {
       const { data, error } = await supabase
         .from("exam_batches")
@@ -186,11 +55,12 @@ export default function ExamBatchDetails() {
     },
   });
 
-  const resolvedBatch = fallbackBatch ?? batch;
+  const resolvedBatch = batch ?? null;
+  const fallbackBatch = null;
 
   const { data: extra } = useQuery({
     queryKey: ["exam-batch-details-extra", resolvedBatch?.category_id, resolvedBatch?.subcategory_id, resolvedBatch?.template_id],
-    enabled: Boolean(resolvedBatch) && !fallbackBatch,
+    enabled: Boolean(resolvedBatch),
     queryFn: async () => {
       const result: BatchExtra = { categoryName: null, subcategoryName: null, templateTitle: null };
 
@@ -391,15 +261,6 @@ export default function ExamBatchDetails() {
                       variant: "destructive",
                     });
                     navigate("/login");
-                    return;
-                  }
-
-                  if (fallbackBatch) {
-                    toast({
-                      title: "ভর্তি করা যাচ্ছে না",
-                      description: "এই ব্যাচটি এখন ডেমো মোডে আছে। ডাটাবেসে ব্যাচ যোগ হলে ভর্তি চালু হবে।",
-                      variant: "destructive",
-                    });
                     return;
                   }
 
