@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
@@ -311,6 +311,7 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { isAdmin, isLoading: isCheckingAdmin } = useAdminCheck();
+  const adminCheckCompleted = useRef(false);
 
   const resolvedTab = forcedTab ?? tabFromPathname(location.pathname);
   const [activeTab, setActiveTab] = useState<PanelTab>(resolvedTab);
@@ -572,15 +573,18 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
 
   // Only check admin access once on component mount, not on every render
   useEffect(() => {
-    if (!isCheckingAdmin && !isAdmin) {
-      toast({
-        title: "Access denied",
-        description: "অ্যাডমিন পারমিশন ছাড়া এই প্যানেলে প্রবেশ করা যাবে না",
-        variant: "destructive",
-      });
-      navigate("/admin/login", { replace: true });
+    if (!isCheckingAdmin) {
+      adminCheckCompleted.current = true;
+      if (!isAdmin) {
+        toast({
+          title: "Access denied",
+          description: "অ্যাডমিন পারমিশন ছাড়া এই প্যানেলে প্রবেশ করা যাবে না",
+          variant: "destructive",
+        });
+        navigate("/admin/login", { replace: true });
+      }
     }
-  }, [isCheckingAdmin]); // Only depend on isCheckingAdmin, not isAdmin
+  }, [isCheckingAdmin, isAdmin, navigate, toast]);
 
   useEffect(() => {
     if (isAdmin) {
@@ -1324,7 +1328,8 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     );
   }
 
-  if (!isAdmin) return null;
+  // Only render nothing if admin check is complete AND user is not admin
+  if (adminCheckCompleted.current && !isAdmin) return null;
 
   return (
     <div className="min-h-screen flex bg-muted/40 text-foreground">
