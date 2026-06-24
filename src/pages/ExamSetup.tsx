@@ -158,7 +158,6 @@ const ExamSetup = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4">
           <div className="mb-6 md:mb-8">
@@ -185,7 +184,7 @@ const ExamSetup = () => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-foreground">বিষয় নির্বাচন</h2>
-                    <p className="text-sm text-muted-foreground">যেসব বিষয় থেকে প্রশ্ন চাও সেগুলো সিলেক্ট করো</p>
+                    <p className="text-sm text-muted-foreground">যেসব বিষয় থেকে প��রশ্ন চাও সেগুলো সিলেক্ট করো</p>
                   </div>
                 </div>
 

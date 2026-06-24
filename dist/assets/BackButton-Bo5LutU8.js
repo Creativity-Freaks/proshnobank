@@ -1,1 +1,0 @@
-import{o as r,j as t,J as n}from"./index-BgWUamdq.js";function i({label:s="ফিরে যান",className:e=""}){const a=r();return t.jsxs("button",{onClick:()=>a(-1),className:`flex items-center gap-2 text-primary hover:text-primary/80 transition-colors ${e}`,children:[t.jsx(n,{className:"w-5 h-5"}),t.jsx("span",{className:"text-sm md:text-base",children:s})]})}export{i as B};
