@@ -7,13 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminQuestionsTab() {
@@ -209,7 +202,7 @@ export default function AdminQuestionsTab() {
         <h2 className="text-2xl font-bold">প্রশ্ন ব্যবস্থাপনা</h2>
         <Button className="gap-2" onClick={() => { setShowForm(!showForm); if (!showForm) resetForm(); }}>
           <Plus className="w-4 h-4" />
-          {showForm ? "বাতিল করুন" : "ন��ুন প্রশ্ন"}
+          {showForm ? "বাতিল করুন" : "ন���ুন প্রশ্ন"}
         </Button>
       </div>
 
@@ -324,62 +317,6 @@ export default function AdminQuestionsTab() {
           <CardTitle className="text-sm">ফিল্টার এবং অনুসন্ধান</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {/* Category Filter */}
-            <div className="space-y-2">
-              <Label>ক্যাটেগরি নির্বাচন করুন</Label>
-              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder="ক্যাটেগরি বেছে নিন..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">সব ক্যাটেগরি</SelectItem>
-                  {categories && categories.length > 0 && categories.map((cat) => cat?.id && cat?.name ? (
-                    <SelectItem key={cat.id} value={String(cat.id)}>
-                      {cat.name}
-                    </SelectItem>
-                  ) : null)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Subcategory Filter */}
-            <div className="space-y-2">
-              <Label>পরীক্ষা নির্বাচন করুন</Label>
-              <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory} disabled={!selectedCategory}>
-                <SelectTrigger>
-                  <SelectValue placeholder={selectedCategory ? "পরীক্ষা বেছে নিন..." : "প্রথমে ক্যাটেগরি বেছে নিন"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">সব পরীক্ষা</SelectItem>
-                  {subcategories && subcategories.length > 0 && subcategories.map((sub) => sub?.id && sub?.name ? (
-                    <SelectItem key={sub.id} value={String(sub.id)}>
-                      {sub.name}
-                    </SelectItem>
-                  ) : null)}
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Subject Filter */}
-            <div className="space-y-2">
-              <Label>বিষয় নির্বাচন করুন</Label>
-              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="বিষয় বেছে নিন..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">সব বিষয়</SelectItem>
-                  {subjects && subjects.length > 0 && subjects.map((subject) => subject?.id && subject?.name ? (
-                    <SelectItem key={subject.id} value={String(subject.id)}>
-                      {subject.name}
-                    </SelectItem>
-                  ) : null)}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
           {/* Search Bar */}
           <div className="space-y-2">
             <Label>প্রশ্ন অনুসন্ধান করুন</Label>
@@ -393,6 +330,84 @@ export default function AdminQuestionsTab() {
               />
             </div>
           </div>
+
+          {/* Category Buttons */}
+          {categories.length > 0 && (
+            <div className="space-y-2">
+              <Label>ক্যাটেগরি নির্বাচন করুন</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedCategory === "" ? "default" : "outline"}
+                  onClick={() => { setSelectedCategory(""); setSelectedSubcategory(""); }}
+                >
+                  সব ক্যাটেগরি
+                </Button>
+                {categories.map((cat) => (
+                  <Button
+                    key={cat.id}
+                    size="sm"
+                    variant={selectedCategory === cat.id ? "default" : "outline"}
+                    onClick={() => { setSelectedCategory(cat.id); setSelectedSubcategory(""); }}
+                  >
+                    {cat.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subcategory Buttons */}
+          {selectedCategory && subcategories.length > 0 && (
+            <div className="space-y-2">
+              <Label>পরীক্ষা নির্বাচন করুন</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedSubcategory === "" ? "default" : "outline"}
+                  onClick={() => setSelectedSubcategory("")}
+                >
+                  সব পরীক্ষা
+                </Button>
+                {subcategories.map((sub) => (
+                  <Button
+                    key={sub.id}
+                    size="sm"
+                    variant={selectedSubcategory === sub.id ? "default" : "outline"}
+                    onClick={() => setSelectedSubcategory(sub.id)}
+                  >
+                    {sub.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Subject Buttons */}
+          {subjects.length > 0 && (
+            <div className="space-y-2">
+              <Label>বিষয় নির্বাচন করুন</Label>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant={selectedSubject === "" ? "default" : "outline"}
+                  onClick={() => setSelectedSubject("")}
+                >
+                  সব বিষয়
+                </Button>
+                {subjects.slice(0, 8).map((subject) => (
+                  <Button
+                    key={subject.id}
+                    size="sm"
+                    variant={selectedSubject === subject.id ? "default" : "outline"}
+                    onClick={() => setSelectedSubject(subject.id)}
+                  >
+                    {subject.name}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Active Filters Display */}
           {(selectedCategory || selectedSubcategory || selectedSubject || searchQuery) && (
