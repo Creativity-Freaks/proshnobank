@@ -1,9 +1,5 @@
-import { useState, useMemo } from "react";
-import ExamFilters from "@/components/ExamFilters";
-import { Button } from "@/components/ui/button";
-import { Briefcase, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
-import { Link } from "react-router-dom";
-import { BackButton } from "@/components/BackButton";
+import { Briefcase } from "lucide-react";
+import CategoryExamsPage from "@/components/CategoryExamsPage";
 
 const subjects = [
   { id: "job_bangla", name: "বাংলা" },
@@ -15,171 +11,19 @@ const subjects = [
   { id: "job_logical", name: "Logical Reasoning" },
 ];
 
-const exams = [
-  { id: 1, title: "BCS প্রিলিমিনারি - বাংলা", subject: "job_bangla", questions: 35, duration: 35, attempts: 8250 },
-  { id: 2, title: "BCS প্রিলিমিনারি - ইংরেজি", subject: "job_english", questions: 35, duration: 35, attempts: 7980 },
-  { id: 3, title: "BCS প্রিলিমিনারি - সাধারণ জ্ঞান", subject: "job_gk", questions: 50, duration: 50, attempts: 9450 },
-  { id: 4, title: "BCS প্রিলিমিনারি - গণিত", subject: "job_math", questions: 15, duration: 20, attempts: 6120 },
-  { id: 5, title: "ব্যাংক নিয়োগ - সম্পূর্ণ", subject: "job_bangla", questions: 80, duration: 60, attempts: 5890 },
-  { id: 6, title: "প্রাইমারি শিক্ষক নিয়োগ", subject: "job_bangla", questions: 80, duration: 80, attempts: 7340 },
-  { id: 7, title: "জাতীয় পরীক্ষা - বাংলা", subject: "job_bangla", questions: 100, duration: 60, attempts: 4150 },
-  { id: 8, title: "চাকরি পরীক্ষা মডেল - ১", subject: "job_gk", questions: 200, duration: 120, attempts: 10670 },
-  { id: 9, title: "বিগত বছরের প্রশ্ন - ৪৫তম BCS", subject: "job_gk", questions: 200, duration: 120, attempts: 12890 },
-  { id: 10, title: "মানসিক দক্ষতা - IQ", subject: "job_mental_ability", questions: 30, duration: 30, attempts: 4560 },
-  { id: 11, title: "Logical Reasoning", subject: "job_logical", questions: 30, duration: 30, attempts: 4890 },
-  { id: 12, title: "ICT - প্রাথমিক", subject: "job_ict", questions: 25, duration: 25, attempts: 5670 },
-];
-
-const JobExams = () => {
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedSubject, setSelectedSubject] = useState("all");
-  const [sortBy, setSortBy] = useState("popular");
-
-  const filteredAndSortedExams = useMemo(() => {
-    let result = [...exams];
-
-    if (selectedSubject !== "all") {
-      result = result.filter((exam) => exam.subject === selectedSubject);
-    }
-
-    if (searchQuery) {
-      result = result.filter((exam) =>
-        exam.title.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
-
-    switch (sortBy) {
-      case "popular":
-        result.sort((a, b) => b.attempts - a.attempts);
-        break;
-      case "newest":
-        result.sort((a, b) => b.id - a.id);
-        break;
-      case "questions-high":
-        result.sort((a, b) => b.questions - a.questions);
-        break;
-      case "questions-low":
-        result.sort((a, b) => a.questions - b.questions);
-        break;
-      case "duration-high":
-        result.sort((a, b) => b.duration - a.duration);
-        break;
-      case "duration-low":
-        result.sort((a, b) => a.duration - b.duration);
-        break;
-    }
-
-    return result;
-  }, [searchQuery, selectedSubject, sortBy]);
-
-  return (
-    <div className="min-h-screen bg-background font-bengali">
-      
-      <section className="pt-24 pb-12 bg-gradient-to-br from-indigo-500/10 to-violet-500/10">
-        <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-500 to-violet-500 flex items-center justify-center">
-                <Briefcase className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground">চাকরি পরীক্ষা</h1>
-                <p className="text-muted-foreground">BCS, Bank, Primary সহ সব চাকরি</p>
-              </div>
-            </div>
-            <Link to="/exam/setup?category=job">
-              <Button variant="hero" size="lg" className="w-full md:w-auto">
-                <Settings className="w-5 h-5 mr-2" />
-                কাস্টম এক্সাম সেটআপ
-              </Button>
-            </Link>
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-8">
-            <div className="bg-card rounded-xl p-4 border border-border">
-              <BookOpen className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">৩০০+</p>
-              <p className="text-sm text-muted-foreground">মোট এক্সাম</p>
-            </div>
-            <div className="bg-card rounded-xl p-4 border border-border">
-              <Users className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">২৫০০০+</p>
-              <p className="text-sm text-muted-foreground">শিক্ষার্থী</p>
-            </div>
-            <div className="bg-card rounded-xl p-4 border border-border">
-              <Trophy className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">৭৫%</p>
-              <p className="text-sm text-muted-foreground">সাফল্যের হার</p>
-            </div>
-            <div className="bg-card rounded-xl p-4 border border-border">
-              <Clock className="w-6 h-6 text-primary mb-2" />
-              <p className="text-2xl font-bold text-foreground">২৪/৭</p>
-              <p className="text-sm text-muted-foreground">অ্যাক্সেস</p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="py-12">
-        <div className="container mx-auto px-4">
-          <ExamFilters
-            subjects={subjects}
-            selectedSubject={selectedSubject}
-            onSubjectChange={setSelectedSubject}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            sortBy={sortBy}
-            onSortChange={setSortBy}
-          />
-
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-foreground">
-                {selectedSubject === "all" ? "সব এক্সাম" : subjects.find(s => s.id === selectedSubject)?.name}
-              </h2>
-              <span className="text-sm text-muted-foreground">
-                {filteredAndSortedExams.length}টি এক্সাম পাওয়া গেছে
-              </span>
-            </div>
-            
-            {filteredAndSortedExams.length > 0 ? (
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {filteredAndSortedExams.map((exam) => (
-                  <Link
-                    key={exam.id}
-                    to={`/exam/${exam.id}`}
-                    className="bg-card rounded-xl p-5 border border-border hover:shadow-lg transition-all duration-300 hover:-translate-y-1 group"
-                  >
-                    <h3 className="text-lg font-semibold text-card-foreground mb-3">{exam.title}</h3>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mb-4">
-                      <span className="flex items-center gap-1">
-                        <BookOpen className="w-4 h-4" />
-                        {exam.questions} প্রশ্ন
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="w-4 h-4" />
-                        {exam.duration} মিনিট
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs text-muted-foreground">{exam.attempts} জন অংশ নিয়েছে</span>
-                      <ArrowRight className="w-5 h-5 text-primary opacity-0 group-hover:opacity-100 transition-opacity" />
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12">
-                <BookOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">কোনো এক্সাম পাওয়া যায়নি</p>
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
-    </div>
-  );
-};
+const JobExams = () => (
+  <CategoryExamsPage
+    config={{
+      category: "job",
+      title: "চাকরি পরীক্ষা",
+      subtitle: "BCS, Bank, Primary সহ সব চাকরি",
+      icon: Briefcase,
+      gradient: "from-indigo-500 to-violet-500",
+      heroGradient: "from-indigo-500/10 to-violet-500/10",
+      subjects,
+      stats: { successRate: "৮৬%" },
+    }}
+  />
+);
 
 export default JobExams;

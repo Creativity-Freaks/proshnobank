@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 type FaqItem = {
   question: string;
@@ -47,6 +48,15 @@ export default function FaqSection({
   subtitle?: string;
   items?: FaqItem[];
 }) {
+  const { data: content } = useSiteContent<{ items?: Array<Record<string, unknown>> }>("faq", {});
+  const dynamic = Array.isArray(content?.items) && content.items.length > 0
+    ? content.items.map((r) => ({
+        question: String(r.question ?? r.q ?? ""),
+        answer: String(r.answer ?? r.a ?? ""),
+      }))
+    : null;
+  const faqItems = dynamic ?? items;
+
   return (
     <section className="py-16">
       <div className="container mx-auto px-4">
@@ -57,7 +67,7 @@ export default function FaqSection({
 
         <div className="max-w-3xl mx-auto">
           <Accordion type="single" collapsible className="w-full">
-            {items.map((item, index) => (
+            {faqItems.map((item, index) => (
               <AccordionItem key={index} value={`item-${index}`}>
                 <AccordionTrigger className="text-left font-bengali">
                   {item.question}

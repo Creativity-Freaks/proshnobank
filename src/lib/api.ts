@@ -25,11 +25,17 @@
  * - `GET ?action=stats` - Get global stats
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import {
+  supabase,
+  SUPABASE_URL as DEFAULT_SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY as DEFAULT_SUPABASE_KEY,
+} from "@/integrations/supabase/client";
 import { examCatalog } from "./exam-catalog";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+// Fall back to the project's configured Supabase constants when the Vite env
+// vars aren't provided, so edge-function calls always resolve a valid URL/key.
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_KEY;
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
