@@ -125,12 +125,16 @@ export default function AdminQuestionsTab() {
   };
 
   const handleSave = async () => {
+    console.log("[v0] handleSave called with formData:", formData);
+    
     if (!formData.subject || !formData.topic || !formData.question_text) {
+      console.log("[v0] Validation failed - missing required fields");
       toast({ title: "Error", description: "সব প্রয়োজনীয় ক্ষেত্র পূরণ করুন", variant: "destructive" });
       return;
     }
 
     if (formData.options.some(opt => !opt.trim())) {
+      console.log("[v0] Validation failed - empty options");
       toast({ title: "Error", description: "সব বিকল্প পূরণ করুন", variant: "destructive" });
       return;
     }
@@ -146,13 +150,23 @@ export default function AdminQuestionsTab() {
         explanation: formData.explanation,
       };
 
+      console.log("[v0] Payload to save:", payload);
+
       if (editingId) {
         // Update
-        await supabase.from("question_bank").update(payload).eq("id", editingId);
+        console.log("[v0] Updating question:", editingId);
+        const { error } = await supabase.from("question_bank").update(payload).eq("id", editingId);
+        if (error) throw error;
         toast({ title: "সাফল্য", description: "প্রশ্ন সফলভাবে আপডেট হয়েছে" });
       } else {
         // Create
-        await supabase.from("question_bank").insert([payload]);
+        console.log("[v0] Creating new question");
+        const { error, data } = await supabase.from("question_bank").insert([payload]);
+        if (error) {
+          console.log("[v0] Insert error:", error);
+          throw error;
+        }
+        console.log("[v0] Question created:", data);
         toast({ title: "সাফল্য", description: "প্রশ্ন সফলভাবে তৈরি হয়েছে" });
       }
 
@@ -237,30 +251,33 @@ export default function AdminQuestionsTab() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>কঠিনতা স্তর</Label>
-                <Select value={formData.difficulty} onValueChange={(value) => setFormData({ ...formData, difficulty: value })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="easy">সহজ</SelectItem>
-                    <SelectItem value="medium">মাঝারি</SelectItem>
-                    <SelectItem value="hard">কঠিন</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  {["easy", "medium", "hard"].map((level) => (
+                    <Button
+                      key={level}
+                      size="sm"
+                      variant={formData.difficulty === level ? "default" : "outline"}
+                      onClick={() => setFormData({ ...formData, difficulty: level })}
+                    >
+                      {level === "easy" ? "সহজ" : level === "medium" ? "মাঝারি" : "কঠিন"}
+                    </Button>
+                  ))}
+                </div>
               </div>
               <div className="space-y-2">
                 <Label>সঠিক উত্তর *</Label>
-                <Select value={String(formData.correct_answer)} onValueChange={(value) => setFormData({ ...formData, correct_answer: parseInt(value) })}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="0">বিকল্প 1</SelectItem>
-                    <SelectItem value="1">বিকল্প 2</SelectItem>
-                    <SelectItem value="2">বিকল্প 3</SelectItem>
-                    <SelectItem value="3">বিকল্প 4</SelectItem>
-                  </SelectContent>
-                </Select>
+                <div className="flex gap-2">
+                  {[0, 1, 2, 3].map((index) => (
+                    <Button
+                      key={index}
+                      size="sm"
+                      variant={formData.correct_answer === index ? "default" : "outline"}
+                      onClick={() => setFormData({ ...formData, correct_answer: index })}
+                    >
+                      {index + 1}
+                    </Button>
+                  ))}
+                </div>
               </div>
             </div>
 
@@ -444,7 +461,7 @@ export default function AdminQuestionsTab() {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">
-            প্রশ্ন তালিকা ({questions.length})
+            প���রশ্ন তালিকা ({questions.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
