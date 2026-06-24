@@ -3,9 +3,6 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 // Lazy load admin pages
 const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
-const AdminCategories = lazy(() => import("@/pages/admin/AdminCategories"));
-const AdminSubjects = lazy(() => import("@/pages/admin/AdminSubjects"));
-const AdminBatches = lazy(() => import("@/pages/admin/AdminBatches"));
 const AdminQuestions = lazy(() => import("@/pages/admin/AdminQuestions"));
 const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminLogin = lazy(() => import("@/pages/admin/AdminLogin"));
@@ -22,9 +19,9 @@ export default function AdminShell() {
       <Routes>
         <Route path="/" element={<AdminOverview />} />
         <Route path="/overview" element={<AdminOverview />} />
-        <Route path="/categories" element={<AdminCategories />} />
-        <Route path="/subjects" element={<AdminSubjects />} />
-        <Route path="/chapters" element={<AdminBatches />} />
+        <Route path="/categories" element={<AdminOverview />} />
+        <Route path="/subjects" element={<AdminOverview />} />
+        <Route path="/chapters" element={<AdminOverview />} />
         <Route path="/questions" element={<AdminQuestions />} />
         <Route path="/users" element={<AdminUsers />} />
         <Route path="*" element={<Navigate to="/" replace />} />
