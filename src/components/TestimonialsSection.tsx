@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 type Testimonial = {
   name: string;
@@ -91,7 +92,27 @@ export default function TestimonialsSection({
   cycleMs?: number;
 }) {
   const safePerPage = Math.max(1, Math.floor(perPage));
-  const normalizedItems = useMemo(() => items.filter(Boolean), [items]);
+
+  // Pull dynamic testimonials from site_content; map stored {name,role,text,rating}
+  // to the component's shape. Falls back to the passed-in items.
+  const { data: content } = useSiteContent<{ items?: Array<Record<string, unknown>> }>(
+    "testimonials",
+    {},
+  );
+  const dynamicItems = useMemo<Testimonial[] | null>(() => {
+    const raw = content?.items;
+    if (!Array.isArray(raw) || raw.length === 0) return null;
+    return raw.map((r) => ({
+      name: String(r.name ?? ""),
+      role: (String(r.role ?? "").includes("শিক্ষক") ? "শিক্ষক" : "শিক্ষার্থী") as Testimonial["role"],
+      institute: r.institute ? String(r.institute) : (r.role ? String(r.role) : undefined),
+      quote: String(r.quote ?? r.text ?? ""),
+      avatarUrl: r.avatarUrl ? String(r.avatarUrl) : undefined,
+    }));
+  }, [content]);
+
+  const effectiveItems = dynamicItems ?? items;
+  const normalizedItems = useMemo(() => effectiveItems.filter(Boolean), [effectiveItems]);
   const canRotate = normalizedItems.length > safePerPage;
 
   const [startIndex, setStartIndex] = useState(0);
