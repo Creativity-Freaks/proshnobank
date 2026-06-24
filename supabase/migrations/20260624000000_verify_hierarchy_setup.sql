@@ -50,7 +50,7 @@ FROM subjects;
 -- Chapters
 SELECT 'Chapters' as entity_type,
   COUNT(*) as total,
-  STRING_AGG(DISTINCT name, ', ') as examples
+  STRING_AGG(DISTINCT chapter_name_bn, ', ') as examples
 FROM chapters;
 
 -- Questions
@@ -69,11 +69,12 @@ SELECT
   base.name as base_category,
   exam.name as exam_category,
   s.name as subject,
-  c.name as chapter
+  c.chapter_name_bn as chapter_bn,
+  c.chapter_name_en as chapter_en
 FROM exam_categories base
 LEFT JOIN exam_categories exam ON exam.parent_id = base.id
 LEFT JOIN subjects s ON s.category_id = exam.id
-LEFT JOIN chapters c ON c.subject_id = s.id
+LEFT JOIN chapters c ON c.subject_id = s.key
 WHERE base.parent_id IS NULL
 LIMIT 50;
 

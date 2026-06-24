@@ -100,29 +100,12 @@ SELECT
 WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_biology_1');
 
 -- Step 5: Add sample chapters for Mathematics
-INSERT INTO chapters (subject_id, name, slug, description)
-SELECT 
-  (SELECT id FROM subjects WHERE code='ssc_math_1' LIMIT 1),
-  'Chapter 1: Numbers',
-  'chapter-1-numbers',
-  'Introduction to number systems'
-WHERE NOT EXISTS (SELECT 1 FROM chapters WHERE slug='chapter-1-numbers');
-
-INSERT INTO chapters (subject_id, name, slug, description)
-SELECT 
-  (SELECT id FROM subjects WHERE code='ssc_math_1' LIMIT 1),
-  'Chapter 2: Algebra',
-  'chapter-2-algebra',
-  'Basic algebraic expressions'
-WHERE NOT EXISTS (SELECT 1 FROM chapters WHERE slug='chapter-2-algebra');
-
-INSERT INTO chapters (subject_id, name, slug, description)
-SELECT 
-  (SELECT id FROM subjects WHERE code='ssc_math_1' LIMIT 1),
-  'Chapter 3: Geometry',
-  'chapter-3-geometry',
-  'Geometric shapes and theorems'
-WHERE NOT EXISTS (SELECT 1 FROM chapters WHERE slug='chapter-3-geometry');
+INSERT INTO chapters (subject_id, chapter_number, chapter_name_bn, chapter_name_en, display_order)
+VALUES 
+  ('ssc_math_1', 1, 'সংখ্যা ব্যবস্থা', 'Number System', 1),
+  ('ssc_math_1', 2, 'বীজগণিত', 'Algebra', 2),
+  ('ssc_math_1', 3, 'জ্যামিতি', 'Geometry', 3)
+ON CONFLICT DO NOTHING;
 
 -- Step 6: Verify all data was added
 SELECT 'Sample Data Summary' as status;
