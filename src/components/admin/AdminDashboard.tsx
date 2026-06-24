@@ -30,6 +30,7 @@ import AdminTemplatesTab from "./tabs/AdminTemplatesTab";
 import AdminLiveEventsTab from "./tabs/AdminLiveEventsTab";
 import AdminAnalyticsTab from "./tabs/AdminAnalyticsTab";
 import AdminContentTab from "./tabs/AdminContentTab";
+import AdminTeachersTab from "./tabs/AdminTeachersTab";
 
 const TAB_CONFIG = [
   { id: "dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard },
@@ -39,6 +40,7 @@ const TAB_CONFIG = [
   { id: "subcategories", label: "পরীক্ষা ক্যাটেগরি", icon: Layers },
   { id: "subjects", label: "বিষয়", icon: FileText },
   { id: "chapters", label: "অধ্যায়", icon: FileText },
+  { id: "teachers", label: "শিক্ষক", icon: Users },
   { id: "users", label: "ব্যবহারকারী", icon: Users },
   { id: "templates", label: "টেমপ্লেট", icon: FilePenLine },
   { id: "live-events", label: "লাইভ ইভেন্ট", icon: CalendarClock },
@@ -53,6 +55,7 @@ const TAB_COMPONENTS = {
   subcategories: AdminSubcategoriesTab,
   subjects: AdminSubjectsTab,
   chapters: AdminChaptersTab,
+  teachers: AdminTeachersTab,
   users: AdminUsersTab,
   templates: AdminTemplatesTab,
   "live-events": AdminLiveEventsTab,
