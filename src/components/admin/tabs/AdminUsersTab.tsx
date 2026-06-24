@@ -39,13 +39,31 @@ export default function AdminUsersTab() {
       // Get unique user IDs
       const userIds = [...new Set(enrollments.map(e => e.user_id))];
 
-      // Fetch user details from auth.users (this requires admin access via service role)
-      // For now, we'll show enrollment data with user_id
+      // Fetch user roles for these users
+      const { data: userRoles, error: rolesError } = await supabase
+        .from("user_roles")
+        .select("user_id, role")
+        .in("user_id", userIds);
+
+      if (rolesError) throw rolesError;
+
+      // Create a map of user_id -> roles
+      const rolesMap = new Map<string, string[]>();
+      userRoles?.forEach(ur => {
+        if (!rolesMap.has(ur.user_id)) {
+          rolesMap.set(ur.user_id, []);
+        }
+        rolesMap.get(ur.user_id)?.push(ur.role);
+      });
+
+      // Combine enrollment and role data
       const userData = enrollments.map(enrollment => ({
         id: enrollment.user_id,
         user_id: enrollment.user_id,
         created_at: enrollment.created_at,
         status: enrollment.status,
+        role: rolesMap.get(enrollment.user_id)?.[0] || 'student',
+        roles: rolesMap.get(enrollment.user_id) || ['student'],
         enrollments_count: enrollments.filter(e => e.user_id === enrollment.user_id).length
       }));
 
@@ -127,10 +145,20 @@ export default function AdminUsersTab() {
               {users.map((user) => (
                 <div key={user.id} className="flex items-start justify-between p-3 border rounded-lg hover:bg-muted/50">
                   <div className="flex-1">
-                    <p className="font-medium text-sm font-mono">{user.user_id.substring(0, 8)}...</p>
+                    <div className="flex items-center gap-2">
+                      <p className="font-medium text-sm font-mono">{user.user_id.substring(0, 8)}...</p>
+                      <span className={`px-2 py-1 text-xs rounded font-medium ${
+                        user.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        user.role === 'teacher' ? 'bg-blue-100 text-blue-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {user.role === 'admin' ? 'অ্যাডমিন' :
+                         user.role === 'teacher' ? 'শিক্ষক' : 'শিক্ষার্থী'}
+                      </span>
+                    </div>
                     <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                       <span>পরীক্ষা: {user.enrollments_count}</span>
-                      <span className={`px-2 py-1 rounded ${user.status === 'enrolled' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      <span className={`px-2 py-1 rounded text-xs ${user.status === 'enrolled' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {user.status === 'enrolled' ? 'সক্রিয়' : 'বাতিল'}
                       </span>
                       <span className="text-xs">
