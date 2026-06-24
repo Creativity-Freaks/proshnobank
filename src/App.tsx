@@ -54,6 +54,7 @@ const EngineeringExams = lazy(() => import("./pages/categories/EngineeringExams"
 const UniversityExams = lazy(() => import("./pages/categories/UniversityExams"));
 const JobExams = lazy(() => import("./pages/categories/JobExams"));
 const Profile = lazy(() => import("./pages/Profile"));
+const Pricing = lazy(() => import("./components/SubscriptionPlans"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -97,6 +98,7 @@ const App = () => (
                 <Route path="/batches/:slug" element={<ExamBatchesCategory />} />
                 <Route path="/leaderboard" element={<Leaderboard />} />
                 <Route path="/live-exams" element={<LiveExams />} />
+                <Route path="/pricing" element={<Pricing />} />
                 <Route path="/exam/setup" element={<ExamSetup />} />
                 <Route path="/exam/:id" element={<ExamDetails />} />
                 <Route path="/teachers" element={<Teachers />} />
