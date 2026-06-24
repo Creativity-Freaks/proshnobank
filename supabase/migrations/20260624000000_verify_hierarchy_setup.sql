@@ -44,7 +44,7 @@ WHERE parent_id IS NOT NULL;
 -- Subjects
 SELECT 'Subjects' as entity_type,
   COUNT(*) as total,
-  STRING_AGG(DISTINCT text, ', ') as examples
+  STRING_AGG(DISTINCT name, ', ') as examples
 FROM subjects;
 
 -- Chapters
@@ -68,7 +68,7 @@ SELECT 'COMPLETE HIERARCHY' as section;
 SELECT 
   base.name as base_category,
   exam.name as exam_category,
-  s.text as subject,
+  s.name as subject,
   c.name as chapter
 FROM exam_categories base
 LEFT JOIN exam_categories exam ON exam.parent_id = base.id

@@ -45,53 +45,59 @@ WHERE NOT EXISTS (
 );
 
 -- Step 4: Add sample subjects (only if empty)
-INSERT INTO subjects (category_id, text, code, slug)
+INSERT INTO subjects (category_id, name, key, description, is_active)
 SELECT 
   (SELECT id FROM exam_categories WHERE slug='ssc-2026-science' LIMIT 1),
   'Bangla',
   'ssc_bangla_1',
-  'ssc_bangla_1'
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE code='ssc_bangla_1');
+  'Bengali Language and Literature',
+  true
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_bangla_1');
 
-INSERT INTO subjects (category_id, text, code, slug)
+INSERT INTO subjects (category_id, name, key, description, is_active)
 SELECT 
   (SELECT id FROM exam_categories WHERE slug='ssc-2026-science' LIMIT 1),
   'English',
   'ssc_english_1',
-  'ssc_english_1'
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE code='ssc_english_1');
+  'English Language and Literature',
+  true
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_english_1');
 
-INSERT INTO subjects (category_id, text, code, slug)
+INSERT INTO subjects (category_id, name, key, description, is_active)
 SELECT 
   (SELECT id FROM exam_categories WHERE slug='ssc-2026-science' LIMIT 1),
   'Mathematics',
   'ssc_math_1',
-  'ssc_math_1'
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE code='ssc_math_1');
+  'Mathematics',
+  true
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_math_1');
 
-INSERT INTO subjects (category_id, text, code, slug)
+INSERT INTO subjects (category_id, name, key, description, is_active)
 SELECT 
   (SELECT id FROM exam_categories WHERE slug='ssc-2026-science' LIMIT 1),
   'Physics',
   'ssc_physics_1',
-  'ssc_physics_1'
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE code='ssc_physics_1');
+  'Physics',
+  true
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_physics_1');
 
-INSERT INTO subjects (category_id, text, code, slug)
+INSERT INTO subjects (category_id, name, key, description, is_active)
 SELECT 
   (SELECT id FROM exam_categories WHERE slug='ssc-2026-science' LIMIT 1),
   'Chemistry',
   'ssc_chemistry_1',
-  'ssc_chemistry_1'
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE code='ssc_chemistry_1');
+  'Chemistry',
+  true
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_chemistry_1');
 
-INSERT INTO subjects (category_id, text, code, slug)
+INSERT INTO subjects (category_id, name, key, description, is_active)
 SELECT 
   (SELECT id FROM exam_categories WHERE slug='ssc-2026-science' LIMIT 1),
   'Biology',
   'ssc_biology_1',
-  'ssc_biology_1'
-WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE code='ssc_biology_1');
+  'Biology',
+  true
+WHERE NOT EXISTS (SELECT 1 FROM subjects WHERE key='ssc_biology_1');
 
 -- Step 5: Add sample chapters for Mathematics
 INSERT INTO chapters (subject_id, name, slug, description)
