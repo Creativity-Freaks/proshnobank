@@ -21,7 +21,11 @@ export default function AdminQuestionsTab() {
   const { refreshTrigger } = useAdmin();
   const [questions, setQuestions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [subcategories, setSubcategories] = useState<any[]>([]);
   const [subjects, setSubjects] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>("");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("");
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showForm, setShowForm] = useState(false);
@@ -37,16 +41,56 @@ export default function AdminQuestionsTab() {
   });
 
   useEffect(() => {
+    fetchCategories();
     fetchSubjects();
   }, []);
+
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchSubcategories(selectedCategory);
+    } else {
+      setSubcategories([]);
+      setSelectedSubcategory("");
+    }
+  }, [selectedCategory]);
 
   useEffect(() => {
     fetchQuestions();
   }, [refreshTrigger, selectedSubject, searchQuery]);
 
+  const fetchCategories = async () => {
+    try {
+      const { data } = await supabase
+        .from("exam_categories")
+        .select("*")
+        .is("parent_id", null)
+        .order("sort_order", { ascending: true });
+      setCategories(data || []);
+    } catch (error) {
+      console.error("[v0] Failed to fetch categories:", error);
+    }
+  };
+
+  const fetchSubcategories = async (categoryId: string) => {
+    try {
+      const { data } = await supabase
+        .from("exam_categories")
+        .select("*")
+        .eq("parent_id", categoryId)
+        .order("sort_order", { ascending: true });
+      setSubcategories(data || []);
+    } catch (error) {
+      console.error("[v0] Failed to fetch subcategories:", error);
+    }
+  };
+
   const fetchSubjects = async () => {
     try {
-      const { data } = await supabase.from("subjects").select("*").limit(100);
+      const { data } = await supabase
+        .from("subjects")
+        .select("*, exam_categories(name)")
+        .order("name", { ascending: true })
+        .limit(100);
       setSubjects(data || []);
     } catch (error) {
       console.error("[v0] Failed to fetch subjects:", error);
@@ -280,31 +324,105 @@ export default function AdminQuestionsTab() {
           <CardTitle className="text-sm">ফিল্টার এবং অনুসন্ধান</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Category Filter */}
+            <div className="space-y-2">
+              <Label>ক্যাটেগরি নির্বাচন করুন</Label>
+              <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder="ক্যাটেগরি বেছে নিন..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">সব ক্যাটেগরি</SelectItem>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Subcategory Filter */}
+            <div className="space-y-2">
+              <Label>পরীক্ষা নির্বাচন করুন</Label>
+              <Select value={selectedSubcategory} onValueChange={setSelectedSubcategory} disabled={!selectedCategory}>
+                <SelectTrigger>
+                  <SelectValue placeholder={selectedCategory ? "পরীক্ষা বেছে নিন..." : "প্রথমে ক্যাটেগরি বেছে নিন"} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">সব পরীক্ষা</SelectItem>
+                  {subcategories.map((sub) => (
+                    <SelectItem key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Subject Filter */}
             <div className="space-y-2">
               <Label>বিষয় নির্বাচন করুন</Label>
-              <div className="flex gap-2 flex-wrap">
-                <button onClick={() => setSelectedSubject("")} className={`px-3 py-1 rounded text-sm ${selectedSubject === "" ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>সব বিষয়</button>
-                {subjects.slice(0, 5).map((subject) => (
-                  <button key={subject.id} onClick={() => setSelectedSubject(subject.id)} className={`px-3 py-1 rounded text-sm ${selectedSubject === subject.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>
-                    {subject.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>প্রশ্ন অনুসন্ধান করুন</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="প্রশ্ন খুঁজুন..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                />
-              </div>
+              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
+                <SelectTrigger>
+                  <SelectValue placeholder="বিষয় বেছে নিন..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">সব বিষয়</SelectItem>
+                  {subjects.map((subject) => (
+                    <SelectItem key={subject.id} value={subject.id}>
+                      {subject.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
+
+          {/* Search Bar */}
+          <div className="space-y-2">
+            <Label>প্রশ্ন অনুসন্ধান করুন</Label>
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="প্রশ্নের টেক্সট দিয়ে খুঁজুন..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+          </div>
+
+          {/* Active Filters Display */}
+          {(selectedCategory || selectedSubcategory || selectedSubject || searchQuery) && (
+            <div className="flex flex-wrap gap-2 pt-2 border-t">
+              {selectedCategory && (
+                <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                  ক্যাটেগরি: {categories.find(c => c.id === selectedCategory)?.name}
+                  <button onClick={() => setSelectedCategory("")} className="hover:font-bold">×</button>
+                </div>
+              )}
+              {selectedSubcategory && (
+                <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                  পরীক্ষা: {subcategories.find(s => s.id === selectedSubcategory)?.name}
+                  <button onClick={() => setSelectedSubcategory("")} className="hover:font-bold">×</button>
+                </div>
+              )}
+              {selectedSubject && (
+                <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                  বিষয়: {subjects.find(s => s.id === selectedSubject)?.name}
+                  <button onClick={() => setSelectedSubject("")} className="hover:font-bold">×</button>
+                </div>
+              )}
+              {searchQuery && (
+                <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-xs flex items-center gap-1">
+                  খোঁজ: {searchQuery.substring(0, 20)}...
+                  <button onClick={() => setSearchQuery("")} className="hover:font-bold">×</button>
+                </div>
+              )}
+            </div>
+          )}
         </CardContent>
       </Card>
 
