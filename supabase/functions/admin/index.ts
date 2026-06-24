@@ -296,7 +296,7 @@ Deno.serve(async (req: Request) => {
       const role = String((body as Record<string, unknown>)?.role || "").trim();
 
       if (!email || !password || !name) return err(req, "Missing name, email or password");
-      if (role !== "admin" && role !== "moderator") return err(req, "Role must be admin or moderator");
+      if (role !== "admin" && role !== "moderator" && role !== "teacher") return err(req, "Role must be admin, moderator or teacher");
       if (password.length < 6) return err(req, "Password must be at least 6 characters");
 
       const { data: created, error: createErr } = await supabase.auth.admin.createUser({

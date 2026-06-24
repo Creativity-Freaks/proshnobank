@@ -33,10 +33,11 @@ export default function AdminSubcategoriesTab() {
     try {
       const { data } = await supabase
         .from("exam_categories")
-        .select("*")
-        .order("order_index", { ascending: true });
+        .select("id, name, slug")
+        .is("parent_id", null)
+        .order("sort_order", { ascending: true });
       setCategories(data || []);
-      if (data && data.length > 0) {
+      if (data && data.length > 0 && !selectedCategory) {
         setSelectedCategory(data[0].id);
       }
     } catch (error) {
@@ -48,10 +49,10 @@ export default function AdminSubcategoriesTab() {
     try {
       setLoading(true);
       const { data } = await supabase
-        .from("category_subcategories")
-        .select("*")
-        .eq("category_id", selectedCategory)
-        .order("order_index", { ascending: true });
+        .from("exam_categories")
+        .select("id, name, slug, description, is_active, sort_order")
+        .eq("parent_id", selectedCategory)
+        .order("sort_order", { ascending: true });
       setSubcategories(data || []);
     } catch (error) {
       toast({ title: "Error", description: "সাব-ক্যাটেগরি লোড করতে ব্যর্থ", variant: "destructive" });
@@ -59,6 +60,16 @@ export default function AdminSubcategoriesTab() {
       setLoading(false);
     }
   };
+
+  function generateSlug(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^\u0980-\u09FFa-z0-9-]/g, "")
+      .replace(/-+/g, "-")
+      .replace(/^-|-$/g, "")
+      || `sub-${Date.now()}`;
+  }
 
   const handleSave = async () => {
     try {
@@ -68,66 +79,78 @@ export default function AdminSubcategoriesTab() {
       }
 
       if (editingId) {
-        await supabase
-          .from("category_subcategories")
-          .update(formData)
+        const { error } = await supabase
+          .from("exam_categories")
+          .update({ name: formData.name, description: formData.description || null })
           .eq("id", editingId);
-        toast({ title: "সাফল্য", description: "সাব-ক্যাটেগরি আপডেট হয়েছে" });
+        if (error) throw error;
+        toast({ title: "সাফল্য", description: "পরীক্ষা ক্যাটেগরি আপডেট হয়েছে" });
       } else {
-        await supabase.from("category_subcategories").insert([
-          { ...formData, category_id: selectedCategory },
+        const slug = generateSlug(formData.name) + `-${Date.now().toString(36)}`;
+        const { error } = await supabase.from("exam_categories").insert([
+          {
+            parent_id: selectedCategory,
+            name: formData.name,
+            slug,
+            description: formData.description || null,
+            is_active: true,
+            sort_order: 0,
+          },
         ]);
-        toast({ title: "সাফল্য", description: "সাব-ক্যাটেগরি তৈরি হয়েছে" });
+        if (error) throw error;
+        toast({ title: "সাফল্য", description: "পরীক্ষা ক্যাটেগরি তৈরি হয়েছে" });
       }
       setFormData({ name: "", description: "" });
       setEditingId(null);
       setShowForm(false);
       fetchSubcategories();
-    } catch (error) {
-      toast({ title: "Error", description: "সংরক্ষণ করতে ব্যর্থ", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error?.message || "সংরক্ষণ করতে ব্যর্থ", variant: "destructive" });
     }
   };
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
-    setFormData({ name: item.name, description: item.description });
+    setFormData({ name: item.name, description: item.description || "" });
     setShowForm(true);
   };
 
   const handleDelete = async (id: string) => {
-    if (confirm("আপনি কি এই সাব-ক্যাটেগরি মুছে দিতে চান?")) {
+    if (confirm("আপনি কি এই পরীক্ষা ক্যাটেগরি মুছে দিতে চান?")) {
       try {
-        await supabase.from("category_subcategories").delete().eq("id", id);
-        toast({ title: "সাফল্য", description: "সাব-ক্যাটেগরি মুছে দেওয়া হয়েছে" });
+        const { error } = await supabase.from("exam_categories").delete().eq("id", id);
+        if (error) throw error;
+        toast({ title: "সাফল্য", description: "পরীক্ষা ক্যাটেগরি মুছে দেওয়া হয়েছে" });
         fetchSubcategories();
-      } catch (error) {
-        toast({ title: "Error", description: "মুছতে ব্যর্থ", variant: "destructive" });
+      } catch (error: any) {
+        toast({ title: "Error", description: error?.message || "মুছতে ব্যর্থ", variant: "destructive" });
       }
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-bold">পরীক্ষা ক্যাটেগরি ব্যবস্থাপনা (সাব-ক্যাটেগরি)</h2>
-        <p className="text-sm text-muted-foreground mt-1">বেস ক্যাটেগরির অধীনে পরীক্ষা ধরন (যেমন: SSC Regular Board, SSC English Medium, etc.)</p>
+        <h2 className="text-2xl font-bold">পরীক্ষা ক্যাটেগরি ব্যবস্থাপনা</h2>
+        <p className="text-sm text-muted-foreground mt-1">বেস ক্যাটেগরির অধীনে পরীক্ষার ধরন (যেমন: SSC বিজ্ঞান, SSC মানবিক)</p>
       </div>
+
       <div className="flex items-center justify-between">
-        <Button onClick={() => { setShowForm(!showForm); setEditingId(null); setFormData({ name: "", description: "" }); }} className="gap-2">
+        <Button
+          onClick={() => {
+            setShowForm(!showForm);
+            setEditingId(null);
+            setFormData({ name: "", description: "" });
+          }}
+          className="gap-2"
+          disabled={!selectedCategory}
+        >
           <Plus className="w-4 h-4" />
           নতুন পরীক্ষা ক্যাটেগরি
         </Button>
       </div>
 
-      {/* Category Filter */}
+      {/* Parent Category Filter */}
       <Card>
         <CardHeader>
           <CardTitle className="text-sm">বেস ক্যাটেগরি নির্বাচন করুন</CardTitle>
@@ -156,7 +179,7 @@ export default function AdminSubcategoriesTab() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {editingId ? "পরীক্ষা ক্যাটেগরি সম্পাদনা করুন" : "নতুন পরীক্ষা ক্যাটেগরি যোগ করুন"}
+              {editingId ? "পরীক্ষা ক্যাটেগরি সম্পাদনা" : "নতুন পরীক্ষা ক্যাটেগরি যোগ করুন"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -164,20 +187,16 @@ export default function AdminSubcategoriesTab() {
               <Label>নাম</Label>
               <Input
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
-                placeholder="যেমন: Regular Board, English Medium"
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="যেমন: SSC বিজ্ঞান ২০২৬"
               />
             </div>
             <div>
-              <Label>বর্ণনা</Label>
+              <Label>বর্ণনা (ঐচ্ছিক)</Label>
               <Input
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
-                placeholder="বর্ণনা (ঐচ্ছিক)"
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                placeholder="বর্ণনা লিখুন"
               />
             </div>
             <div className="flex gap-2">
@@ -197,50 +216,47 @@ export default function AdminSubcategoriesTab() {
       )}
 
       {/* List */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {subcategories.length === 0 ? (
-          <Card className="md:col-span-2 lg:col-span-3">
-            <CardContent className="pt-6">
-              <p className="text-muted-foreground text-center">
-                এই ক্যাটেগরিতে কোন সাব-ক্যাটেগরি নেই
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          subcategories.map((item) => (
-            <Card key={item.id}>
-              <CardHeader>
-                <CardTitle className="text-lg">{item.name}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground mb-4">
-                  {item.description}
+      {loading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {subcategories.length === 0 ? (
+            <Card className="md:col-span-2 lg:col-span-3">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">
+                  এই ক্যাটেগরিতে কোন পরীক্ষা ক্যাটেগরি নেই
                 </p>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="flex-1 gap-2"
-                    onClick={() => handleEdit(item)}
-                  >
-                    <Edit2 className="w-3 h-3" />
-                    সম্পাদনা
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    className="flex-1 gap-2"
-                    onClick={() => handleDelete(item.id)}
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    মুছুন
-                  </Button>
-                </div>
               </CardContent>
             </Card>
-          ))
-        )}
-      </div>
+          ) : (
+            subcategories.map((item) => (
+              <Card key={item.id} className="border-l-4 border-l-primary/60">
+                <CardHeader>
+                  <CardTitle className="text-base">{item.name}</CardTitle>
+                  <p className="text-xs text-muted-foreground font-mono">{item.slug}</p>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {item.description || "বর্ণনা নেই"}
+                  </p>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 gap-2" onClick={() => handleEdit(item)}>
+                      <Edit2 className="w-3 h-3" />
+                      সম্পাদনা
+                    </Button>
+                    <Button size="sm" variant="destructive" className="flex-1 gap-2" onClick={() => handleDelete(item.id)}>
+                      <Trash2 className="w-3 h-3" />
+                      মুছুন
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

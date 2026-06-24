@@ -112,6 +112,36 @@ export interface SubjectInfo {
   question_count: number;
 }
 
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  plan_type: string;
+  description: string | null;
+  price_monthly: number;
+  price_yearly: number;
+  max_practice_exams: number | null;
+  max_live_exams_per_month: number | null;
+  max_doubts_per_month: number | null;
+  question_upload_limit: number;
+  batch_student_limit: number;
+  omr_grading: boolean;
+  features: string[];
+  is_active: boolean;
+  sort_order: number;
+}
+
+export interface UserSubscription {
+  id: string;
+  user_id: string;
+  plan_id: string;
+  status: string;
+  billing_cycle: string;
+  started_at: string;
+  cancel_at: string | null;
+  updated_at: string;
+  plan?: SubscriptionPlan;
+}
+
 export const adminApi = {
   stats: () => adminCall<{ data: AdminStats }>({ action: "stats" }),
 
@@ -193,4 +223,52 @@ export const adminApi = {
 
   // Subjects
   subjects: () => adminCall<{ data: SubjectInfo[] }>({ action: "subjects" }),
+
+  // Subscription Plans — direct Supabase client (no admin edge function needed, not sensitive)
+  getPlans: async (): Promise<SubscriptionPlan[]> => {
+    const { data, error } = await supabase
+      .from("subscription_plans")
+      .select("*")
+      .order("sort_order");
+    if (error) throw new Error(error.message);
+    return (data || []) as SubscriptionPlan[];
+  },
+
+  getUserSubscription: async (userId: string): Promise<UserSubscription | null> => {
+    const { data, error } = await supabase
+      .from("user_subscriptions")
+      .select("*, plan:subscription_plans(*)")
+      .eq("user_id", userId)
+      .eq("status", "active")
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    return data as UserSubscription | null;
+  },
+
+  assignPlan: async (userId: string, planId: string, billingCycle: "monthly" | "yearly" = "monthly"): Promise<void> => {
+    // Cancel existing active subscription first
+    await supabase
+      .from("user_subscriptions")
+      .update({ status: "cancelled", cancel_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("status", "active");
+    // Insert new subscription
+    const { error } = await supabase.from("user_subscriptions").insert({
+      user_id: userId,
+      plan_id: planId,
+      status: "active",
+      billing_cycle: billingCycle,
+      started_at: new Date().toISOString(),
+    });
+    if (error) throw new Error(error.message);
+  },
+
+  cancelSubscription: async (userId: string): Promise<void> => {
+    const { error } = await supabase
+      .from("user_subscriptions")
+      .update({ status: "cancelled", cancel_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .eq("status", "active");
+    if (error) throw new Error(error.message);
+  },
 };
