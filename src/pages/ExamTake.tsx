@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { examsApi } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { Tables } from "@/integrations/supabase/types";
 import {
   Clock, ChevronLeft, ChevronRight, Flag, CheckCircle,
@@ -53,6 +54,7 @@ const ExamTake = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
+  const { loading: subLoading, canTakePracticeExam, isFreeTier } = useSubscription();
 
   const defaultConfig = useMemo<ExamConfig>(
     () => ({
@@ -173,7 +175,29 @@ const ExamTake = () => {
   const progress = questions.length > 0 ? (Object.keys(answers).length / questions.length) * 100 : 0;
   const totalPossibleMarks = attempt?.max_score ?? questions.length * config.marksPerQuestion;
 
-  if (loadingQuestions) {
+  // Subscription gate — must have an active plan to take exams
+  if (!subLoading && (isFreeTier || !canTakePracticeExam)) {
+    return (
+      <div className="min-h-screen bg-background font-bengali flex items-center justify-center p-4">
+        <div className="bg-card rounded-2xl border border-border p-8 max-w-md w-full text-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto">
+            <BookOpen className="w-8 h-8 text-amber-600" />
+          </div>
+          <h1 className="text-2xl font-bold">প্ল্যান প্রয়োজন</h1>
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            পরীক্ষা দিতে হলে আপনাকে একটি সক্রিয় প্ল্যান নিতে হবে।<br />
+            লগইনের পরেই প্ল্যান সিলেক্ট করুন।
+          </p>
+          <div className="flex gap-3 justify-center">
+            <Button variant="outline" onClick={() => navigate(-1)}>ফিরে যাও</Button>
+            <Button variant="hero" onClick={() => navigate("/pricing")}>প্ল্যান দেখুন</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (loadingQuestions || subLoading) {
     return (
       <div className="min-h-screen bg-background font-bengali flex items-center justify-center">
         <div className="text-center">
