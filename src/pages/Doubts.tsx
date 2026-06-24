@@ -171,6 +171,11 @@ export default function Doubts() {
   const [answerImageFile, setAnswerImageFile] = useState<File | null>(null);
   const [answerImagePreview, setAnswerImagePreview] = useState<string | null>(null);
 
+  // Categories & subjects for ask form
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [allSubjects, setAllSubjects] = useState<{ id: string; name: string; category_id: string }[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
+
   // Ask form
   const [showAskForm, setShowAskForm] = useState(false);
   const [submittingDoubt, setSubmittingDoubt] = useState(false);
@@ -247,6 +252,18 @@ export default function Doubts() {
   useEffect(() => { fetchDoubts(); }, [fetchDoubts]);
   useEffect(() => { fetchMonthlyUsage(); }, [fetchMonthlyUsage]);
 
+  useEffect(() => {
+    const fetchCategoriesAndSubjects = async () => {
+      const [{ data: cats }, { data: subs }] = await Promise.all([
+        supabase.from("exam_categories").select("id, name").is("parent_id", null).order("sort_order"),
+        supabase.from("subjects").select("id, name, category_id").order("name"),
+      ]);
+      setCategories(cats || []);
+      setAllSubjects(subs || []);
+    };
+    fetchCategoriesAndSubjects();
+  }, []);
+
   const openThread = useCallback(async (doubt: Doubt) => {
     setSelectedDoubt(doubt);
     setLoadingAnswers(true);
@@ -315,6 +332,7 @@ export default function Doubts() {
       await doubtApi.createDoubt({ ...newDoubt, image_url } as any);
       toast({ title: "সাফল্য", description: "আপনার প্রশ্ন জমা দেওয়া হয়েছে" });
       setNewDoubt({ title: "", description: "", subject: "", topic: "", priority: "medium" });
+      setSelectedCategoryId("");
       setDoubtImageFile(null);
       setDoubtImagePreview(null);
       setShowAskForm(false);
@@ -349,7 +367,7 @@ export default function Doubts() {
         image_url: image_url || null,
       });
       if (error) throw error;
-      toast({ title: "সাফল্য", description: "উত্তর পোস্ট হয়েছে" });
+      toast({ title: "সাফল্য", description: "উত্তর পো��্ট হয়েছে" });
       setAnswerText("");
       setAnswerImageFile(null);
       setAnswerImagePreview(null);
@@ -373,8 +391,8 @@ export default function Doubts() {
     } catch { /* ignore duplicate */ }
   };
 
-  const canAskDoubt = user && !subLoading && (max_doubts_per_month === null || monthlyDoubtCount < max_doubts_per_month);
-  const doubtLimitReached = user && max_doubts_per_month !== null && monthlyDoubtCount >= max_doubts_per_month;
+  const doubtLimitReached = user && !subLoading && max_doubts_per_month !== null && monthlyDoubtCount >= max_doubts_per_month;
+  const canAskDoubt = !!user && !doubtLimitReached;
 
   const filteredDoubts = doubts.filter(d =>
     !searchQuery ||
@@ -478,22 +496,48 @@ export default function Doubts() {
             <form onSubmit={handleSubmitDoubt} className="space-y-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">বিষয় <span className="text-red-500">*</span></label>
-                  <Input
-                    placeholder="যেমন: গণিত, পদার্থবিজ্ঞান"
-                    value={newDoubt.subject}
-                    onChange={e => setNewDoubt({ ...newDoubt, subject: e.target.value })}
+                  <label className="block text-sm font-medium text-foreground mb-1">ক্যাটেগরি <span className="text-red-500">*</span></label>
+                  <select
+                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    value={selectedCategoryId}
+                    onChange={e => {
+                      setSelectedCategoryId(e.target.value);
+                      setNewDoubt(prev => ({ ...prev, subject: "" }));
+                    }}
                     required
-                  />
+                  >
+                    <option value="">ক্যাটেগরি বেছে নিন</option>
+                    {categories.map(c => (
+                      <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-1">টপিক (ঐচ্ছিক)</label>
-                  <Input
-                    placeholder="যেমন: দ্বিঘাত সমীকরণ"
-                    value={newDoubt.topic}
-                    onChange={e => setNewDoubt({ ...newDoubt, topic: e.target.value })}
-                  />
+                  <label className="block text-sm font-medium text-foreground mb-1">বিষয় <span className="text-red-500">*</span></label>
+                  <select
+                    className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
+                    value={newDoubt.subject}
+                    onChange={e => setNewDoubt(prev => ({ ...prev, subject: e.target.value }))}
+                    required
+                    disabled={!selectedCategoryId}
+                  >
+                    <option value="">{selectedCategoryId ? "বিষয় বেছে নিন" : "আগে ক্যাটেগরি বেছে নিন"}</option>
+                    {allSubjects
+                      .filter(s => s.category_id === selectedCategoryId)
+                      .map(s => (
+                        <option key={s.id} value={s.name}>{s.name}</option>
+                      ))
+                    }
+                  </select>
                 </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1">টপিক (ঐচ্ছিক)</label>
+                <Input
+                  placeholder="যেমন: দ্বিঘাত সমীকরণ"
+                  value={newDoubt.topic}
+                  onChange={e => setNewDoubt({ ...newDoubt, topic: e.target.value })}
+                />
               </div>
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1">প্রশ্নের শিরোনাম <span className="text-red-500">*</span></label>
