@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit2, Loader2, Search } from "lucide-react";
+import { Plus, Trash2, Edit2, Loader2, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,14 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 export default function AdminQuestionsTab() {
   const { toast } = useToast();
@@ -16,6 +24,17 @@ export default function AdminQuestionsTab() {
   const [subjects, setSubjects] = useState<any[]>([]);
   const [selectedSubject, setSelectedSubject] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    subject: "",
+    topic: "",
+    difficulty: "medium",
+    question_text: "",
+    options: ["", "", "", ""],
+    correct_answer: 0,
+    explanation: "",
+  });
 
   useEffect(() => {
     fetchSubjects();
@@ -68,6 +87,74 @@ export default function AdminQuestionsTab() {
     }
   };
 
+  const handleSave = async () => {
+    if (!formData.subject || !formData.topic || !formData.question_text) {
+      toast({ title: "Error", description: "সব প্রয়োজনীয় ক্ষেত্র পূরণ করুন", variant: "destructive" });
+      return;
+    }
+
+    if (formData.options.some(opt => !opt.trim())) {
+      toast({ title: "Error", description: "সব বিকল্প পূরণ করুন", variant: "destructive" });
+      return;
+    }
+
+    try {
+      const payload = {
+        subject: formData.subject,
+        topic: formData.topic,
+        difficulty: formData.difficulty,
+        question_text: formData.question_text,
+        options: formData.options,
+        correct_answer: parseInt(String(formData.correct_answer)),
+        explanation: formData.explanation,
+      };
+
+      if (editingId) {
+        // Update
+        await supabase.from("question_bank").update(payload).eq("id", editingId);
+        toast({ title: "সাফল্য", description: "প্রশ্ন সফলভাবে আপডেট হয়েছে" });
+      } else {
+        // Create
+        await supabase.from("question_bank").insert([payload]);
+        toast({ title: "সাফল্য", description: "প্রশ্ন সফলভাবে তৈরি হয়েছে" });
+      }
+
+      resetForm();
+      fetchQuestions();
+    } catch (error) {
+      console.error("[v0] Failed to save question:", error);
+      toast({ title: "Error", description: "প্রশ্ন সংরক্ষণ করতে ব্যর্থ", variant: "destructive" });
+    }
+  };
+
+  const handleEdit = (question: any) => {
+    setEditingId(question.id);
+    setFormData({
+      subject: question.subject,
+      topic: question.topic,
+      difficulty: question.difficulty || "medium",
+      question_text: question.question_text,
+      options: Array.isArray(question.options) ? question.options : ["", "", "", ""],
+      correct_answer: question.correct_answer || 0,
+      explanation: question.explanation || "",
+    });
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setEditingId(null);
+    setFormData({
+      subject: "",
+      topic: "",
+      difficulty: "medium",
+      question_text: "",
+      options: ["", "", "", ""],
+      correct_answer: 0,
+      explanation: "",
+    });
+    setShowForm(false);
+  };
+
   if (loading) {
     return <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 animate-spin" /></div>;
   }
@@ -76,11 +163,117 @@ export default function AdminQuestionsTab() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold">প্রশ্ন ব্যবস্থাপনা</h2>
-        <Button className="gap-2">
+        <Button className="gap-2" onClick={() => { setShowForm(!showForm); if (!showForm) resetForm(); }}>
           <Plus className="w-4 h-4" />
-          নতুন প্রশ্ন
+          {showForm ? "বাতিল করুন" : "নতুন প্রশ্ন"}
         </Button>
       </div>
+
+      {showForm && (
+        <Card className="border-2 border-primary">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>{editingId ? "প্রশ্ন সম্পাদনা করুন" : "নতুন প্রশ্ন যোগ করুন"}</CardTitle>
+            <Button size="sm" variant="ghost" onClick={() => setShowForm(false)}>
+              <X className="w-4 h-4" />
+            </Button>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>বিষয় *</Label>
+                <Input
+                  placeholder="বিষয় (যেমন: গণিত)"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>বিষয়বস্তু/অধ্যায় *</Label>
+                <Input
+                  placeholder="অধ্যায় (যেমন: বীজগণিত)"
+                  value={formData.topic}
+                  onChange={(e) => setFormData({ ...formData, topic: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>কঠিনতা স্তর</Label>
+                <Select value={formData.difficulty} onValueChange={(value) => setFormData({ ...formData, difficulty: value })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="easy">সহজ</SelectItem>
+                    <SelectItem value="medium">মাঝারি</SelectItem>
+                    <SelectItem value="hard">কঠিন</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>সঠিক উত্তর *</Label>
+                <Select value={String(formData.correct_answer)} onValueChange={(value) => setFormData({ ...formData, correct_answer: parseInt(value) })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="0">বিকল্প 1</SelectItem>
+                    <SelectItem value="1">বিকল্প 2</SelectItem>
+                    <SelectItem value="2">বিকল্প 3</SelectItem>
+                    <SelectItem value="3">বিকল্প 4</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>প্রশ্ন টেক্সট *</Label>
+              <Textarea
+                placeholder="প্রশ্ন এখানে লিখুন..."
+                value={formData.question_text}
+                onChange={(e) => setFormData({ ...formData, question_text: e.target.value })}
+                rows={3}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>বিকল্পগুলি *</Label>
+              {formData.options.map((option, index) => (
+                <Input
+                  key={index}
+                  placeholder={`বিকল্প ${index + 1}`}
+                  value={option}
+                  onChange={(e) => {
+                    const newOptions = [...formData.options];
+                    newOptions[index] = e.target.value;
+                    setFormData({ ...formData, options: newOptions });
+                  }}
+                />
+              ))}
+            </div>
+
+            <div className="space-y-2">
+              <Label>ব্যাখ্যা (ঐচ্ছিক)</Label>
+              <Textarea
+                placeholder="সঠিক উত্তরের ব্যাখ্যা..."
+                value={formData.explanation}
+                onChange={(e) => setFormData({ ...formData, explanation: e.target.value })}
+                rows={2}
+              />
+            </div>
+
+            <div className="flex gap-2 pt-4">
+              <Button onClick={handleSave} className="flex-1">
+                {editingId ? "আপডেট করুন" : "প্রশ্ন সংরক্ষণ করুন"}
+              </Button>
+              <Button onClick={() => setShowForm(false)} variant="outline" className="flex-1">
+                বাতিল করুন
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -135,7 +328,7 @@ export default function AdminQuestionsTab() {
                     </p>
                   </div>
                   <div className="flex gap-2 ml-4">
-                    <Button size="sm" variant="outline" className="gap-1">
+                    <Button size="sm" variant="outline" className="gap-1" onClick={() => handleEdit(question)}>
                       <Edit2 className="w-3 h-3" />
                     </Button>
                     <Button size="sm" variant="destructive" className="gap-1" onClick={() => handleDelete(question.id)}>
