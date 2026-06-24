@@ -21,7 +21,9 @@ import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
 import AdminDashboardTab from "./tabs/AdminDashboardTab";
 import AdminCategoriesTab from "./tabs/AdminCategoriesTab";
+import AdminSubcategoriesTab from "./tabs/AdminSubcategoriesTab";
 import AdminSubjectsTab from "./tabs/AdminSubjectsTab";
+import AdminChaptersTab from "./tabs/AdminChaptersTab";
 import AdminQuestionsTab from "./tabs/AdminQuestionsTab";
 import AdminUsersTab from "./tabs/AdminUsersTab";
 import AdminTemplatesTab from "./tabs/AdminTemplatesTab";
@@ -33,7 +35,9 @@ const TAB_CONFIG = [
   { id: "analytics", label: "বিশ্লেষণ", icon: BarChart3 },
   { id: "questions", label: "প্রশ্ন", icon: BookOpen },
   { id: "categories", label: "ক্যাটেগরি", icon: Layers },
+  { id: "subcategories", label: "সাব-ক্যাটেগরি", icon: Layers },
   { id: "subjects", label: "বিষয়", icon: FileText },
+  { id: "chapters", label: "অধ্যায়", icon: FileText },
   { id: "users", label: "ব্যবহারকারী", icon: Users },
   { id: "templates", label: "টেমপ্লেট", icon: FilePenLine },
   { id: "live-events", label: "লাইভ ইভেন্ট", icon: CalendarClock },
@@ -44,7 +48,9 @@ const TAB_COMPONENTS = {
   analytics: AdminAnalyticsTab,
   questions: AdminQuestionsTab,
   categories: AdminCategoriesTab,
+  subcategories: AdminSubcategoriesTab,
   subjects: AdminSubjectsTab,
+  chapters: AdminChaptersTab,
   users: AdminUsersTab,
   templates: AdminTemplatesTab,
   "live-events": AdminLiveEventsTab,
