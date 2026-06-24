@@ -125,16 +125,12 @@ export default function AdminQuestionsTab() {
   };
 
   const handleSave = async () => {
-    console.log("[v0] handleSave called with formData:", formData);
-    
     if (!formData.subject || !formData.topic || !formData.question_text) {
-      console.log("[v0] Validation failed - missing required fields");
       toast({ title: "Error", description: "সব প্রয়োজনীয় ক্ষেত্র পূরণ করুন", variant: "destructive" });
       return;
     }
 
     if (formData.options.some(opt => !opt.trim())) {
-      console.log("[v0] Validation failed - empty options");
       toast({ title: "Error", description: "সব বিকল্প পূরণ করুন", variant: "destructive" });
       return;
     }
@@ -150,23 +146,15 @@ export default function AdminQuestionsTab() {
         explanation: formData.explanation,
       };
 
-      console.log("[v0] Payload to save:", payload);
-
       if (editingId) {
         // Update
-        console.log("[v0] Updating question:", editingId);
         const { error } = await supabase.from("question_bank").update(payload).eq("id", editingId);
         if (error) throw error;
         toast({ title: "সাফল্য", description: "প্রশ্ন সফলভাবে আপডেট হয়েছে" });
       } else {
         // Create
-        console.log("[v0] Creating new question");
-        const { error, data } = await supabase.from("question_bank").insert([payload]);
-        if (error) {
-          console.log("[v0] Insert error:", error);
-          throw error;
-        }
-        console.log("[v0] Question created:", data);
+        const { error } = await supabase.from("question_bank").insert([payload]);
+        if (error) throw error;
         toast({ title: "সাফল্য", description: "প্রশ্ন সফলভাবে তৈরি হয়েছে" });
       }
 
