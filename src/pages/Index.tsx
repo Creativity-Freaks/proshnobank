@@ -7,6 +7,7 @@ import WhyChooseUsSection from "@/components/WhyChooseUsSection";
 import TestimonialsSection from "@/components/TestimonialsSection";
 import FaqSection from "@/components/FaqSection";
 import PricingSection from "@/components/PricingSection";
+import DoubtMarketingSection from "@/components/DoubtMarketingSection";
 import { usePageMeta } from "@/hooks/usePageMeta";
 
 const Index = () => {
@@ -27,6 +28,7 @@ const Index = () => {
         subtitle="যে কারণে শিক্ষার্থী ও শিক্ষকরা প্রশ্নব্যাংক বেছে নেন—দ্রুত, আধুনিক এবং ফলাফল-কেন্দ্রিক অভিজ্ঞতা।"
       />
       <TestimonialsSection />
+      <DoubtMarketingSection />
       <PricingSection />
       <FaqSection title="FAQ" subtitle="হোমের গুরুত্বপূর্ণ প্রশ্নগুলো" />
       <StatsSection />

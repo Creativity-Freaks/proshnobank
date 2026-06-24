@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { examsApi } from "@/lib/api";
 import { Badge } from "@/components/ui/badge";
 import { usePageMeta } from "@/hooks/usePageMeta";
 import { mapLiveExamRow, getTimeRemainingLabel } from "@/lib/live-exam";
+import { useSubscription } from "@/hooks/useSubscription";
 import {
   Clock,
   Users,
@@ -15,6 +16,7 @@ import {
   Trophy,
   Zap,
   Loader2,
+  Lock,
 } from "lucide-react";
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -28,6 +30,8 @@ const CATEGORY_LABELS: Record<string, string> = {
 };
 
 const LiveExams = () => {
+  const navigate = useNavigate();
+  const { canTakeLiveExam, isFreeTier } = useSubscription();
   const [, setCurrentTime] = useState(new Date());
 
   usePageMeta({
@@ -163,15 +167,26 @@ const LiveExams = () => {
 
                   <div className="px-6 pb-6">
                     {exam.status === "live" || exam.status === "starting-soon" ? (
-                      <Link to={`/exam/${exam.id}/take`} state={{ config: exam.config }}>
+                      canTakeLiveExam ? (
+                        <Link to={`/exam/${exam.id}/take`} state={{ config: exam.config }}>
+                          <Button
+                            variant="hero"
+                            className={`w-full ${exam.status === "live" ? "bg-red-500 hover:bg-red-600" : ""}`}
+                          >
+                            <PlayCircle className="w-4 h-4 mr-2" />
+                            {exam.status === "live" ? "এখনই জয়েন করো" : "প্রস্তুত হও"}
+                          </Button>
+                        </Link>
+                      ) : (
                         <Button
-                          variant="hero"
-                          className={`w-full ${exam.status === "live" ? "bg-red-500 hover:bg-red-600" : ""}`}
+                          variant="outline"
+                          className="w-full border-amber-400 text-amber-700 hover:bg-amber-50"
+                          onClick={() => navigate("/pricing")}
                         >
-                          <PlayCircle className="w-4 h-4 mr-2" />
-                          {exam.status === "live" ? "এখনই জয়েন করো" : "প্রস্তুত হও"}
+                          <Lock className="w-4 h-4 mr-2" />
+                          {isFreeTier ? "প্ল্যান নিন — আনলক করুন" : "আপগ্রেড করুন"}
                         </Button>
-                      </Link>
+                      )
                     ) : (
                       <Button variant="outline" className="w-full">
                         <Bell className="w-4 h-4 mr-2" />
