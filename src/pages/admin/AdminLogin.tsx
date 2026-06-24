@@ -5,6 +5,7 @@ import BrandLogo from "@/components/BrandLogo";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { BackButton } from "@/components/BackButton";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { usePageMeta } from "@/hooks/usePageMeta";
@@ -107,6 +108,10 @@ const AdminLogin = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary/5 via-background to-accent/5 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
+        <div className="mb-6">
+          <BackButton />
+        </div>
+        
         <Link to="/" className="mb-8 flex items-center justify-center">
           <BrandLogo size="lg" />
         </Link>

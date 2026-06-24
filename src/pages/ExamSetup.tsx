@@ -15,7 +15,9 @@ import {
 } from "@/components/ui/select";
 import { examsApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { Loader2, BookOpen, Clock, Award, MinusCircle, Settings, Play, ChevronRight, Layers, Target } from "lucide-react";
+import { Loader2, BookOpen, Clock, Award, MinusCircle, Settings, Play, ChevronRight, Layers, Target, ChevronDown } from "lucide-react";
+import { BackButton } from "@/components/BackButton";
+import { getChaptersForSubject } from "@/lib/curriculum-chapters";
 
 type TopicItem = { id: string; name: string };
 type SubjectItem = { id: string; name: string; topics: TopicItem[] };
@@ -65,6 +67,8 @@ const ExamSetup = () => {
 
   const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
   const [selectedTopics, setSelectedTopics] = useState<Record<string, string[]>>({});
+  const [selectedChapters, setSelectedChapters] = useState<Record<string, string[]>>({});
+  const [expandedChapters, setExpandedChapters] = useState<Record<string, boolean>>({});
   const [questionCount, setQuestionCount] = useState([25]);
   const [duration, setDuration] = useState([30]);
   const [marksPerQuestion, setMarksPerQuestion] = useState([1]);
@@ -101,6 +105,28 @@ const ExamSetup = () => {
     }
   };
 
+  const handleChapterToggle = (subjectId: string, chapterId: string) => {
+    const currentChapters = selectedChapters[subjectId] || [];
+    if (currentChapters.includes(chapterId)) {
+      setSelectedChapters((prev) => ({
+        ...prev,
+        [subjectId]: currentChapters.filter((c) => c !== chapterId),
+      }));
+    } else {
+      setSelectedChapters((prev) => ({
+        ...prev,
+        [subjectId]: [...currentChapters, chapterId],
+      }));
+    }
+  };
+
+  const toggleChapterExpand = (chapterId: string) => {
+    setExpandedChapters((prev) => ({
+      ...prev,
+      [chapterId]: !prev[chapterId],
+    }));
+  };
+
   const selectAllTopics = (subjectId: string) => {
     const subject = subjects.find((s) => s.id === subjectId);
     if (!subject) return;
@@ -132,22 +158,25 @@ const ExamSetup = () => {
 
   return (
     <div className="min-h-screen bg-background font-bengali">
-
       <main className="pt-20 pb-16">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 text-primary mb-4">
-              <Settings className="w-5 h-5" />
-              <span className="font-medium">কাস্টম এক্সাম সেটআপ</span>
+          <div className="mb-6 md:mb-8">
+            <BackButton className="mb-4 md:mb-6" />
+            
+            <div className="text-center">
+              <div className="flex items-center justify-center gap-2 mb-4 text-primary">
+                <Settings className="w-5 h-5" />
+                <span className="font-medium">কাস্টম এক্সাম সেটআপ</span>
+              </div>
+              <h1 className="text-2xl md:text-4xl font-bold text-foreground mb-2">{categoryName} - নিজের মতো করে সাজাও</h1>
+              <p className="text-sm md:text-base text-muted-foreground max-w-2xl mx-auto">
+                বিষয়, টপিক, প্রশ্ন সংখ্যা, সময়, মার্কস - সব কিছু তোমার ইচ্ছামতো সেট করো এবং পরীক্ষা দাও
+              </p>
             </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2">{categoryName} - নিজের মতো করে সাজাও</h1>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
-              বিষয়, টপিক, প্রশ্ন সংখ্যা, সময়, মার্কস - সব কিছু তোমার ইচ্ছামতো সেট করো এবং পরীক্ষা দাও
-            </p>
           </div>
 
-          <div className="grid lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-6">
+          <div className="grid md:grid-cols-3 gap-4 md:gap-8">
+            <div className="md:col-span-2 space-y-4 md:space-y-6">
               <div className="bg-card rounded-2xl border border-border p-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -155,7 +184,7 @@ const ExamSetup = () => {
                   </div>
                   <div>
                     <h2 className="text-xl font-bold text-foreground">বিষয় নির্বাচন</h2>
-                    <p className="text-sm text-muted-foreground">যেসব বিষয় থেকে প্রশ্ন চাও সেগুলো সিলেক্ট করো</p>
+                    <p className="text-sm text-muted-foreground">যেসব বিষয় থেকে প��রশ্ন চাও সেগুলো সিলেক্ট করো</p>
                   </div>
                 </div>
 
@@ -197,26 +226,79 @@ const ExamSetup = () => {
                         </div>
 
                         {selectedSubjects.includes(subject.id) && (
-                          <div className="px-4 pb-4">
-                            <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
-                              <Layers className="w-4 h-4" />
-                              <span>টপিক নির্বাচন (ঐচ্ছিক)</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2">
-                              {subject.topics.map((topic) => (
-                                <button
-                                  key={topic.id}
-                                  onClick={() => handleTopicToggle(subject.id, topic.id)}
-                                  className={`px-4 py-2 rounded-lg text-sm transition-all ${
-                                    (selectedTopics[subject.id] || []).includes(topic.id)
-                                      ? "bg-primary text-primary-foreground"
-                                      : "bg-muted text-muted-foreground hover:bg-muted/80"
-                                  }`}
-                                >
-                                  {topic.name}
-                                </button>
-                              ))}
-                            </div>
+                          <div className="px-4 pb-4 space-y-4 border-t border-border pt-4">
+                            {/* Chapters Section */}
+                            {getChaptersForSubject(subject.id).length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                                  <BookOpen className="w-4 h-4" />
+                                  <span>অধ্যায় নির্বাচন (ঐচ্ছিক)</span>
+                                </div>
+                                <div className="space-y-2">
+                                  {getChaptersForSubject(subject.id).map((chapter) => (
+                                    <div key={chapter.id} className="border border-border rounded-lg overflow-hidden">
+                                      <button
+                                        onClick={() => toggleChapterExpand(chapter.id)}
+                                        className="w-full flex items-center justify-between p-3 hover:bg-muted/50 transition-colors"
+                                      >
+                                        <div className="flex items-center gap-3 flex-1">
+                                          <Checkbox
+                                            checked={(selectedChapters[subject.id] || []).includes(chapter.id)}
+                                            onCheckedChange={() => handleChapterToggle(subject.id, chapter.id)}
+                                            onClick={(e) => e.stopPropagation()}
+                                          />
+                                          <span className="text-sm font-medium">অধ্যায়-{String(chapter.number).padStart(2, '0')} {chapter.name}</span>
+                                        </div>
+                                        <ChevronDown
+                                          className={`w-4 h-4 text-muted-foreground transition-transform ${
+                                            expandedChapters[chapter.id] ? "rotate-180" : ""
+                                          }`}
+                                        />
+                                      </button>
+                                      
+                                      {expandedChapters[chapter.id] && (
+                                        <div className="px-3 pb-3 pt-2 bg-muted/20 border-t border-border space-y-2">
+                                          {chapter.topics.map((topic) => (
+                                            <label key={topic} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-muted/50 p-2 rounded">
+                                              <Checkbox
+                                                checked={(selectedTopics[subject.id] || []).includes(topic)}
+                                                onCheckedChange={() => handleTopicToggle(subject.id, topic)}
+                                              />
+                                              <span>{topic}</span>
+                                            </label>
+                                          ))}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Topics Section (Legacy) */}
+                            {subject.topics && subject.topics.length > 0 && (
+                              <div>
+                                <div className="flex items-center gap-2 mb-3 text-sm text-muted-foreground">
+                                  <Layers className="w-4 h-4" />
+                                  <span>টপিক নির্বাচন (ঐচ্ছিক)</span>
+                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {subject.topics.map((topic) => (
+                                    <button
+                                      key={topic.id}
+                                      onClick={() => handleTopicToggle(subject.id, topic.id)}
+                                      className={`px-3 py-1 rounded-lg text-xs md:text-sm transition-all ${
+                                        (selectedTopics[subject.id] || []).includes(topic.id)
+                                          ? "bg-primary text-primary-foreground"
+                                          : "bg-muted text-muted-foreground hover:bg-muted/80"
+                                      }`}
+                                    >
+                                      {topic.name}
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
@@ -254,8 +336,8 @@ const ExamSetup = () => {
               </div>
             </div>
 
-            <div className="lg:col-span-1">
-              <div className="bg-card rounded-2xl border border-border p-6 sticky top-24 space-y-6">
+            <div className="md:col-span-1">
+              <div className="bg-card rounded-2xl border border-border p-4 md:p-6 md:sticky md:top-24 space-y-4 md:space-y-6">
                 <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
                   <Settings className="w-5 h-5 text-primary" />
                   এক্সাম সেটিংস
@@ -338,11 +420,11 @@ const ExamSetup = () => {
 
                 <div className="bg-muted rounded-xl p-4 space-y-2">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">মোট প্রশ্ন</span>
+                    <span className="text-muted-foreground">মোট ���্রশ্ন</span>
                     <span className="font-medium text-foreground">{questionCount[0]}টি</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">মোট সময়</span>
+                    <span className="text-muted-foreground">মোট ���ময়</span>
                     <span className="font-medium text-foreground">{duration[0]} মিনিট</span>
                   </div>
                   <div className="flex justify-between text-sm">
@@ -373,7 +455,6 @@ const ExamSetup = () => {
           </div>
         </div>
       </main>
-
     </div>
   );
 };

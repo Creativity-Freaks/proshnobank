@@ -3,31 +3,39 @@ import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
 import { GraduationCap, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackButton } from "@/components/BackButton";
 
 const subjects = [
-  { id: "bangla", name: "বাংলা" },
-  { id: "english", name: "ইংরেজি" },
-  { id: "physics", name: "পদার্থবিজ্ঞান" },
-  { id: "chemistry", name: "রসায়ন" },
-  { id: "biology", name: "জীববিজ্ঞান" },
-  { id: "math", name: "উচ্চতর গণিত" },
-  { id: "ict", name: "আইসিটি" },
-  { id: "accounting", name: "হিসাববিজ্ঞান" },
+  { id: "hsc_bangla", name: "বাংলা" },
+  { id: "hsc_english", name: "ইংরেজি" },
+  { id: "hsc_physics", name: "পদার্থবিজ্ঞান" },
+  { id: "hsc_chemistry", name: "রসায়ন" },
+  { id: "hsc_biology", name: "জীববিজ্ঞান" },
+  { id: "hsc_higher_math", name: "উচ্চতর গণিত" },
+  { id: "hsc_statistics", name: "পরিসংখ্যান" },
+  { id: "hsc_ict", name: "ICT" },
+  { id: "hsc_accounting", name: "হিসাববিজ্ঞান" },
+  { id: "hsc_finance", name: "ফিন্যান্স" },
+  { id: "hsc_management", name: "ব্যবস্থাপনা" },
+  { id: "hsc_history", name: "ইতিহাস" },
+  { id: "hsc_islamic_studies", name: "ইসলামিক স্টাডিজ" },
+  { id: "hsc_social_science", name: "সমাজবিজ্ঞান" },
+  { id: "hsc_economics", name: "অর্থনীতি" },
 ];
 
 const exams = [
-  { id: 1, title: "HSC বাংলা ১ম পত্র", subject: "bangla", questions: 50, duration: 60, attempts: 1850 },
-  { id: 2, title: "HSC বাংলা ২য় পত্র", subject: "bangla", questions: 50, duration: 60, attempts: 1580 },
-  { id: 3, title: "HSC ইংরেজি ১ম পত্র", subject: "english", questions: 50, duration: 60, attempts: 2050 },
-  { id: 4, title: "HSC ইংরেজি ২য় পত্র", subject: "english", questions: 50, duration: 60, attempts: 1720 },
-  { id: 5, title: "HSC পদার্থবিজ্ঞান ১ম পত্র", subject: "physics", questions: 40, duration: 50, attempts: 1290 },
-  { id: 6, title: "HSC পদার্থবিজ্ঞান ২য় পত্র", subject: "physics", questions: 40, duration: 50, attempts: 1150 },
-  { id: 7, title: "HSC রসায়ন ১ম পত্র", subject: "chemistry", questions: 40, duration: 50, attempts: 1060 },
-  { id: 8, title: "HSC রসায়ন ২য় পত্র", subject: "chemistry", questions: 40, duration: 50, attempts: 980 },
-  { id: 9, title: "HSC উচ্চতর গণিত ১ম পত্র", subject: "math", questions: 35, duration: 45, attempts: 890 },
-  { id: 10, title: "HSC জীববিজ্ঞান ১ম পত্র", subject: "biology", questions: 40, duration: 50, attempts: 760 },
-  { id: 11, title: "HSC আইসিটি", subject: "ict", questions: 25, duration: 30, attempts: 920 },
-  { id: 12, title: "HSC হিসাববিজ্ঞান ১ম পত্র", subject: "accounting", questions: 40, duration: 50, attempts: 650 },
+  { id: 1, title: "HSC বাংলা মডেল টেস্ট", subject: "hsc_bangla", questions: 50, duration: 60, attempts: 1850 },
+  { id: 2, title: "HSC ইংরেজি মডেল টেস্ট", subject: "hsc_english", questions: 50, duration: 60, attempts: 2050 },
+  { id: 3, title: "HSC পদার্থবিজ্ঞান মডেল টেস্ট", subject: "hsc_physics", questions: 40, duration: 50, attempts: 1290 },
+  { id: 4, title: "HSC রসায়ন মডেল টেস্ট", subject: "hsc_chemistry", questions: 40, duration: 50, attempts: 1060 },
+  { id: 5, title: "HSC জীববিজ্ঞান মডেল টেস্ট", subject: "hsc_biology", questions: 40, duration: 50, attempts: 760 },
+  { id: 6, title: "HSC উচ্চতর গণিত মডেল টেস্ট", subject: "hsc_higher_math", questions: 35, duration: 45, attempts: 890 },
+  { id: 7, title: "HSC পরিসংখ্যান মডেল টেস্ট", subject: "hsc_statistics", questions: 40, duration: 50, attempts: 620 },
+  { id: 8, title: "HSC ICT মডেল টেস্ট", subject: "hsc_ict", questions: 25, duration: 30, attempts: 920 },
+  { id: 9, title: "HSC হিসাববিজ্ঞান মডেল টেস্ট", subject: "hsc_accounting", questions: 40, duration: 50, attempts: 650 },
+  { id: 10, title: "HSC ফিন্যান্স মডেল টেস্ট", subject: "hsc_finance", questions: 40, duration: 45, attempts: 540 },
+  { id: 11, title: "HSC ব্যবস্থাপনা মডেল টেস্ট", subject: "hsc_management", questions: 40, duration: 45, attempts: 480 },
+  { id: 12, title: "HSC ইতিহাস মডেল টেস্ট", subject: "hsc_history", questions: 40, duration: 50, attempts: 420 },
 ];
 
 const HSCExams = () => {

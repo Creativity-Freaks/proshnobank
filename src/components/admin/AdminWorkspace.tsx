@@ -570,16 +570,17 @@ const AdminWorkspace = ({ forcedTab }: AdminPanelProps) => {
     fetchUsers,
   ]);
 
+  // Only check admin access once on component mount, not on every render
   useEffect(() => {
     if (!isCheckingAdmin && !isAdmin) {
       toast({
         title: "Access denied",
-        description: "অ্যাডমিন পারমিশন ছাড়া এই প্যানেলে প্রবেশ করা যাবে না",
+        description: "অ্যাডমিন পারমিশন ছাড়া এই প্যানেলে প্রবেশ করা যাবে না",
         variant: "destructive",
       });
       navigate("/admin/login", { replace: true });
     }
-  }, [isAdmin, isCheckingAdmin, navigate, toast]);
+  }, [isCheckingAdmin]); // Only depend on isCheckingAdmin, not isAdmin
 
   useEffect(() => {
     if (isAdmin) {

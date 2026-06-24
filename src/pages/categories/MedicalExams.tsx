@@ -3,28 +3,27 @@ import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
 import { Stethoscope, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackButton } from "@/components/BackButton";
 
 const subjects = [
-  { id: "physics", name: "পদার্থবিজ্ঞান" },
-  { id: "chemistry", name: "রসায়ন" },
-  { id: "biology", name: "জীববিজ্ঞান" },
-  { id: "english", name: "ইংরেজি" },
-  { id: "gk", name: "সাধারণ জ্ঞান" },
-  { id: "model", name: "মডেল টেস্ট" },
-  { id: "previous", name: "বিগত বছর" },
+  { id: "medical_physics", name: "পদার্থবিজ্ঞান" },
+  { id: "medical_chemistry", name: "রসায়ন" },
+  { id: "medical_biology", name: "জীববিজ্ঞান" },
+  { id: "medical_english", name: "ইংরেজি" },
+  { id: "medical_gk", name: "সাধারণ জ্ঞান" },
 ];
 
 const exams = [
-  { id: 1, title: "মেডিকেল ভর্তি - পদার্থবিজ্ঞান", subject: "physics", questions: 40, duration: 40, attempts: 3250 },
-  { id: 2, title: "মেডিকেল ভর্তি - রসায়ন", subject: "chemistry", questions: 40, duration: 40, attempts: 3180 },
-  { id: 3, title: "মেডিকেল ভর্তি - জীববিজ্ঞান", subject: "biology", questions: 40, duration: 40, attempts: 3450 },
-  { id: 4, title: "মেডিকেল ভর্তি - ইংরেজি", subject: "english", questions: 20, duration: 20, attempts: 2720 },
-  { id: 5, title: "মেডিকেল ভর্তি - সাধারণ জ্ঞান", subject: "gk", questions: 20, duration: 20, attempts: 2150 },
-  { id: 6, title: "মেডিকেল মডেল টেস্ট - ১", subject: "model", questions: 100, duration: 60, attempts: 4890 },
-  { id: 7, title: "মেডিকেল মডেল টেস্ট - ২", subject: "model", questions: 100, duration: 60, attempts: 4560 },
-  { id: 8, title: "মেডিকেল মডেল টেস্ট - ৩", subject: "model", questions: 100, duration: 60, attempts: 4120 },
-  { id: 9, title: "বিগত বছরের প্রশ্ন - ২০২৩", subject: "previous", questions: 100, duration: 60, attempts: 5670 },
-  { id: 10, title: "বিগত বছরের প্রশ্ন - ২০২২", subject: "previous", questions: 100, duration: 60, attempts: 4980 },
+  { id: 1, title: "MBBS ভর্তি - পদার্থবিজ্ঞান", subject: "medical_physics", questions: 40, duration: 40, attempts: 3250 },
+  { id: 2, title: "MBBS ভর্তি - রসায়ন", subject: "medical_chemistry", questions: 40, duration: 40, attempts: 3180 },
+  { id: 3, title: "MBBS ভর্তি - জীববিজ্ঞান", subject: "medical_biology", questions: 40, duration: 40, attempts: 3450 },
+  { id: 4, title: "MBBS ভর্তি - ইংরেজি", subject: "medical_english", questions: 20, duration: 20, attempts: 2720 },
+  { id: 5, title: "MBBS ভর্তি - সাধারণ জ্ঞান", subject: "medical_gk", questions: 20, duration: 20, attempts: 2150 },
+  { id: 6, title: "মেডিকেল মডেল টেস্ট - ১", subject: "medical_physics", questions: 100, duration: 60, attempts: 4890 },
+  { id: 7, title: "মেডিকেল মডেল টেস্ট - ২", subject: "medical_chemistry", questions: 100, duration: 60, attempts: 4560 },
+  { id: 8, title: "মেডিকেল মডেল টেস্ট - ৩", subject: "medical_biology", questions: 100, duration: 60, attempts: 4120 },
+  { id: 9, title: "বিগত বছরের MBBS প্রশ্ন - ২০২৩", subject: "medical_physics", questions: 100, duration: 60, attempts: 5670 },
+  { id: 10, title: "বিগত বছরের MBBS প্রশ্ন - ২০২২", subject: "medical_chemistry", questions: 100, duration: 60, attempts: 4980 },
 ];
 
 const MedicalExams = () => {

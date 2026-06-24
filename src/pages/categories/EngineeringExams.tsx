@@ -3,28 +3,26 @@ import ExamFilters from "@/components/ExamFilters";
 import { Button } from "@/components/ui/button";
 import { Cog, Clock, Users, BookOpen, Trophy, ArrowRight, Settings } from "lucide-react";
 import { Link } from "react-router-dom";
+import { BackButton } from "@/components/BackButton";
 
 const subjects = [
-  { id: "physics", name: "পদার্থবিজ্ঞান" },
-  { id: "chemistry", name: "রসায়ন" },
-  { id: "math", name: "গণিত" },
-  { id: "buet", name: "BUET" },
-  { id: "cuet", name: "CUET" },
-  { id: "kuet", name: "KUET" },
-  { id: "model", name: "মডেল টেস্ট" },
+  { id: "engineering_higher_math", name: "উচ্চতর গণিত" },
+  { id: "engineering_physics", name: "পদার্থবিজ্ঞান" },
+  { id: "engineering_chemistry", name: "রসায়ন" },
+  { id: "engineering_english", name: "ইংরেজি" },
 ];
 
 const exams = [
-  { id: 1, title: "BUET ভর্তি - পদার্থবিজ্ঞান", subject: "buet", questions: 40, duration: 40, attempts: 2850 },
-  { id: 2, title: "BUET ভর্তি - রসায়ন", subject: "buet", questions: 40, duration: 40, attempts: 2780 },
-  { id: 3, title: "BUET ভর্তি - গণিত", subject: "buet", questions: 40, duration: 40, attempts: 3150 },
-  { id: 4, title: "CUET ভর্তি - পদার্থবিজ্ঞান", subject: "cuet", questions: 35, duration: 35, attempts: 1920 },
-  { id: 5, title: "CUET ভর্তি - রসায়ন", subject: "cuet", questions: 35, duration: 35, attempts: 1850 },
-  { id: 6, title: "KUET ভর্তি - সম্পূর্ণ", subject: "kuet", questions: 100, duration: 90, attempts: 2340 },
-  { id: 7, title: "ইঞ্জিনিয়ারিং মডেল টেস্ট - ১", subject: "model", questions: 100, duration: 90, attempts: 3890 },
-  { id: 8, title: "ইঞ্জিনিয়ারিং মডেল টেস্ট - ২", subject: "model", questions: 100, duration: 90, attempts: 3560 },
-  { id: 9, title: "পদার্থবিজ্ঞান - তাপগতিবিদ্যা", subject: "physics", questions: 30, duration: 30, attempts: 1450 },
-  { id: 10, title: "গণিত - ক্যালকুলাস", subject: "math", questions: 30, duration: 35, attempts: 1780 },
+  { id: 1, title: "BUET ভর্তি - উচ্চতর গণিত", subject: "engineering_higher_math", questions: 40, duration: 40, attempts: 3150 },
+  { id: 2, title: "BUET ভর্তি - পদার্থবিজ্ঞান", subject: "engineering_physics", questions: 40, duration: 40, attempts: 2850 },
+  { id: 3, title: "BUET ভর্তি - রসায়ন", subject: "engineering_chemistry", questions: 40, duration: 40, attempts: 2780 },
+  { id: 4, title: "CUET ভর্তি - উচ্চতর গণিত", subject: "engineering_higher_math", questions: 35, duration: 35, attempts: 1950 },
+  { id: 5, title: "CUET ভর্তি - পদার্থবিজ্ঞান", subject: "engineering_physics", questions: 35, duration: 35, attempts: 1920 },
+  { id: 6, title: "KUET ভর্তি - সম্পূর্ণ", subject: "engineering_physics", questions: 100, duration: 90, attempts: 2340 },
+  { id: 7, title: "ইঞ্জিনিয়ারিং মডেল টেস্ট - ১", subject: "engineering_higher_math", questions: 100, duration: 90, attempts: 3890 },
+  { id: 8, title: "ইঞ্জিনিয়ারিং মডেল টেস্ট - ২", subject: "engineering_physics", questions: 100, duration: 90, attempts: 3560 },
+  { id: 9, title: "পদার্থবিজ্ঞান - তাপগতিবিদ্যা", subject: "engineering_physics", questions: 30, duration: 30, attempts: 1450 },
+  { id: 10, title: "উচ্চতর গণিত - ক্যালকুলাস", subject: "engineering_higher_math", questions: 30, duration: 35, attempts: 1780 },
 ];
 
 const EngineeringExams = () => {
