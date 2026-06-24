@@ -2,10 +2,9 @@ import { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 // Lazy load admin pages
-const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
-const AdminQuestions = lazy(() => import("@/pages/admin/AdminQuestions"));
-const AdminUsers = lazy(() => import("@/pages/admin/AdminUsers"));
 const AdminLogin = lazy(() => import("@/pages/admin/AdminLogin"));
+const AdminOverview = lazy(() => import("@/pages/admin/AdminOverview"));
+const AdminDashboard = lazy(() => import("@/components/admin/AdminDashboard"));
 
 const AdminFallback = () => (
   <div className="min-h-screen flex items-center justify-center bg-background font-bengali">
@@ -17,13 +16,18 @@ export default function AdminShell() {
   return (
     <Suspense fallback={<AdminFallback />}>
       <Routes>
-        <Route path="/" element={<AdminOverview />} />
-        <Route path="/overview" element={<AdminOverview />} />
-        <Route path="/categories" element={<AdminOverview />} />
-        <Route path="/subjects" element={<AdminOverview />} />
-        <Route path="/chapters" element={<AdminOverview />} />
-        <Route path="/questions" element={<AdminQuestions />} />
-        <Route path="/users" element={<AdminUsers />} />
+        <Route path="/" element={<AdminDashboard />} />
+        <Route path="/dashboard" element={<AdminDashboard />} />
+        <Route path="/overview" element={<AdminDashboard />} />
+        <Route path="/categories" element={<AdminDashboard />} />
+        <Route path="/subcategories" element={<AdminDashboard />} />
+        <Route path="/subjects" element={<AdminDashboard />} />
+        <Route path="/chapters" element={<AdminDashboard />} />
+        <Route path="/questions" element={<AdminDashboard />} />
+        <Route path="/users" element={<AdminDashboard />} />
+        <Route path="/templates" element={<AdminDashboard />} />
+        <Route path="/live-events" element={<AdminDashboard />} />
+        <Route path="/analytics" element={<AdminDashboard />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Suspense>
