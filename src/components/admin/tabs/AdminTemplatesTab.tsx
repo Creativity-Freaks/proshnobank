@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Plus, Trash2, Edit2, Loader2, RefreshCw, FilePenLine,
-  Clock, BookOpen, Target, Star, TrendingUp, ChevronDown, ChevronUp,
+  Clock, BookOpen, Target, Star, TrendingUp, ChevronDown, ChevronUp, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -89,6 +89,8 @@ export default function AdminTemplatesTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<TemplateForm>(defaultForm);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState("");
 
   const fetchTemplates = useCallback(async () => {
     try {
@@ -187,6 +189,14 @@ export default function AdminTemplatesTab() {
   const catLabel = (cat: string) => CATEGORIES.find(c => c.id === cat)?.label || cat;
   const diffLabel = (d: string | null) => DIFFICULTIES.find(x => x.id === d)?.label || d || "-";
 
+  const filteredTemplates = useMemo(() => {
+    return templates.filter(t => {
+      const matchesCat    = !filterCategory || t.category === filterCategory;
+      const matchesSearch = !searchQuery || t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCat && matchesSearch;
+    });
+  }, [templates, filterCategory, searchQuery]);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -207,24 +217,54 @@ export default function AdminTemplatesTab() {
         </div>
       </div>
 
+      {/* ── Filter / Search Bar ─────────────────────────────────────────── */}
+      {!loading && (
+        <Card>
+          <CardContent className="pt-4 pb-4 space-y-3">
+            <div className="relative">
+              <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="টেমপ্লেট নাম দিয়ে খুঁজুন..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-10"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant={filterCategory === "" ? "default" : "outline"}
+                onClick={() => setFilterCategory("")}>সব ক্যাটেগরি</Button>
+              {CATEGORIES.map(cat => (
+                <Button key={cat.id} size="sm" variant={filterCategory === cat.id ? "default" : "outline"}
+                  onClick={() => setFilterCategory(cat.id === filterCategory ? "" : cat.id)}>{cat.label}</Button>
+              ))}
+            </div>
+            {(searchQuery || filterCategory) && (
+              <p className="text-xs text-muted-foreground">দেখাচ্ছে: {filteredTemplates.length}/{templates.length}টি</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {loading ? (
         <div className="flex justify-center py-16">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      ) : templates.length === 0 ? (
+      ) : filteredTemplates.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 gap-3">
             <FilePenLine className="h-12 w-12 text-muted-foreground opacity-40" />
-            <p className="text-muted-foreground">কোনো টেমপ্লেট নেই</p>
-            <Button size="sm" onClick={openCreate} className="gap-2">
-              <Plus className="h-4 w-4" />
-              প্রথম টেমপ্লেট তৈরি করুন
-            </Button>
+            <p className="text-muted-foreground">{searchQuery || filterCategory ? "কোনো ফলাফল পাওয়া যায়নি" : "কোনো টেমপ্লেট নেই"}</p>
+            {!searchQuery && !filterCategory && (
+              <Button size="sm" onClick={openCreate} className="gap-2">
+                <Plus className="h-4 w-4" />
+                প্রথম টেমপ্লেট তৈরি করুন
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : (
         <div className="space-y-3">
-          {templates.map(t => (
+          {filteredTemplates.map(t => (
             <Card key={t.id} className="overflow-hidden">
               <div
                 className="flex items-center gap-4 p-4 cursor-pointer hover:bg-muted/30 transition-colors"

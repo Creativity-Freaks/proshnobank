@@ -1,4 +1,4 @@
-import { useState, type ComponentType } from "react";
+import { useState, useEffect, type ComponentType } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { questionsApi } from "@/lib/api";
 import { usePageMeta } from "@/hooks/usePageMeta";
-import { SUBJECT_OPTIONS, getSubjectLabel, normalizeSubjectKey } from "@/lib/subjects";
-import { Search, BookOpen, ChevronRight, GraduationCap, Briefcase, FileText, Loader2 } from "lucide-react";
-
-const subjectFilters = [{ id: "all", name: "সকল বিষয়" }, ...SUBJECT_OPTIONS.map((x) => ({ id: x.key, name: x.label }))];
+import { getSubjectLabel, normalizeSubjectKey } from "@/lib/subjects";
+import { supabase } from "@/integrations/supabase/client";
+import { Search, BookOpen, ChevronRight, GraduationCap, Briefcase, FileText, Loader2, Layers } from "lucide-react";
 
 const difficultyMap: Record<string, string> = { easy: "সহজ", medium: "মধ্যম", hard: "কঠিন" };
 const difficultyColor: Record<string, string> = {
@@ -64,11 +63,26 @@ function clampInt(value: number, min: number, max: number) {
 const QuestionBank = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSubject, setSelectedSubject] = useState("all");
+  const [selectedCategory, setSelectedCategory] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [subjects, setSubjects] = useState<{ id: string; name: string }[]>([]);
 
   usePageMeta({
     title: "প্রশ্নব্যাংক",
-    description: "বিষয়, টপিক ও কঠিনতার ভিত্তিতে সাজানো প্রশ্নব্যাংক থেকে প্র্যাকটিস শুরু করো।",
+    description: "বিষয়, টপিক ও কঠিনতার ভিত্তিতে সাজানো প্রশ্নব্যাংক থেকে প্র্যাকটিস শুরু করো।",
   });
+
+  useEffect(() => {
+    supabase.from("exam_categories").select("id, name").is("parent_id", null).order("sort_order", { ascending: true })
+      .then(({ data }) => setCategories(data || []));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedCategory) { setSubjects([]); setSelectedSubjectId(""); setSelectedSubject("all"); return; }
+    supabase.from("subjects").select("id, name").eq("category_id", selectedCategory).order("name")
+      .then(({ data }) => { setSubjects(data || []); setSelectedSubjectId(""); setSelectedSubject("all"); });
+  }, [selectedCategory]);
 
   const {
     data,
@@ -83,6 +97,9 @@ const QuestionBank = () => {
         search: searchQuery || undefined,
       }),
   });
+
+  const selectedCategoryName = categories.find(c => c.id === selectedCategory)?.name;
+  const selectedSubjectName  = subjects.find(s => s.id === selectedSubjectId)?.name;
 
   const groups = data?.data ?? [];
   const total = data?.total_questions ?? 0;
@@ -153,18 +170,63 @@ const QuestionBank = () => {
 
       <section className="py-12">
         <div className="container mx-auto px-4">
-          <div className="flex flex-wrap gap-3 mb-8 justify-center">
-            {subjectFilters.map((subject) => (
-              <Button
-                key={subject.id}
-                variant={selectedSubject === subject.id ? "hero" : "outline"}
-                size="sm"
-                onClick={() => setSelectedSubject(subject.id)}
-                className="font-bengali"
-              >
-                {subject.name}
-              </Button>
-            ))}
+          {/* ── Category → Subject cascade ──────────────────────────── */}
+          <div className="space-y-4 mb-8">
+            {/* Step 1: Category */}
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
+                <Layers className="h-3.5 w-3.5" /> ক্যাটেগরি নির্বাচন
+              </div>
+              <div className="flex flex-wrap gap-2 justify-center">
+                <Button
+                  size="sm"
+                  variant={!selectedCategory ? "hero" : "outline"}
+                  onClick={() => { setSelectedCategory(""); setSelectedSubject("all"); setSelectedSubjectId(""); }}
+                  className="font-bengali"
+                >সব ক্যাটেগরি</Button>
+                {categories.map(cat => (
+                  <Button key={cat.id} size="sm"
+                    variant={selectedCategory === cat.id ? "hero" : "outline"}
+                    onClick={() => setSelectedCategory(cat.id === selectedCategory ? "" : cat.id)}
+                    className="font-bengali">{cat.name}</Button>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 2: Subject (shows when category selected) */}
+            {selectedCategory && subjects.length > 0 && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
+                  <ChevronRight className="h-3.5 w-3.5" /> বিষয় নির্বাচন
+                </div>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  <Button
+                    size="sm"
+                    variant={!selectedSubjectId ? "secondary" : "outline"}
+                    onClick={() => { setSelectedSubjectId(""); setSelectedSubject("all"); }}
+                    className="font-bengali"
+                  >সব বিষয়</Button>
+                  {subjects.map(sub => (
+                    <Button key={sub.id} size="sm"
+                      variant={selectedSubjectId === sub.id ? "secondary" : "outline"}
+                      onClick={() => {
+                        setSelectedSubjectId(sub.id === selectedSubjectId ? "" : sub.id);
+                        setSelectedSubject(sub.id === selectedSubjectId ? "all" : sub.name);
+                      }}
+                      className="font-bengali">{sub.name}</Button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Active filter indicator */}
+            {(selectedCategoryName || selectedSubjectName) && (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground flex-wrap">
+                <span>ফিল্টার:</span>
+                {selectedCategoryName && <span className="bg-primary/10 text-primary px-2 py-0.5 rounded-full">{selectedCategoryName}</span>}
+                {selectedSubjectName && <span className="bg-secondary/20 text-secondary-foreground px-2 py-0.5 rounded-full">{selectedSubjectName}</span>}
+              </div>
+            )}
           </div>
 
           {isLoading ? (
