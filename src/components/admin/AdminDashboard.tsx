@@ -1,8 +1,21 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { LogOut, Menu, X } from "lucide-react";
+import { 
+  LogOut,
+  Shield,
+  LayoutDashboard,
+  BarChart3,
+  BookOpen,
+  Layers,
+  FileText,
+  Users,
+  FilePenLine,
+  CalendarClock,
+  Loader2,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAdmin } from "@/contexts/AdminContext";
 import { useAdminCheck } from "@/hooks/useAdminCheck";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,16 +28,42 @@ import AdminTemplatesTab from "./tabs/AdminTemplatesTab";
 import AdminLiveEventsTab from "./tabs/AdminLiveEventsTab";
 import AdminAnalyticsTab from "./tabs/AdminAnalyticsTab";
 
+const TAB_CONFIG = [
+  { id: "dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard },
+  { id: "analytics", label: "বিশ্লেষণ", icon: BarChart3 },
+  { id: "questions", label: "প্রশ্ন", icon: BookOpen },
+  { id: "categories", label: "ক্যাটেগরি", icon: Layers },
+  { id: "subjects", label: "বিষয়", icon: FileText },
+  { id: "users", label: "ব্যবহারকারী", icon: Users },
+  { id: "templates", label: "টেমপ্লেট", icon: FilePenLine },
+  { id: "live-events", label: "লাইভ ইভেন্ট", icon: CalendarClock },
+];
+
+const TAB_COMPONENTS = {
+  dashboard: AdminDashboardTab,
+  analytics: AdminAnalyticsTab,
+  questions: AdminQuestionsTab,
+  categories: AdminCategoriesTab,
+  subjects: AdminSubjectsTab,
+  users: AdminUsersTab,
+  templates: AdminTemplatesTab,
+  "live-events": AdminLiveEventsTab,
+};
+
 export default function AdminDashboard() {
   const navigate = useNavigate();
   const { isAdmin, isLoading: isCheckingAdmin } = useAdminCheck();
   const { currentTab, setCurrentTab } = useAdmin();
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [adminEmail, setAdminEmail] = useState<string>("");
+  const adminCheckCompleted = useRef(false);
 
   useEffect(() => {
-    if (!isCheckingAdmin && !isAdmin) {
-      navigate("/admin/login", { replace: true });
+    if (!isCheckingAdmin) {
+      adminCheckCompleted.current = true;
+      if (!isAdmin) {
+        navigate("/admin/login", { replace: true });
+      }
     }
   }, [isCheckingAdmin, isAdmin, navigate]);
 
@@ -46,101 +85,117 @@ export default function AdminDashboard() {
   if (isCheckingAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
-        <div className="text-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
-          <p className="mt-4 text-muted-foreground">Loading admin panel...</p>
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <span className="text-sm text-muted-foreground">Loading admin panel...</span>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Header */}
-      <div className="border-b bg-card sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">প্রশ্নব্যাংক</h1>
-            <p className="text-sm text-muted-foreground">আডমিন প্যানেল</p>
-          </div>
-          
-          <div className="hidden md:flex items-center gap-4">
-            <div className="text-sm">
-              <p className="text-muted-foreground">Logged in as</p>
-              <p className="font-medium text-foreground">{adminEmail}</p>
-            </div>
-            <Button onClick={handleLogout} variant="outline" size="sm" className="gap-2">
-              <LogOut className="w-4 h-4" />
-              লগ আউট
-            </Button>
-          </div>
+  if (adminCheckCompleted.current && !isAdmin) return null;
 
-          {/* Mobile Menu Button */}
-          <button className="md:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
-            {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-          </button>
+  const CurrentTabComponent = TAB_COMPONENTS[currentTab] || AdminDashboardTab;
+  const currentTabLabel = TAB_CONFIG.find((tab) => tab.id === currentTab)?.label || "Dashboard";
+
+  return (
+    <div className="min-h-screen flex bg-muted/40 text-foreground font-bengali">
+      {/* Left Sidebar */}
+      <aside
+        className={`${
+          sidebarOpen ? "w-64" : "w-20"
+        } shrink-0 border-r border-background/10 bg-foreground text-background transition-all duration-300 flex flex-col`}
+      >
+        {/* Logo Section */}
+        <div className="flex h-16 items-center justify-between px-4 border-b border-background/10">
+          {sidebarOpen && (
+            <div className="flex items-center gap-2 font-semibold">
+              <Shield className="h-5 w-5 flex-shrink-0" />
+              <span className="text-sm truncate">ProshnoBank Admin</span>
+            </div>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSidebarOpen(!sidebarOpen)}
+            className="text-background hover:bg-background/10 ml-auto"
+          >
+            {sidebarOpen ? (
+              <ChevronLeft className="h-4 w-4" />
+            ) : (
+              <ChevronRight className="h-4 w-4" />
+            )}
+          </Button>
         </div>
-      </div>
+
+        {/* Menu Items */}
+        <div className="flex-1 overflow-y-auto px-3 py-4">
+          {sidebarOpen && (
+            <p className="px-2 text-xs font-medium uppercase tracking-widest text-background/50 mb-3">
+              Menu
+            </p>
+          )}
+          <div className="space-y-1">
+            {TAB_CONFIG.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = currentTab === tab.id;
+              return (
+                <Button
+                  key={tab.id}
+                  variant="ghost"
+                  size={sidebarOpen ? "default" : "icon"}
+                  className={`w-full ${
+                    sidebarOpen ? "justify-start" : "justify-center"
+                  } ${
+                    isActive
+                      ? "bg-background/10 text-background"
+                      : "text-background/80 hover:bg-background/10 hover:text-background"
+                  }`}
+                  onClick={() => setCurrentTab(tab.id as any)}
+                  title={!sidebarOpen ? tab.label : ""}
+                >
+                  <Icon className={`h-4 w-4 flex-shrink-0 ${sidebarOpen ? "mr-2" : ""}`} />
+                  {sidebarOpen && <span className="text-sm">{tab.label}</span>}
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Logout Section */}
+        <div className="border-t border-background/10 p-3">
+          <Button
+            variant="ghost"
+            size={sidebarOpen ? "default" : "icon"}
+            className={`w-full ${
+              sidebarOpen ? "justify-start" : "justify-center"
+            } text-background/80 hover:bg-background/10 hover:text-background`}
+            onClick={handleLogout}
+            title={!sidebarOpen ? "Logout" : ""}
+          >
+            <LogOut className={`h-4 w-4 flex-shrink-0 ${sidebarOpen ? "mr-2" : ""}`} />
+            {sidebarOpen && <span className="text-sm">লগ আউট</span>}
+          </Button>
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="max-w-7xl mx-auto">
-        <Tabs value={currentTab} onValueChange={(value) => setCurrentTab(value as any)} className="w-full">
-          {/* Tabs List */}
-          <div className="overflow-x-auto border-b bg-card sticky top-16 z-30">
-            <TabsList className="w-full justify-start rounded-none bg-transparent p-0 h-auto border-0">
-              <TabsTrigger value="dashboard" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                ড্যাশবোর্ড
-              </TabsTrigger>
-              <TabsTrigger value="categories" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                ক্যাটেগরি
-              </TabsTrigger>
-              <TabsTrigger value="subjects" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                বিষয়
-              </TabsTrigger>
-              <TabsTrigger value="questions" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                প্রশ্ন
-              </TabsTrigger>
-              <TabsTrigger value="users" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                ব্যবহারকারী
-              </TabsTrigger>
-              <TabsTrigger value="templates" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                টেমপ্লেট
-              </TabsTrigger>
-              <TabsTrigger value="live-events" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                লাইভ ইভেন্ট
-              </TabsTrigger>
-              <TabsTrigger value="analytics" className="rounded-none border-b-2 border-transparent data-[state=active]:border-primary data-[state=active]:bg-transparent">
-                বিশ্লেষণ
-              </TabsTrigger>
-            </TabsList>
-          </div>
-
-          {/* Tab Contents */}
-          <div className="p-6">
-            <TabsContent value="dashboard"><AdminDashboardTab /></TabsContent>
-            <TabsContent value="categories"><AdminCategoriesTab /></TabsContent>
-            <TabsContent value="subjects"><AdminSubjectsTab /></TabsContent>
-            <TabsContent value="questions"><AdminQuestionsTab /></TabsContent>
-            <TabsContent value="users"><AdminUsersTab /></TabsContent>
-            <TabsContent value="templates"><AdminTemplatesTab /></TabsContent>
-            <TabsContent value="live-events"><AdminLiveEventsTab /></TabsContent>
-            <TabsContent value="analytics"><AdminAnalyticsTab /></TabsContent>
-          </div>
-        </Tabs>
-      </div>
-
-      {/* Mobile Menu */}
-      {isMobileMenuOpen && (
-        <div className="md:hidden fixed inset-0 top-16 bg-background/95 p-4 z-40">
-          <div className="flex flex-col gap-4">
-            <p className="text-sm text-muted-foreground">Logged in as {adminEmail}</p>
-            <Button onClick={handleLogout} className="w-full gap-2">
-              <LogOut className="w-4 h-4" />
-              লগ আউট
-            </Button>
+      <div className="flex-1 flex flex-col min-h-screen">
+        {/* Top Header */}
+        <div className="h-16 border-b border-background/10 bg-background flex items-center justify-between px-6 sticky top-0 z-10">
+          <h1 className="text-xl font-semibold text-foreground">{currentTabLabel}</h1>
+          <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
+            <span>Admin: {adminEmail}</span>
           </div>
         </div>
-      )}
+
+        {/* Content Area */}
+        <div className="flex-1 overflow-auto p-6">
+          <div className="max-w-7xl mx-auto">
+            {CurrentTabComponent && <CurrentTabComponent />}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
