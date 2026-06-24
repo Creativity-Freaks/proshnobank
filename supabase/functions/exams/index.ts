@@ -302,9 +302,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === "GET" && action === "generate") {
-      const user = await getUser(req);
-      if (!user) return errorResponse(req, "Unauthorized", 401);
-
       const subject = url.searchParams.get("subject");
       const topic = url.searchParams.get("topic");
       const topicsCsv = url.searchParams.get("topics");
@@ -349,9 +346,6 @@ Deno.serve(async (req: Request) => {
     }
 
     if (req.method === "GET" && action === "generate_template") {
-      const user = await getUser(req);
-      if (!user) return errorResponse(req, "Unauthorized", 401);
-
       const id = url.searchParams.get("id");
       if (!id) return errorResponse(req, "Missing template id", 400);
 
