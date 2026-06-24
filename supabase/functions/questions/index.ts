@@ -1,16 +1,12 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const defaultDevOrigins = [
-  "http://localhost:5173",
-  "http://127.0.0.1:5173",
-  "http://localhost:8080",
-  "http://127.0.0.1:8080",
-];
-const configuredOrigins = (Deno.env.get("ALLOWED_ORIGINS") || "")
-  .split(",")
-  .map((o: string) => o.trim())
-  .filter(Boolean);
-const allowedOrigins = configuredOrigins.length > 0 ? configuredOrigins : defaultDevOrigins;
+const ALLOWED_ORIGINS_ENV = (Deno.env.get("ALLOWED_ORIGINS") || "").trim();
+const allowWildcard = ALLOWED_ORIGINS_ENV === "*";
+const allowedOrigins = allowWildcard
+  ? []
+  : ALLOWED_ORIGINS_ENV
+    ? ALLOWED_ORIGINS_ENV.split(",").map((o: string) => o.trim()).filter(Boolean)
+    : ["http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:8080"];
 
 const rateBuckets = new Map<string, { count: number; resetAt: number }>();
 
@@ -30,7 +26,7 @@ const subjectAliases: Record<string, string[]> = {
 
 function corsHeaders(req: Request) {
   const origin = req.headers.get("origin") || "";
-  const allowOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "*";
+  const allowOrigin = allowWildcard ? "*" : (allowedOrigins.includes(origin) ? origin : allowedOrigins[0] || "*");
 
   return {
     "Access-Control-Allow-Origin": allowOrigin,

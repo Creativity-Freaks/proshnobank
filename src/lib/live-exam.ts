@@ -40,7 +40,12 @@ function toStringArray(value: unknown): string[] {
 }
 
 function toTopicsRecord(value: unknown): Record<string, string[]> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  // If the API returns topics as a flat array ["বীজগণিত", "গতি"], wrap it
+  if (Array.isArray(value)) {
+    const topics = value.filter((x): x is string => typeof x === "string");
+    return topics.length > 0 ? { general: topics } : {};
+  }
+  if (!value || typeof value !== "object") return {};
   const v = value as Record<string, unknown>;
   const out: Record<string, string[]> = {};
   Object.entries(v).forEach(([k, val]) => {

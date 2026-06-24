@@ -65,6 +65,15 @@ function toTopicsRecord(value: unknown): Record<string, string[]> {
 }
 
 function toBreakdown(value: unknown): ExamSubjectBreakdown[] {
+  // Handle object format: { "গণিত": 20, "রসায়ন": 15 }
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return Object.entries(value as Record<string, unknown>).map(([name, count]) => ({
+      name,
+      questions: typeof count === "number" ? count : 0,
+      marks: typeof count === "number" ? count : 0,
+    }));
+  }
+  // Handle array format: [{ name, questions, marks }]
   if (!Array.isArray(value)) return [];
   return value
     .map((x) => {

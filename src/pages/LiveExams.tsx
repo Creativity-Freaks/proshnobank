@@ -17,6 +17,16 @@ import {
   Loader2,
 } from "lucide-react";
 
+const CATEGORY_LABELS: Record<string, string> = {
+  ssc: "SSC",
+  hsc: "HSC",
+  medical: "মেডিকেল",
+  engineering: "ইঞ্জিনিয়ারিং",
+  university: "বিশ্ববিদ্যালয়",
+  job: "চাকরি",
+  admission: "ভর্তি",
+};
+
 const LiveExams = () => {
   const [, setCurrentTime] = useState(new Date());
 
@@ -118,7 +128,7 @@ const LiveExams = () => {
                   <div className="p-6 pb-4">
                     <div className="flex items-start justify-between mb-4">
                       {getStatusBadge(exam.status)}
-                      <Badge variant="outline">{exam.category}</Badge>
+                      <Badge variant="outline">{CATEGORY_LABELS[exam.category] ?? exam.category}</Badge>
                     </div>
 
                     <h3 className="text-lg font-bold text-card-foreground mb-2">{exam.title}</h3>

@@ -58,398 +58,11 @@ function formatPriceBDT(value: number | null): string {
   return `BDT ${Math.trunc(amount)}`;
 }
 
-const fallbackCategoriesBySlug: Record<string, ExamCategory> = {
-  ssc: {
-    id: "fallback-ssc",
-    name: "SSC পরীক্ষা",
-    slug: "ssc",
-    description: "এসএসসি বোর্ড পরীক্ষার প্রস্তুতি",
-    is_active: true,
-    sort_order: 10,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-  hsc: {
-    id: "fallback-hsc",
-    name: "HSC পরীক্ষা",
-    slug: "hsc",
-    description: "এইচএসসি বোর্ড পরীক্ষার প্রস্তুতি",
-    is_active: true,
-    sort_order: 20,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-  admission: {
-    id: "fallback-admission",
-    name: "ভর্তি পরীক্ষা",
-    slug: "admission",
-    description: "মেডিকেল, ইঞ্জিনিয়ারিং ও বিশ্ববিদ্যালয় ভর্তি প্রস্তুতি",
-    is_active: true,
-    sort_order: 25,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-  medical: {
-    id: "fallback-medical",
-    name: "মেডিকেল ভর্তি",
-    slug: "medical",
-    description: "MBBS ভর্তি পরীক্ষার প্রস্তুতি",
-    is_active: true,
-    sort_order: 30,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-  engineering: {
-    id: "fallback-engineering",
-    name: "ইঞ্জিনিয়ারিং ভর্তি",
-    slug: "engineering",
-    description: "BUET, CUET, KUET ভর্তি প্রস্তুতি",
-    is_active: true,
-    sort_order: 40,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-  university: {
-    id: "fallback-university",
-    name: "বিশ্ববিদ্যালয় ভর্তি",
-    slug: "university",
-    description: "ঢাবি, জাবি, রাবি ভর্তি প্রস্তুতি",
-    is_active: true,
-    sort_order: 50,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-  job: {
-    id: "fallback-job",
-    name: "চাকরি পরীক্ষা",
-    slug: "job",
-    description: "BCS, Bank, Primary সহ সব চাকরি",
-    is_active: true,
-    sort_order: 60,
-    created_at: new Date(0).toISOString(),
-    parent_id: null,
-  },
-};
+const fallbackCategoriesBySlug: Record<string, ExamCategory> = {};
 
-const fallbackSubcategoriesByParentSlug: Record<string, ExamCategory[]> = {
-  ssc: [
-    {
-      id: "fallback-ssc-2026",
-      name: "SSC 2026",
-      slug: "ssc-2026",
-      description: null,
-      is_active: true,
-      sort_order: 101,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-ssc",
-    },
-    {
-      id: "fallback-ssc-2025",
-      name: "SSC 2025",
-      slug: "ssc-2025",
-      description: null,
-      is_active: true,
-      sort_order: 102,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-ssc",
-    },
-    {
-      id: "fallback-ssc-science",
-      name: "SSC বিজ্ঞান",
-      slug: "ssc-science",
-      description: null,
-      is_active: true,
-      sort_order: 111,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-ssc",
-    },
-    {
-      id: "fallback-ssc-commerce",
-      name: "SSC ব্যবসা",
-      slug: "ssc-commerce",
-      description: null,
-      is_active: true,
-      sort_order: 112,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-ssc",
-    },
-    {
-      id: "fallback-ssc-arts",
-      name: "SSC মানবিক",
-      slug: "ssc-arts",
-      description: null,
-      is_active: true,
-      sort_order: 113,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-ssc",
-    },
-  ],
-  hsc: [
-    {
-      id: "fallback-hsc-2026",
-      name: "HSC 2026",
-      slug: "hsc-2026",
-      description: null,
-      is_active: true,
-      sort_order: 201,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-hsc",
-    },
-    {
-      id: "fallback-hsc-2025",
-      name: "HSC 2025",
-      slug: "hsc-2025",
-      description: null,
-      is_active: true,
-      sort_order: 202,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-hsc",
-    },
-    {
-      id: "fallback-hsc-science",
-      name: "HSC বিজ্ঞান",
-      slug: "hsc-science",
-      description: null,
-      is_active: true,
-      sort_order: 211,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-hsc",
-    },
-    {
-      id: "fallback-hsc-commerce",
-      name: "HSC ব্যবসা",
-      slug: "hsc-commerce",
-      description: null,
-      is_active: true,
-      sort_order: 212,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-hsc",
-    },
-    {
-      id: "fallback-hsc-arts",
-      name: "HSC মানবিক",
-      slug: "hsc-arts",
-      description: null,
-      is_active: true,
-      sort_order: 213,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-hsc",
-    },
-  ],
-  medical: [
-    {
-      id: "fallback-medical-mat",
-      name: "MAT",
-      slug: "medical-mat",
-      description: null,
-      is_active: true,
-      sort_order: 301,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-medical",
-    },
-    {
-      id: "fallback-medical-dat",
-      name: "DAT",
-      slug: "medical-dat",
-      description: null,
-      is_active: true,
-      sort_order: 302,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-medical",
-    },
-  ],
-  engineering: [
-    {
-      id: "fallback-engineering-2026",
-      name: "Engineering 2026",
-      slug: "engineering-2026",
-      description: null,
-      is_active: true,
-      sort_order: 401,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-engineering",
-    },
-    {
-      id: "fallback-engineering-2025",
-      name: "Engineering 2025",
-      slug: "engineering-2025",
-      description: null,
-      is_active: true,
-      sort_order: 402,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-engineering",
-    },
-  ],
-  university: [
-    {
-      id: "fallback-university-2026",
-      name: "Varsity 2026",
-      slug: "university-2026",
-      description: null,
-      is_active: true,
-      sort_order: 501,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-university",
-    },
-    {
-      id: "fallback-university-2025",
-      name: "Varsity 2025",
-      slug: "university-2025",
-      description: null,
-      is_active: true,
-      sort_order: 502,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-university",
-    },
-  ],
-  admission: [
-    {
-      id: "fallback-admission-medical",
-      name: "মেডিকেল ভর্তি",
-      slug: "admission-medical",
-      description: null,
-      is_active: true,
-      sort_order: 251,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-admission",
-    },
-    {
-      id: "fallback-admission-engineering",
-      name: "ইঞ্জিনিয়ারিং ভর্তি",
-      slug: "admission-engineering",
-      description: null,
-      is_active: true,
-      sort_order: 252,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-admission",
-    },
-    {
-      id: "fallback-admission-university",
-      name: "বিশ্ববিদ্যালয় ভর্তি",
-      slug: "admission-university",
-      description: null,
-      is_active: true,
-      sort_order: 253,
-      created_at: new Date(0).toISOString(),
-      parent_id: "fallback-admission",
-    },
-  ],
-};
+const fallbackSubcategoriesByParentSlug: Record<string, ExamCategory[]> = {};
 
-const fallbackBatchesBySlug: Record<string, Array<Pick<ExamBatch, "id" | "title" | "description" | "duration_days" | "start_date" | "seats" | "price" | "status" | "created_at" | "category_id" | "subcategory_id" | "template_id">>> = {
-  ssc: [
-    {
-      id: "fallback-batch-ssc-1",
-      title: "SSC 2026 সম্পূর্ণ প্রস্তুতি",
-      description: "SSC পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি - সকল বিষয়",
-      duration_days: 180,
-      start_date: null,
-      seats: 0,
-      price: 599,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-ssc",
-      subcategory_id: "fallback-ssc-2026",
-      template_id: null,
-    },
-  ],
-  hsc: [
-    {
-      id: "fallback-batch-hsc-1",
-      title: "HSC 2026 Science Batch",
-      description: "HSC বিজ্ঞান বিভাগের সম্পূর্ণ প্রস্তুতি",
-      duration_days: 365,
-      start_date: null,
-      seats: 0,
-      price: 799,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-hsc",
-      subcategory_id: "fallback-hsc-science",
-      template_id: null,
-    },
-  ],
-  admission: [
-    {
-      id: "fallback-batch-admission-1",
-      title: "ভর্তি পরীক্ষা - কম্বো ব্যাচ",
-      description: "মেডিকেল/ইঞ্জিনিয়ারিং/বিশ্ববিদ্যালয় ভর্তি প্রস্তুতি",
-      duration_days: 240,
-      start_date: null,
-      seats: 0,
-      price: 999,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-admission",
-      subcategory_id: "fallback-admission-university",
-      template_id: null,
-    },
-  ],
-  medical: [
-    {
-      id: "fallback-batch-medical-1",
-      title: "মেডিকেল ভর্তি ২০২৬",
-      description: "MBBS ভর্তি পরীক্ষার জন্য সেরা প্রস্তুতি",
-      duration_days: 240,
-      start_date: null,
-      seats: 0,
-      price: 1299,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-medical",
-      subcategory_id: "fallback-medical-mat",
-      template_id: null,
-    },
-  ],
-  engineering: [
-    {
-      id: "fallback-batch-engineering-1",
-      title: "ইঞ্জিনিয়ারিং ভর্তি ২০২৬",
-      description: "BUET, CUET, KUET সহ সকল ইঞ্জিনিয়ারিং ভর্তি",
-      duration_days: 240,
-      start_date: null,
-      seats: 0,
-      price: 1099,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-engineering",
-      subcategory_id: "fallback-engineering-2026",
-      template_id: null,
-    },
-  ],
-  university: [
-    {
-      id: "fallback-batch-university-1",
-      title: "বিশ্ববিদ্যালয় ভর্তি - ক ইউনিট",
-      description: "ঢাবি, জাবি, রাবি ক ইউনিট সম্পূর্ণ প্রস্তুতি",
-      duration_days: 180,
-      start_date: null,
-      seats: 0,
-      price: 899,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-university",
-      subcategory_id: "fallback-university-2026",
-      template_id: null,
-    },
-  ],
-  job: [
-    {
-      id: "fallback-batch-job-1",
-      title: "BCS প্রিলিমিনারি ২০২৬",
-      description: "৪৭তম BCS প্রিলিমিনারি সম্পূর্ণ প্রস্তুতি",
-      duration_days: 365,
-      start_date: null,
-      seats: 0,
-      price: 1499,
-      status: "published",
-      created_at: new Date(0).toISOString(),
-      category_id: "fallback-job",
-      subcategory_id: null,
-      template_id: null,
-    },
-  ],
-};
+const fallbackBatchesBySlug: Record<string, ExamBatch[]> = {};
 
 type ExamBatchesCategoryProps = {
   forcedSlug?: string;
@@ -491,11 +104,9 @@ export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatche
         const list = (data || []) as Array<Pick<ExamCategory, "id" | "name" | "slug" | "parent_id">>;
         const parents = list.filter((c) => c.parent_id == null);
         const display = parents.length > 0 ? parents : list;
-        return display.length > 0
-          ? display.map((c) => ({ id: c.id, name: c.name, slug: c.slug }))
-          : Object.values(fallbackCategoriesBySlug).map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
+        return display.map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
       } catch {
-        return Object.values(fallbackCategoriesBySlug).map((c) => ({ id: c.id, name: c.name, slug: c.slug }));
+        return [];
       }
     },
     staleTime: 60_000,
@@ -512,11 +123,8 @@ export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatche
         .eq("is_active", true)
         .maybeSingle();
 
-      if (error) {
-        return fallbackCategoriesBySlug[slug] ?? null;
-      }
-
-      return (data as ExamCategory | null) ?? (fallbackCategoriesBySlug[slug] ?? null);
+      if (error) return null;
+      return (data as ExamCategory | null) ?? null;
     },
   });
 
@@ -541,12 +149,8 @@ export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatche
         .order("created_at", { ascending: false })
         .limit(60);
 
-      if (error) {
-        return (fallbackBatchesBySlug[slug] || []) as unknown as ExamBatch[];
-      }
-      return ((data || []) as ExamBatch[]).length > 0
-        ? (data || []) as ExamBatch[]
-        : (fallbackBatchesBySlug[slug] || []) as unknown as ExamBatch[];
+      if (error) return [] as ExamBatch[];
+      return (data || []) as ExamBatch[];
     },
   });
 
@@ -554,9 +158,6 @@ export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatche
     queryKey: ["exam-subcategories", category?.id],
     enabled: Boolean(category?.id),
     queryFn: async () => {
-      const parentSlug = slug;
-      const fallback = fallbackSubcategoriesByParentSlug[parentSlug] || [];
-
       try {
         const { data, error } = await supabase
           .from("exam_categories")
@@ -568,10 +169,9 @@ export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatche
           .limit(60);
 
         if (error) throw error;
-        const list = (data || []) as ExamCategory[];
-        return list.length > 0 ? list : fallback;
+        return (data || []) as ExamCategory[];
       } catch {
-        return fallback;
+        return [] as ExamCategory[];
       }
     },
     staleTime: 60_000,
@@ -824,7 +424,7 @@ export default function ExamBatchesCategory({ forcedSlug, pathSlug }: ExamBatche
                     </div>
 
                     <Button variant="hero" className="w-full" asChild>
-                      <Link to={`/batches/${urlSlug}/${batch.id}`}>View Details</Link>
+                      <Link to={`/batches/${urlSlug}/${batch.id}`}>বিস্তারিত দেখো</Link>
                     </Button>
                   </div>
                 </div>
