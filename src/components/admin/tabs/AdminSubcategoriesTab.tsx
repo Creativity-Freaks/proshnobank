@@ -116,18 +116,21 @@ export default function AdminSubcategoriesTab() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">পরীক্ষা ক্যাটেগরি ব্যবস্থাপনা (সাব-ক্যাটেগরি)</h2>
+        <p className="text-sm text-muted-foreground mt-1">বেস ক্যাটেগরির অধীনে পরীক্ষা ধরন (যেমন: SSC Regular Board, SSC English Medium, etc.)</p>
+      </div>
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">সাব-ক্যাটেগরি ব্যবস্থাপনা</h2>
         <Button onClick={() => { setShowForm(!showForm); setEditingId(null); setFormData({ name: "", description: "" }); }} className="gap-2">
           <Plus className="w-4 h-4" />
-          নতুন সাব-ক্যাটেগরি
+          নতুন পরীক্ষা ক্যাটেগরি
         </Button>
       </div>
 
       {/* Category Filter */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm">ক্যাটেগরি নির্বাচন করুন</CardTitle>
+          <CardTitle className="text-sm">বেস ক্যাটেগরি নির্বাচন করুন</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="flex gap-2 flex-wrap">
@@ -153,7 +156,7 @@ export default function AdminSubcategoriesTab() {
         <Card>
           <CardHeader>
             <CardTitle>
-              {editingId ? "সাব-ক্যাটেগরি সম্পাদনা" : "নতুন সাব-ক্যাটেগরি যোগ করুন"}
+              {editingId ? "পরীক্ষা ক্যাটেগরি সম্পাদনা করুন" : "নতুন পরীক্ষা ক্যাটেগরি যোগ করুন"}
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">

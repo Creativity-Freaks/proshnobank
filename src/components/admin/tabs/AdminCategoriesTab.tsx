@@ -69,18 +69,21 @@ export default function AdminCategoriesTab() {
 
   return (
     <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-bold">বেস ক্যাটেগরি ব্যবস্থাপনা</h2>
+        <p className="text-sm text-muted-foreground mt-1">মূল পরীক্ষা ক্যাটেগরি (SSC, HSC, Medical, Engineering, University, Job)</p>
+      </div>
       <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold">ক্যাটেগরি ব্যবস্থাপনা</h2>
         <Button onClick={() => { setShowForm(!showForm); setEditingId(null); setFormData({ name: "", description: "" }); }} className="gap-2">
           <Plus className="w-4 h-4" />
-          নতুন ক্যাটেগরি
+          নতুন বেস ক্যাটেগরি
         </Button>
       </div>
 
       {showForm && (
         <Card>
           <CardHeader>
-            <CardTitle>{editingId ? "ক্যাটেগরি সম্পাদনা" : "নতুন ক্যাটেগরি যোগ করুন"}</CardTitle>
+            <CardTitle>{editingId ? "বেস ক্যাটেগরি সম্পাদনা করুন" : "নতুন বেস ক্যাটেগরি যোগ করুন"}</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
@@ -101,9 +104,10 @@ export default function AdminCategoriesTab() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {categories.map((category) => (
-          <Card key={category.id}>
+          <Card key={category.id} className="border-l-4 border-l-primary">
             <CardHeader>
               <CardTitle className="text-lg">{category.name}</CardTitle>
+              <p className="text-xs text-muted-foreground">বেস ক্যাটেগরি</p>
             </CardHeader>
             <CardContent>
               <p className="text-sm text-muted-foreground mb-4">{category.description}</p>
