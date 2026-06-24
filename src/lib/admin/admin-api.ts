@@ -3,10 +3,14 @@
  * All admin operations go through the /functions/v1/admin edge function.
  */
 
-import { supabase } from "@/integrations/supabase/client";
+import {
+  supabase,
+  SUPABASE_URL as DEFAULT_SUPABASE_URL,
+  SUPABASE_PUBLISHABLE_KEY as DEFAULT_SUPABASE_KEY,
+} from "@/integrations/supabase/client";
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || DEFAULT_SUPABASE_KEY;
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
