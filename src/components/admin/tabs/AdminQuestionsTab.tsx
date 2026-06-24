@@ -209,7 +209,7 @@ export default function AdminQuestionsTab() {
         <h2 className="text-2xl font-bold">প্রশ্ন ব্যবস্থাপনা</h2>
         <Button className="gap-2" onClick={() => { setShowForm(!showForm); if (!showForm) resetForm(); }}>
           <Plus className="w-4 h-4" />
-          {showForm ? "বাতিল করুন" : "নতুন প্রশ্ন"}
+          {showForm ? "বাতিল করুন" : "ন��ুন প্রশ্ন"}
         </Button>
       </div>
 
@@ -334,11 +334,15 @@ export default function AdminQuestionsTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">সব ক্যাটেগরি</SelectItem>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>
-                      {cat.name}
-                    </SelectItem>
-                  ))}
+                  {categories && categories.length > 0 ? (
+                    categories.map((cat) => cat?.id && cat?.name ? (
+                      <SelectItem key={cat.id} value={String(cat.id)}>
+                        {cat.name}
+                      </SelectItem>
+                    ) : null)
+                  ) : (
+                    <SelectItem value="empty" disabled>কোন ক্যাটেগরি নেই</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -352,11 +356,15 @@ export default function AdminQuestionsTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">সব পরীক্ষা</SelectItem>
-                  {subcategories.map((sub) => (
-                    <SelectItem key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
+                  {subcategories && subcategories.length > 0 ? (
+                    subcategories.map((sub) => sub?.id && sub?.name ? (
+                      <SelectItem key={sub.id} value={String(sub.id)}>
+                        {sub.name}
+                      </SelectItem>
+                    ) : null)
+                  ) : (
+                    <SelectItem value="empty" disabled>কোন পরীক্ষা নেই</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -370,11 +378,15 @@ export default function AdminQuestionsTab() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="">সব বিষয়</SelectItem>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
+                  {subjects && subjects.length > 0 ? (
+                    subjects.map((subject) => subject?.id && subject?.name ? (
+                      <SelectItem key={subject.id} value={String(subject.id)}>
+                        {subject.name}
+                      </SelectItem>
+                    ) : null)
+                  ) : (
+                    <SelectItem value="empty" disabled>কোন বিষয় নেই</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
