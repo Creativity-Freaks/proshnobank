@@ -11,8 +11,6 @@ import { ArrowLeft, Calendar, Clock, Loader2 } from "lucide-react";
 
 type ExamBatch = Tables<"exam_batches">;
 
-const fallbackBatchesBySlug: Record<string, ExamBatch[]> = {};
-
 type BatchExtra = {
   categoryName: string | null;
   subcategoryName: string | null;
@@ -56,14 +54,17 @@ export default function ExamBatchDetails() {
   });
 
   const resolvedBatch = batch ?? null;
-  const fallbackBatch = null;
 
   const { data: extra } = useQuery({
-    queryKey: ["exam-batch-details-extra", resolvedBatch?.category_id, resolvedBatch?.subcategory_id, resolvedBatch?.template_id],
+    queryKey: [
+      "exam-batch-details-extra",
+      resolvedBatch?.category_id,
+      resolvedBatch?.subcategory_id,
+      resolvedBatch?.template_id,
+    ],
     enabled: Boolean(resolvedBatch),
     queryFn: async () => {
       const result: BatchExtra = { categoryName: null, subcategoryName: null, templateTitle: null };
-
       if (!resolvedBatch) return result;
 
       const tasks: Array<Promise<void>> = [];
@@ -140,23 +141,68 @@ export default function ExamBatchDetails() {
     );
   }
 
-  if ((isError && !fallbackBatch) || !resolvedBatch) {
+  if (isError || !resolvedBatch) {
     return (
       <div className="min-h-screen bg-background font-bengali">
         <section className="pt-24 pb-12 bg-gradient-to-br from-primary/10 via-background to-accent/10">
           <div className="container mx-auto px-4">
             <div className="max-w-3xl mx-auto">
-              <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground">
+              <Link
+                to={backTo}
+                className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground"
+              >
                 <ArrowLeft className="h-4 w-4" /> ব্যাচসমূহ
               </Link>
-              <h1 className="mt-4 text-2xl md:text-3xl font-bold text-foreground">ব্যাচ পাওয়া যায়নি</h1>
-              <p className="mt-2 text-muted-foreground">এই ব্যাচটি এখন উপলব্ধ নয়।</p>
+              <h1 className="mt-4 text-2xl md:text-3xl font-bold text-foreground">ব্যাচ পাওয়া যায়নি</h1>
+              <p className="mt-2 text-muted-foreground">এই ব্যাচটি এখন উপলব্ধ নয়।</p>
             </div>
           </div>
         </section>
       </div>
     );
   }
+
+  const handleEnroll = async () => {
+    if (!user) {
+      toast({
+        title: "লগইন প্রয়োজন",
+        description: "ভর্তি করতে আগে লগইন করুন।",
+        variant: "destructive",
+      });
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const { error } = await supabase.functions.invoke("enrollments", {
+        body: { action: "enroll", batch_id: resolvedBatch.id },
+      });
+
+      if (error) {
+        const msg = error.message || "ভর্তি করতে সমস্যা হয়েছে।";
+        if (msg.toLowerCase().includes("no seats")) {
+          toast({ title: "সিট নেই", description: "এই ব্যাচের সিট শেষ।", variant: "destructive" });
+          return;
+        }
+        if (msg.toLowerCase().includes("unauthorized")) {
+          toast({ title: "লগইন প্রয়োজন", description: "ভর্তি করতে আগে লগইন করুন।", variant: "destructive" });
+          navigate("/login");
+          return;
+        }
+        toast({ title: "ত্রুটি", description: msg, variant: "destructive" });
+        return;
+      }
+
+      toast({
+        title: "ভর্তি সফল",
+        description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
+      });
+      navigate("/dashboard#my-batches");
+    } catch (e: unknown) {
+      const message = e instanceof Error ? e.message : "ভর্তি করতে সমস্যা হয়েছে।";
+      toast({ title: "ত্রুটি", description: message, variant: "destructive" });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background font-bengali">
@@ -169,7 +215,10 @@ export default function ExamBatchDetails() {
               <div className="pointer-events-none absolute -right-24 -bottom-24 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
 
               <div className="relative">
-                <Link to={backTo} className="inline-flex items-center gap-2 text-sm text-background/75 hover:text-background">
+                <Link
+                  to={backTo}
+                  className="inline-flex items-center gap-2 text-sm text-background/75 hover:text-background"
+                >
                   <ArrowLeft className="h-4 w-4" /> ব্যাচসমূহ
                 </Link>
 
@@ -180,21 +229,30 @@ export default function ExamBatchDetails() {
                       {resolvedBatch.description || "এই ব্যাচের বিস্তারিত শীঘ্রই যোগ হবে"}
                     </p>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      {extra?.categoryName ? (
-                        <Badge variant="secondary" className="bg-background/10 text-background border border-background/10">
+                      {extra?.categoryName && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-background/10 text-background border border-background/10"
+                        >
                           {extra.categoryName}
                         </Badge>
-                      ) : null}
-                      {extra?.subcategoryName ? (
-                        <Badge variant="secondary" className="bg-background/10 text-background border border-background/10">
+                      )}
+                      {extra?.subcategoryName && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-background/10 text-background border border-background/10"
+                        >
                           {extra.subcategoryName}
                         </Badge>
-                      ) : null}
-                      {extra?.templateTitle ? (
-                        <Badge variant="secondary" className="bg-background/10 text-background border border-background/10">
+                      )}
+                      {extra?.templateTitle && (
+                        <Badge
+                          variant="secondary"
+                          className="bg-background/10 text-background border border-background/10"
+                        >
                           {extra.templateTitle}
                         </Badge>
-                      ) : null}
+                      )}
                     </div>
                   </div>
 
@@ -215,11 +273,10 @@ export default function ExamBatchDetails() {
           <div className="max-w-5xl mx-auto grid gap-6 lg:grid-cols-3">
             <div className="lg:col-span-2 rounded-2xl border border-border bg-card p-6 shadow-card">
               <h2 className="text-lg font-bold text-foreground">ব্যাচ ইনফো</h2>
-
               <div className="mt-4 grid gap-3 sm:grid-cols-2">
                 <div className="rounded-xl border border-border p-4">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <Clock className="h-4 w-4" /> মেয়াদ
+                    <Clock className="h-4 w-4" /> মেয়াদ
                   </div>
                   <div className="mt-1 font-semibold text-foreground">{resolvedBatch.duration_days} দিন</div>
                 </div>
@@ -247,64 +304,9 @@ export default function ExamBatchDetails() {
             <div className="rounded-2xl border border-border bg-card p-6 shadow-card">
               <h2 className="text-lg font-bold text-foreground">ভর্তি</h2>
               <p className="mt-2 text-sm text-muted-foreground">
-                ভর্তি করতে লগইন প্রয়োজন। লগইন থাকলে এই ব্যাচে ভর্তি হবে।
+                ভর্তি করতে লগইন প্রয়োজন। লগইন থাকলে এই ব্যাচে ভর্তি হবে।
               </p>
-              <Button
-                variant="hero"
-                size="lg"
-                className="w-full mt-5"
-                onClick={async () => {
-                  if (!user) {
-                    toast({
-                      title: "লগইন প্রয়োজন",
-                      description: "ভর্তি করতে আগে লগইন করুন।",
-                      variant: "destructive",
-                    });
-                    navigate("/login");
-                    return;
-                  }
-
-                  try {
-                    const { data, error } = await supabase.functions.invoke("enrollments", {
-                      body: { action: "enroll", batch_id: resolvedBatch.id },
-                    });
-
-                    if (error) {
-                      const msg = error.message || "ভর্তি করতে সমস্যা হয়েছে।";
-                      if (msg.toLowerCase().includes("no seats")) {
-                        toast({ title: "সিট নেই", description: "এই ব্যাচের সিট শেষ।", variant: "destructive" });
-                        return;
-                      }
-
-                      if (msg.toLowerCase().includes("unauthorized")) {
-                        toast({ title: "লগইন প্রয়োজন", description: "ভর্তি করতে আগে লগইন করুন।", variant: "destructive" });
-                        navigate("/login");
-                        return;
-                      }
-
-                      toast({ title: "ত্রুটি", description: msg, variant: "destructive" });
-                      return;
-                    }
-
-                    toast({
-                      title: "ভর্তি সফল",
-                      description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
-                    });
-                    navigate("/dashboard#my-batches");
-                      return;
-                    }
-
-                    toast({
-                      title: "ভর্তি সফল",
-                      description: "তুমি সফলভাবে এই ব্যাচে ভর্তি হয়েছো।",
-                    });
-                    navigate("/dashboard#my-batches");
-                  } catch (e: unknown) {
-                    const message = e instanceof Error ? e.message : "ভর্তি করতে সমস্যা হয়েছে।";
-                    toast({ title: "ত্রুটি", description: message, variant: "destructive" });
-                  }
-                }}
-              >
+              <Button variant="hero" size="lg" className="w-full mt-5" onClick={handleEnroll}>
                 ভর্তি করুন
               </Button>
             </div>
