@@ -1,8 +1,26 @@
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Play, Award, Users, BookOpen } from "lucide-react";
+import { useSiteContent } from "@/hooks/useSiteContent";
+
+interface HeroContent {
+  title: string;
+  subtitle: string;
+  cta_primary: string;
+  cta_secondary: string;
+}
+
+const DEFAULT_HERO: HeroContent = {
+  title: "তোমার স্বপ্নের লক্ষ্যে পৌঁছে দিতে আমরা আছি",
+  subtitle:
+    "SSC, HSC, মেডিকেল, ইঞ্জিনিয়ারিং, বিশ্ববিদ্যালয় ভর্তি এবং চাকরির পরীক্ষার জন্য সম্পূর্ণ প্রস্তুতি নাও। লাইভ এক্সাম, প্রশ্নব্যাংক, লিডারবোর্ড সব এক জায়গায়।",
+  cta_primary: "এখনই শুরু করো",
+  cta_secondary: "ফ্রি ট্রায়াল নাও",
+};
 
 const HeroSection = () => {
+  const { data: hero } = useSiteContent<HeroContent>("hero", DEFAULT_HERO);
+
   return (
     <section className="relative min-h-[100dvh] bg-gradient-hero overflow-hidden pt-16">
       {/* Background Pattern */}
@@ -21,27 +39,23 @@ const HeroSection = () => {
             </div>
 
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-primary-foreground font-bengali leading-tight">
-              তোমার স্বপ্নের{" "}
-              <span className="text-accent">লক্ষ্যে</span>
-              <br />
-              পৌঁছে দিতে আমরা আছি
+              {hero.title}
             </h1>
 
             <p className="text-lg text-primary-foreground/80 font-bengali max-w-xl mx-auto lg:mx-0">
-              SSC, HSC, মেডিকেল, ইঞ্জিনিয়ারিং, বিশ্ববিদ্যালয় ভর্তি এবং চাকরির পরীক্ষার
-              জন্য সম্পূর্ণ প্রস্তুতি নাও। লাইভ এক্সাম, প্রশ্নব্যাংক, লিডারবোর্ড সব এক জায়গায়।
+              {hero.subtitle}
             </p>
 
             <div className="flex flex-wrap justify-center lg:justify-start gap-4">
               <Link to="/register">
                 <Button variant="accent" size="xl">
                   <Play className="w-5 h-5" />
-                  এখনই শুরু করো
+                  {hero.cta_primary}
                 </Button>
               </Link>
               <Link to="/live-exams">
                 <Button variant="outline" size="xl" className="border-primary-foreground/30 text-primary-foreground hover:bg-primary-foreground/10 hover:text-primary-foreground">
-                  ফ্রি ট্রায়াল নাও
+                  {hero.cta_secondary}
                 </Button>
               </Link>
             </div>
