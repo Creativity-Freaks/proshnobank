@@ -93,52 +93,84 @@ export default function AdminTeachersTab() {
   const fetchAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [usersRes, fetchedPlans] = await Promise.all([
-        adminApi.users({ role: "teacher", search: searchQuery, limit: 200 }),
-        adminApi.getPlans(),
-      ]);
+      // 1. Get all teacher role entries directly from Supabase (no admin edge function needed for read)
+      let rolesQuery = supabase
+        .from("user_roles")
+        .select("user_id, created_at")
+        .eq("role", "teacher");
+      const { data: rolesData, error: rolesErr } = await rolesQuery;
+      if (rolesErr) throw new Error(rolesErr.message);
+
+      const teacherRoles = rolesData || [];
+
+      // Fetch plans in parallel
+      const fetchedPlans = await adminApi.getPlans();
       setPlans(fetchedPlans);
 
-      const teacherUsers = usersRes.data || [];
-      if (teacherUsers.length === 0) {
+      if (teacherRoles.length === 0) {
         setTeachers([]);
         setLoading(false);
         return;
       }
 
-      // Fetch question counts
-      const { data: qData } = await supabase
-        .from("question_bank")
-        .select("created_by")
-        .not("created_by", "is", null);
+      const userIds = teacherRoles.map((r: any) => r.user_id);
+
+      // 2. Fetch profiles, question counts, and subscriptions in parallel
+      const [profilesRes, qRes, subsRes] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, full_name, email, institution, avatar_url, created_at, is_active")
+          .in("id", userIds),
+        supabase
+          .from("question_bank")
+          .select("created_by")
+          .in("created_by", userIds),
+        supabase
+          .from("user_subscriptions")
+          .select("*, plan:subscription_plans(*)")
+          .in("user_id", userIds)
+          .eq("status", "active"),
+      ]);
+
+      // Build lookup maps
+      const profileMap: Record<string, any> = {};
+      (profilesRes.data || []).forEach((p: any) => { profileMap[p.id] = p; });
+
       const countMap: Record<string, number> = {};
-      (qData || []).forEach((row: any) => {
+      (qRes.data || []).forEach((row: any) => {
         if (row.created_by) countMap[row.created_by] = (countMap[row.created_by] || 0) + 1;
       });
 
-      // Fetch all subscriptions for teacher user IDs
-      const userIds = teacherUsers.map((u) => u.user_id);
-      const { data: subsData } = await supabase
-        .from("user_subscriptions")
-        .select("*, plan:subscription_plans(*)")
-        .in("user_id", userIds)
-        .eq("status", "active");
-
       const subMap: Record<string, UserSubscription> = {};
-      (subsData || []).forEach((s: any) => { subMap[s.user_id] = s; });
+      (subsRes.data || []).forEach((s: any) => { subMap[s.user_id] = s; });
+
+      // Apply search filter client-side
+      const search = searchQuery.toLowerCase();
+      const filtered = teacherRoles.filter((r: any) => {
+        if (!search) return true;
+        const p = profileMap[r.user_id];
+        return (
+          (p?.full_name || "").toLowerCase().includes(search) ||
+          (p?.email || "").toLowerCase().includes(search) ||
+          (p?.institution || "").toLowerCase().includes(search)
+        );
+      });
 
       setTeachers(
-        teacherUsers.map((u) => ({
-          user_id: u.user_id,
-          name: u.name || "(নাম নেই)",
-          email: u.email || "",
-          institution: (u as any).institution || "",
-          avatar_url: u.avatar_url || "",
-          created_at: u.created_at,
-          is_suspended: u.is_suspended || false,
-          question_count: countMap[u.user_id] || 0,
-          subscription: subMap[u.user_id] || null,
-        }))
+        filtered.map((r: any) => {
+          const p = profileMap[r.user_id] || {};
+          return {
+            user_id: r.user_id,
+            name: p.full_name || "(নাম নেই)",
+            email: p.email || "",
+            institution: p.institution || "",
+            avatar_url: p.avatar_url || "",
+            created_at: p.created_at || r.created_at,
+            is_suspended: p.is_active === false,
+            question_count: countMap[r.user_id] || 0,
+            subscription: subMap[r.user_id] || null,
+          };
+        })
       );
     } catch (e: any) {
       toast({ title: "ত্রুটি", description: e?.message, variant: "destructive" });
@@ -171,7 +203,12 @@ export default function AdminTeachersTab() {
 
   const handleSuspend = async (teacher: Teacher) => {
     try {
-      await adminApi.updateSuspension(teacher.user_id, !teacher.is_suspended);
+      const newActive = teacher.is_suspended; // if currently suspended, set active=true
+      const { error } = await supabase
+        .from("profiles")
+        .update({ is_active: newActive })
+        .eq("id", teacher.user_id);
+      if (error) throw new Error(error.message);
       toast({
         title: "সাফল্য",
         description: teacher.is_suspended ? "শিক্ষক পুনরায় সক্রিয় হয়েছে" : "শিক্ষক স্থগিত হয়েছে",

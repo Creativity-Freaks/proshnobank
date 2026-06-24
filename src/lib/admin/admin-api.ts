@@ -224,11 +224,9 @@ export const adminApi = {
   // Subjects
   subjects: () => adminCall<{ data: SubjectInfo[] }>({ action: "subjects" }),
 
-  // Subscription Plans (direct Supabase — no admin edge function needed)
+  // Subscription Plans — direct Supabase client (no admin edge function needed, not sensitive)
   getPlans: async (): Promise<SubscriptionPlan[]> => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const { data, error } = await client
+    const { data, error } = await supabase
       .from("subscription_plans")
       .select("*")
       .order("sort_order");
@@ -236,11 +234,8 @@ export const adminApi = {
     return (data || []) as SubscriptionPlan[];
   },
 
-  // User subscriptions
   getUserSubscription: async (userId: string): Promise<UserSubscription | null> => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const { data, error } = await client
+    const { data, error } = await supabase
       .from("user_subscriptions")
       .select("*, plan:subscription_plans(*)")
       .eq("user_id", userId)
@@ -251,16 +246,14 @@ export const adminApi = {
   },
 
   assignPlan: async (userId: string, planId: string, billingCycle: "monthly" | "yearly" = "monthly"): Promise<void> => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(SUPABASE_URL, SUPABASE_KEY);
     // Cancel existing active subscription first
-    await client
+    await supabase
       .from("user_subscriptions")
       .update({ status: "cancelled", cancel_at: new Date().toISOString() })
       .eq("user_id", userId)
       .eq("status", "active");
     // Insert new subscription
-    const { error } = await client.from("user_subscriptions").insert({
+    const { error } = await supabase.from("user_subscriptions").insert({
       user_id: userId,
       plan_id: planId,
       status: "active",
@@ -271,9 +264,7 @@ export const adminApi = {
   },
 
   cancelSubscription: async (userId: string): Promise<void> => {
-    const { createClient } = await import("@supabase/supabase-js");
-    const client = createClient(SUPABASE_URL, SUPABASE_KEY);
-    const { error } = await client
+    const { error } = await supabase
       .from("user_subscriptions")
       .update({ status: "cancelled", cancel_at: new Date().toISOString() })
       .eq("user_id", userId)
