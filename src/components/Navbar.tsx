@@ -49,6 +49,7 @@ const Navbar = () => {
     { name: "এক্সাম ব্যাচ", href: "/batches" },
     { name: "প্রশ্নব্যাংক", href: "/question-bank" },
     { name: "লাইভ এক্সাম", href: "/live-exams" },
+    { name: "ডাউট", href: "/doubts" },
     { name: "লিডারবোর্ড", href: "/leaderboard" },
     dashboardLink,
   ];

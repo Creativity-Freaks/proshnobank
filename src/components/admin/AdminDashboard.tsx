@@ -15,6 +15,7 @@ import {
   ChevronLeft,
   ChevronRight,
   GraduationCap,
+  HelpCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -33,6 +34,7 @@ import AdminAnalyticsTab from "./tabs/AdminAnalyticsTab";
 import AdminContentTab from "./tabs/AdminContentTab";
 import AdminTeachersTab from "./tabs/AdminTeachersTab";
 import AdminStudentsTab from "./tabs/AdminStudentsTab";
+import AdminDoubtsTab from "./tabs/AdminDoubtsTab";
 
 const TAB_CONFIG = [
   { id: "dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard },
@@ -44,6 +46,7 @@ const TAB_CONFIG = [
   { id: "chapters", label: "অধ্যায়", icon: FileText },
   { id: "teachers", label: "শিক্ষক", icon: Users },
   { id: "students", label: "শিক্ষার্থী", icon: GraduationCap },
+  { id: "doubts", label: "ডাউট", icon: HelpCircle },
   { id: "users", label: "ব্যবহারকারী", icon: Users },
   { id: "templates", label: "টেমপ্লেট", icon: FilePenLine },
   { id: "live-events", label: "লাইভ ইভেন্ট", icon: CalendarClock },
@@ -60,6 +63,7 @@ const TAB_COMPONENTS = {
   chapters: AdminChaptersTab,
   teachers: AdminTeachersTab,
   students: AdminStudentsTab,
+  doubts: AdminDoubtsTab,
   users: AdminUsersTab,
   templates: AdminTemplatesTab,
   "live-events": AdminLiveEventsTab,
