@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminQuestionsTab() {
   const { toast } = useToast();
@@ -91,19 +90,14 @@ export default function AdminQuestionsTab() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>বিষয় নির্বাচন করুন</Label>
-              <Select value={selectedSubject} onValueChange={setSelectedSubject}>
-                <SelectTrigger>
-                  <SelectValue placeholder="সব বিষয়" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">সব বিষয়</SelectItem>
-                  {subjects.map((subject) => (
-                    <SelectItem key={subject.id} value={subject.id}>
-                      {subject.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2 flex-wrap">
+                <button onClick={() => setSelectedSubject("")} className={`px-3 py-1 rounded text-sm ${selectedSubject === "" ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>সব বিষয়</button>
+                {subjects.slice(0, 5).map((subject) => (
+                  <button key={subject.id} onClick={() => setSelectedSubject(subject.id)} className={`px-3 py-1 rounded text-sm ${selectedSubject === subject.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}>
+                    {subject.name}
+                  </button>
+                ))}
+              </div>
             </div>
             <div className="space-y-2">
               <Label>প্রশ্ন অনুসন্ধান করুন</Label>

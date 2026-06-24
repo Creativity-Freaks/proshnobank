@@ -7,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAdmin } from "@/contexts/AdminContext";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function AdminSubjectsTab() {
   const { toast } = useToast();
@@ -106,16 +105,18 @@ export default function AdminSubjectsTab() {
             </div>
             <div>
               <Label>ক্যাটেগরি</Label>
-              <Select value={formData.category_id} onValueChange={(value) => setFormData({ ...formData, category_id: value })}>
-                <SelectTrigger>
-                  <SelectValue placeholder="ক্যাটেগরি নির্বাচন করুন" />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex gap-2 flex-wrap">
+                {categories.map((cat) => (
+                  <button 
+                    key={cat.id}
+                    onClick={() => setFormData({ ...formData, category_id: cat.id })}
+                    className={`px-3 py-2 rounded text-sm ${formData.category_id === cat.id ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"}`}
+                  >
+                    {cat.name}
+                  </button>
+                ))}
+              </div>
+              {!formData.category_id && <p className="text-xs text-red-500 mt-1">ক্যাটেগরি নির্বাচন করুন</p>}
             </div>
             <div>
               <Label>বর্ণনা</Label>
