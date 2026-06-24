@@ -132,6 +132,8 @@ export default function AdminTeachersTab() {
           .eq("status", "active"),
       ]);
 
+      if (profilesRes.error) throw new Error(profilesRes.error.message);
+
       // Build lookup maps
       const profileMap: Record<string, any> = {};
       (profilesRes.data || []).forEach((p: any) => { profileMap[p.id] = p; });
@@ -203,7 +205,7 @@ export default function AdminTeachersTab() {
 
   const handleSuspend = async (teacher: Teacher) => {
     try {
-      const newActive = teacher.is_suspended; // if currently suspended, set active=true
+      const newActive = !teacher.is_suspended; // toggle: suspended→active, active→suspended(false)
       const { error } = await supabase
         .from("profiles")
         .update({ is_active: newActive })
@@ -368,7 +370,7 @@ export default function AdminTeachersTab() {
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-bengali">শিক্ষক তালিকা</CardTitle>
-          <CardDescription className="font-bengali">প্রতিটি শিক্ষকের অ্যাকাউন্ট ও সাবস্ক্রিপশন অবস্থা</CardDescription>
+          <CardDescription className="font-bengali">প্রতিটি শিক্ষকের অ্যাকাউন্ট ও সাব��্ক্রিপশন অবস্থা</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
