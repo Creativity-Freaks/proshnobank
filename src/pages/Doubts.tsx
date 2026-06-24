@@ -194,7 +194,7 @@ export default function Doubts() {
     try {
       let query = supabase
         .from("doubts")
-        .select("*, student:profiles!doubts_student_id_fkey(full_name), doubt_answers(count)")
+        .select("*, doubt_answers(count)")
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
@@ -203,9 +203,23 @@ export default function Doubts() {
       const { data, error } = await query;
       if (error) throw error;
 
-      const mapped = (data || []).map((d: any) => ({
+      const rows = data || [];
+
+      // Fetch profiles separately (no FK to profiles in schema cache)
+      const studentIds = [...new Set(rows.map((d: any) => d.student_id).filter(Boolean))];
+      const profileMap: Record<string, { full_name: string | null }> = {};
+      if (studentIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", studentIds);
+        (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
+      }
+
+      const mapped = rows.map((d: any) => ({
         ...d,
         answer_count: d.doubt_answers?.[0]?.count ?? 0,
+        student: profileMap[d.student_id] ?? null,
       }));
       setDoubts(mapped);
       const allSubjects = [...new Set(mapped.map((d: Doubt) => d.subject).filter(Boolean))];
@@ -239,12 +253,24 @@ export default function Doubts() {
     try {
       const { data, error } = await supabase
         .from("doubt_answers")
-        .select("*, answerer:profiles!doubt_answers_answerer_id_fkey(full_name)")
+        .select("*")
         .eq("doubt_id", doubt.id)
         .order("is_best_answer", { ascending: false })
         .order("helpful_count", { ascending: false });
       if (error) throw error;
-      setAnswers(data || []);
+
+      const rows = data || [];
+      const answererIds = [...new Set(rows.map((a: any) => a.answerer_id).filter(Boolean))];
+      const profileMap: Record<string, { full_name: string | null }> = {};
+      if (answererIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from("profiles")
+          .select("id, full_name")
+          .in("id", answererIds);
+        (profiles || []).forEach((p: any) => { profileMap[p.id] = p; });
+      }
+
+      setAnswers(rows.map((a: any) => ({ ...a, answerer: profileMap[a.answerer_id] ?? null })));
       await supabase.from("doubts").update({ views: (doubt.views || 0) + 1 }).eq("id", doubt.id);
     } catch (e: any) {
       toast({ title: "ত্রুটি", description: e.message, variant: "destructive" });
