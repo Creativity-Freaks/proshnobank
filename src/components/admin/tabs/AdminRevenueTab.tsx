@@ -223,112 +223,126 @@ export default function AdminRevenueTab() {
     if (!data) return;
     setGenerating(true);
     try {
-      const { default: jsPDF } = await import("jspdf");
       const {
-        createReport, finalizePages,
-        drawSectionHeading, drawKpiGrid, drawTable,
-        BRAND, i18n,
-      } = await import("@/lib/reportUtils");
+        i18n, buildReportHtml, buildKpiGrid, buildTable, htmlToPdf, COLORS,
+      } = await import("@/lib/reportHtmlUtils");
 
-      // Detect language from user's browser or localStorage
       const lang = (localStorage.getItem("appLanguage") ?? navigator.language.split("-")[0]) === "bn" ? "bn" : "en";
       const t = i18n[lang];
 
       const dateLabel =
-        filters.dateRange === "7d"  ? (lang === "bn" ? "গত ৭ দিন" : "Last 7 Days") :
+        filters.dateRange === "7d"  ? (lang === "bn" ? "গত ৭ দিন"  : "Last 7 Days")  :
         filters.dateRange === "30d" ? (lang === "bn" ? "গত ৩০ দিন" : "Last 30 Days") :
         filters.dateRange === "90d" ? (lang === "bn" ? "গত ৯০ দিন" : "Last 90 Days") :
-        (lang === "bn" ? "সর্বকালীন" : "All Time");
+                                      (lang === "bn" ? "সর্বকালীন" : "All Time");
       const statusLabel =
         filters.status === "all"       ? t.all :
-        filters.status === "active"    ? (lang === "bn" ? "সক্রিয়" : "Active") :
-        filters.status === "cancelled" ? (lang === "bn" ? "বাতিল" : "Cancelled") :
-        (lang === "bn" ? "অপেক্ষমাণ" : "Pending");
+        filters.status === "active"    ? (lang === "bn" ? "সক্রিয়"    : "Active")    :
+        filters.status === "cancelled" ? (lang === "bn" ? "বাতিল"     : "Cancelled") :
+                                         (lang === "bn" ? "অপেক্ষমাণ" : "Pending");
       const planLabel =
         filters.planType === "all"     ? t.all :
         filters.planType === "student" ? (lang === "bn" ? "স্টুডেন্ট" : "Student") :
-        filters.planType === "teacher" ? (lang === "bn" ? "টিচার" : "Teacher") :
-        (lang === "bn" ? "কোচিং" : "Coaching");
+        filters.planType === "teacher" ? (lang === "bn" ? "টিচার"     : "Teacher")  :
+                                         (lang === "bn" ? "কোচিং"     : "Coaching");
 
-      const page = await createReport(
-        jsPDF,
-        t.revenue_title,
-        t.revenue_subtitle,
-        [
-          { label: t.analytics_period, value: dateLabel },
-          { label: t.revenue_plan,     value: planLabel  },
-          { label: t.revenue_status,   value: statusLabel },
-        ],
+      // Load logo as base64
+      const logoBase64 = await fetch("/proshnobank.png")
+        .then(r => r.blob())
+        .then(b => new Promise<string>(res => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(b); }))
+        .catch(() => undefined);
+
+      const sections = [
+        // KPI
+        {
+          heading: t.revenue_summary,
+          content: buildKpiGrid([
+            { label: t.revenue_total,               value: `৳${data.totalRevenue.toLocaleString()}` },
+            { label: t.revenue_subscription,        value: `৳${data.subscriptionRevenue.toLocaleString()}` },
+            { label: t.revenue_batch,               value: `৳${data.batchRevenue.toLocaleString()}` },
+            { label: t.revenue_total_subscribers,   value: String(data.totalSubscribers) },
+            { label: t.revenue_active_subscribers,  value: String(data.activeSubscribers) },
+            { label: t.revenue_batch_enrollments,   value: String(data.totalBatchEnrollments) },
+          ]),
+        },
+        // Plan breakdown
+        ...(data.planBreakdown.length > 0 ? [{
+          heading: t.revenue_plan_breakdown,
+          content: buildTable(
+            [
+              { header: t.plan_name,    key: "name",       flex: 3 },
+              { header: t.subscribers,  key: "count",      flex: 1, align: "right" },
+              { header: t.revenue,      key: "revenueStr", flex: 1, align: "right" },
+              { header: t.share,        key: "pct",        flex: 1, align: "right" },
+            ],
+            data.planBreakdown.map(r => ({
+              ...r,
+              revenueStr: `৳${r.revenue.toLocaleString()}`,
+              pct: data.subscriptionRevenue > 0
+                ? `${Math.round((r.revenue / data.subscriptionRevenue) * 100)}%`
+                : "0%",
+            })),
+          ),
+        }] : []),
+        // Batch breakdown
+        ...(data.batchBreakdown.length > 0 ? [{
+          heading: t.revenue_batch_breakdown,
+          content: buildTable(
+            [
+              { header: t.batch_name, key: "name",       flex: 3 },
+              { header: t.enrolled,   key: "enrolled",   flex: 1, align: "right" },
+              { header: t.price,      key: "priceStr",   flex: 1, align: "right" },
+              { header: t.total,      key: "revenueStr", flex: 1, align: "right" },
+            ],
+            data.batchBreakdown.map(r => ({
+              ...r,
+              priceStr:   r.price != null ? `৳${r.price.toLocaleString()}` : "—",
+              revenueStr: `৳${r.revenue.toLocaleString()}`,
+            })),
+            COLORS.teal,
+          ),
+        }] : []),
+        // Monthly trend
+        ...(data.monthlyRevenue.length > 0 ? [{
+          heading: t.revenue_monthly_trend,
+          content: buildTable(
+            [
+              { header: t.month,        key: "month",    flex: 2 },
+              { header: t.sub_revenue,  key: "subStr",   flex: 2, align: "right" },
+              { header: t.batch_revenue,key: "batchStr", flex: 2, align: "right" },
+              { header: t.total,        key: "totalStr", flex: 1, align: "right" },
+            ],
+            data.monthlyRevenue.map(r => ({
+              ...r,
+              subStr:   `৳${r.subscription.toLocaleString()}`,
+              batchStr: `৳${r.batch.toLocaleString()}`,
+              totalStr: `৳${(r.subscription + r.batch).toLocaleString()}`,
+            })),
+            COLORS.amber,
+          ),
+        }] : []),
+      ];
+
+      const html = buildReportHtml({
         lang,
-      );
+        title: t.revenue_title,
+        subtitle: t.revenue_subtitle,
+        meta: [
+          { label: t.period, value: dateLabel  },
+          { label: t.plan,   value: planLabel  },
+          { label: t.status, value: statusLabel },
+        ],
+        logoBase64,
+        sections,
+      });
 
-      // ── KPI Cards ────────────────────────────────────────────────────────
-      drawSectionHeading(page, t.revenue_summary);
-      drawKpiGrid(page, [
-        { label: t.revenue_total,            value: `৳${data.totalRevenue.toLocaleString()}` },
-        { label: t.revenue_subscription,   value: `৳${data.subscriptionRevenue.toLocaleString()}` },
-        { label: t.revenue_batch,           value: `৳${data.batchRevenue.toLocaleString()}` },
-        { label: t.revenue_total_subscribers,         value: String(data.totalSubscribers) },
-        { label: t.revenue_active_subscribers,      value: String(data.activeSubscribers) },
-        { label: t.revenue_batch_enrollments,   value: String(data.totalBatchEnrollments) },
-      ]);
-
-      // ── Plan Breakdown ────────────────────────────────────────────────────
-      if (data.planBreakdown.length > 0) {
-        drawSectionHeading(page, t.revenue_plan_breakdown);
-        drawTable(page, [
-          { header: lang === "bn" ? "প্ল্যানের নাম" : "Plan Name", key: "name",       width: 85 },
-          { header: lang === "bn" ? "গ্রাহক" : "Subscribers",        key: "count",      width: 30, align: "right" },
-          { header: lang === "bn" ? "আয় (৳)" : "Revenue (৳)",        key: "revenueStr", width: 40, align: "right" },
-          { header: t.share,        key: "pct",        width: 25, align: "right" },
-        ], data.planBreakdown.map(r => ({
-          ...r,
-          revenueStr: `৳${r.revenue.toLocaleString()}`,
-          pct: data.subscriptionRevenue > 0
-            ? `${Math.round((r.revenue / data.subscriptionRevenue) * 100)}%`
-            : "০%",
-        })));
-      }
-
-      // ── Batch Breakdown ───────────────────────────────────────────────────
-      if (data.batchBreakdown.length > 0) {
-        drawSectionHeading(page, t.revenue_batch_breakdown);
-        drawTable(page, [
-          { header: lang === "bn" ? "ব্যাচের নাম" : "Batch Name",    key: "name",       width: 90 },
-          { header: lang === "bn" ? "এনরোল্ড" : "Enrolled",        key: "enrolled",   width: 25, align: "right" },
-          { header: lang === "bn" ? "মূল্য (৳)" : "Price (৳)",       key: "priceStr",   width: 30, align: "right" },
-          { header: lang === "bn" ? "মোট আয় (৳)" : "Total (৳)",     key: "revenueStr", width: 35, align: "right" },
-        ], data.batchBreakdown.map(r => ({
-          ...r,
-          priceStr:   r.price != null ? `৳${r.price.toLocaleString()}` : "—",
-          revenueStr: `৳${r.revenue.toLocaleString()}`,
-        })), BRAND.teal as [number, number, number]);
-      }
-
-      // ── Monthly Trend ─────────────────────────────────────────────────────
-      if (data.monthlyRevenue.length > 0) {
-        drawSectionHeading(page, t.revenue_monthly_trend);
-        drawTable(page, [
-          { header: t.month,                  key: "month",    width: 55 },
-          { header: lang === "bn" ? "সাবস্ক্রিপশন আয় (৳)" : "Subscription (৳)", key: "subStr",   width: 55, align: "right" },
-          { header: lang === "bn" ? "ব্যাচ আয় (৳)" : "Batch (৳)",         key: "batchStr", width: 45, align: "right" },
-          { header: lang === "bn" ? "মোট (৳)" : "Total (৳)",               key: "totalStr", width: 25, align: "right" },
-        ], data.monthlyRevenue.map(r => ({
-          ...r,
-          subStr:   `৳${r.subscription.toLocaleString()}`,
-          batchStr: `৳${r.batch.toLocaleString()}`,
-          totalStr: `৳${(r.subscription + r.batch).toLocaleString()}`,
-        })), BRAND.amber as [number, number, number]);
-      }
-
-      finalizePages(page.doc, lang);
       const fileName = `ProshnoBank_Revenue_${new Date().toISOString().slice(0, 10)}.pdf`;
-      page.doc.save(fileName);
+      await htmlToPdf(html, fileName);
       const successMsg = lang === "bn" ? "রিপোর্ট তৈরি হয়েছে" : "Report generated";
       toast({ title: successMsg, description: fileName });
     } catch (err: any) {
       const errorMsg = lang === "bn" ? "PDF তৈরি করতে ব্যর্থ" : "Failed to generate PDF";
-      toast({ title: "Error", description: errorMsg + ": " + err.message, variant: "destructive" });
+      toast({ title: "Error", description: `${errorMsg}: ${err.message}`, variant: "destructive" });
     } finally {
       setGenerating(false);
     }

@@ -195,22 +195,18 @@ export default function AdminAnalyticsTab() {
     if (!data) return;
     setGenerating(true);
     try {
-      const { default: jsPDF } = await import("jspdf");
       const {
-        createReport, finalizePages,
-        drawSectionHeading, drawKpiGrid, drawTable,
-        BRAND, i18n,
-      } = await import("@/lib/reportUtils");
+        i18n, buildReportHtml, buildKpiGrid, buildTable, htmlToPdf, COLORS,
+      } = await import("@/lib/reportHtmlUtils");
 
-      // Detect language from user's browser or localStorage
       const lang = (localStorage.getItem("appLanguage") ?? navigator.language.split("-")[0]) === "bn" ? "bn" : "en";
       const t = i18n[lang];
 
       const dateLabel =
-        filters.dateRange === "7d" ? (lang === "bn" ? "গত ৭ দিন" : "Last 7 Days") :
+        filters.dateRange === "7d"  ? (lang === "bn" ? "গত ৭ দিন"  : "Last 7 Days")  :
         filters.dateRange === "30d" ? (lang === "bn" ? "গত ৩০ দিন" : "Last 30 Days") :
         filters.dateRange === "90d" ? (lang === "bn" ? "গত ৯০ দিন" : "Last 90 Days") :
-        (lang === "bn" ? "সর্বকালীন" : "All Time");
+                                      (lang === "bn" ? "সর্বকালীন" : "All Time");
       const catLabel = filters.category === "all"
         ? t.all
         : (categories.find(c => c.id === filters.category)?.name ?? filters.category);
@@ -218,80 +214,106 @@ export default function AdminAnalyticsTab() {
         ? t.all
         : (lang === "bn" ? (DIFFICULTY_LABELS[filters.difficulty] ?? filters.difficulty) : filters.difficulty);
 
-      const page = await createReport(
-        jsPDF,
-        t.analytics_title,
-        t.analytics_subtitle,
-        [
-          { label: t.analytics_period, value: dateLabel },
-          { label: t.analytics_category, value: catLabel },
-          { label: t.analytics_difficulty, value: diffLabel },
-        ],
-        lang,
-      );
+      // Load logo as base64
+      const logoBase64 = await fetch("/proshnobank.png")
+        .then(r => r.blob())
+        .then(b => new Promise<string>(res => { const fr = new FileReader(); fr.onload = () => res(fr.result as string); fr.readAsDataURL(b); }))
+        .catch(() => undefined);
 
-      // ── KPI Cards ──────────────────────────────────────────────────────────
-      drawSectionHeading(page, t.analytics_summary);
-      drawKpiGrid(page, [
-        { label: t.analytics_total_questions, value: String(data.totalQuestions) },
-        { label: t.analytics_total_users,    value: String(data.totalUsers) },
-        { label: t.analytics_total_attempts,   value: String(data.totalAttempts) },
-        { label: t.analytics_avg_accuracy,   value: `${data.avgAccuracyPct}%` },
-        { label: t.analytics_categories,     value: String(data.totalCategories) },
-        { label: t.analytics_subjects,       value: String(data.totalSubjects) },
-      ]);
-
-      // ── Subject Breakdown Table ─────────────────────────────────────────────
-      drawSectionHeading(page, t.analytics_subject_breakdown);
+      // ── Sections ────────────────────────────────────────────────────────────
       const totalQ = data.subjectBreakdown.reduce((s, r) => s + r.questions, 0) || 1;
-      drawTable(page, [
-        { header: lang === "bn" ? "বিষয়" : "Subject",         key: "name",      width: 75 },
-        { header: lang === "bn" ? "প্রশ্ন সংখ্যা" : "Questions", key: "questions", width: 30, align: "right" },
-        { header: lang === "bn" ? "পরীক্ষার সংখ্যা" : "Attempts", key: "attempts", width: 35, align: "right" },
-        { header: t.share, key: "share",     width: 22, align: "right" },
-        { header: lang === "bn" ? "গড় স্কোর" : "Avg Score",      key: "avgScore",  width: 18, align: "right" },
-      ], data.subjectBreakdown.map(r => ({
-        ...r,
-        share: `${Math.round((r.questions / totalQ) * 100)}%`,
-        avgScore: r.avgScore != null ? `${Math.round(r.avgScore)}%` : "—",
-      })));
-
-      // ── Difficulty Distribution ─────────────────────────────────────────────
-      drawSectionHeading(page, t.analytics_difficulty_dist);
       const totalDiff = data.difficultyBreakdown.reduce((s, r) => s + r.value, 0) || 1;
-      drawTable(page, [
-        { header: lang === "bn" ? "কঠিনতার স্তর" : "Difficulty", key: "name",  width: 80 },
-        { header: lang === "bn" ? "প্রশ্ন সংখ্যা" : "Count", key: "value", width: 40, align: "right" },
-        { header: t.percentage, key: "pct",   width: 40, align: "right" },
-      ], data.difficultyBreakdown.map(r => ({
-        ...r,
-        pct: `${Math.round((r.value / totalDiff) * 100)}%`,
-      })), BRAND.teal as [number, number, number]);
 
-      // ── Score Band Distribution ─────────────────────────────────────────────
-      if (data.totalAttempts > 0) {
-        drawSectionHeading(page, t.analytics_score_dist);
-        drawTable(page, [
-          { header: lang === "bn" ? "স্কোর রেঞ্জ" : "Score Range",   key: "name",  width: 80 },
-          { header: lang === "bn" ? "শিক্ষার্থী সংখ্যা" : "Count", key: "value", width: 40, align: "right" },
-          { header: t.percentage, key: "pct",   width: 40, align: "right" },
-        ], data.scoreBandBreakdown.map(r => ({
-          ...r,
-          pct: `${data.totalAttempts > 0 ? Math.round((r.value / data.totalAttempts) * 100) : 0}%`,
-        })), BRAND.amber as [number, number, number]);
-      }
+      const sections = [
+        // KPI
+        {
+          heading: t.analytics_summary,
+          content: buildKpiGrid([
+            { label: t.analytics_total_questions, value: String(data.totalQuestions) },
+            { label: t.analytics_total_users,     value: String(data.totalUsers) },
+            { label: t.analytics_total_attempts,  value: String(data.totalAttempts) },
+            { label: t.analytics_avg_accuracy,    value: `${data.avgAccuracyPct}%` },
+            { label: t.analytics_categories,      value: String(data.totalCategories) },
+            { label: t.analytics_subjects,        value: String(data.totalSubjects) },
+          ]),
+        },
+        // Subject breakdown
+        {
+          heading: t.analytics_subject_breakdown,
+          content: buildTable(
+            [
+              { header: t.subject,    key: "name",      flex: 3 },
+              { header: t.questions,  key: "questions", flex: 1, align: "right" },
+              { header: t.attempts,   key: "attempts",  flex: 1, align: "right" },
+              { header: t.share,      key: "share",     flex: 1, align: "right" },
+              { header: t.avg_score,  key: "avgScore",  flex: 1, align: "right" },
+            ],
+            data.subjectBreakdown.map(r => ({
+              ...r,
+              share: `${Math.round((r.questions / totalQ) * 100)}%`,
+              avgScore: (r as any).avgScore != null ? `${Math.round((r as any).avgScore)}%` : "—",
+            })),
+          ),
+        },
+        // Difficulty
+        {
+          heading: t.analytics_difficulty_dist,
+          content: buildTable(
+            [
+              { header: t.difficulty_level, key: "name",  flex: 3 },
+              { header: t.count,            key: "value", flex: 1, align: "right" },
+              { header: t.percentage,       key: "pct",   flex: 1, align: "right" },
+            ],
+            data.difficultyBreakdown.map(r => ({
+              ...r,
+              pct: `${Math.round((r.value / totalDiff) * 100)}%`,
+            })),
+            COLORS.teal,
+          ),
+        },
+        // Score bands
+        ...(data.totalAttempts > 0 ? [{
+          heading: t.analytics_score_dist,
+          content: buildTable(
+            [
+              { header: t.score_range, key: "name",  flex: 3 },
+              { header: t.students,    key: "value", flex: 1, align: "right" },
+              { header: t.percentage,  key: "pct",   flex: 1, align: "right" },
+            ],
+            data.scoreBandBreakdown.map(r => ({
+              ...r,
+              pct: `${data.totalAttempts > 0 ? Math.round((r.value / data.totalAttempts) * 100) : 0}%`,
+            })),
+            COLORS.amber,
+          ),
+        }] : []),
+        // Category
+        ...(data.categoryBreakdown.length > 0 ? [{
+          heading: t.analytics_category_breakdown,
+          content: buildTable(
+            [
+              { header: t.category,  key: "name",      flex: 4 },
+              { header: t.questions, key: "questions",  flex: 1, align: "right" },
+            ],
+            data.categoryBreakdown,
+          ),
+        }] : []),
+      ];
 
-      // ── Category Breakdown ──────────────────────────────────────────────────
-      if (data.categoryBreakdown.length > 0) {
-        drawSectionHeading(page, t.analytics_category_breakdown);
-        drawTable(page, [
-          { header: lang === "bn" ? "ক্যাটেগরি" : "Category",      key: "name",      width: 100 },
-          { header: lang === "bn" ? "প্রশ্ন সংখ্যা" : "Questions",  key: "questions", width: 60, align: "right" },
-        ], data.categoryBreakdown);
-      }
+      const html = buildReportHtml({
+        lang,
+        title: t.analytics_title,
+        subtitle: t.analytics_subtitle,
+        meta: [
+          { label: t.period,     value: dateLabel },
+          { label: t.category,   value: catLabel },
+          { label: t.difficulty, value: diffLabel },
+        ],
+        logoBase64,
+        sections,
+      });
 
-      finalizePages(page.doc, lang);
-      page.doc.save(`ProshnoBank_Analytics_${new Date().toISOString().slice(0, 10)}.pdf`);
+      await htmlToPdf(html, `ProshnoBank_Analytics_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error("[v0] PDF generation error:", err);
     } finally {
