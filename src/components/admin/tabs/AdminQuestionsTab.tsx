@@ -108,12 +108,10 @@ export default function AdminQuestionsTab() {
 
       const { data, error } = await query;
       if (error) {
-        console.error("[v0] fetchQuestions error:", error.message, error.details, error.hint);
         toast({ title: "Error", description: error.message || "প্রশ্ন লোড করতে ব্যর্থ", variant: "destructive" });
       }
       setQuestions(data || []);
-    } catch (err: any) {
-      console.error("[v0] fetchQuestions catch:", err);
+    } catch {
       toast({ title: "Error", description: "প্রশ্ন লোড করতে ব্যর্থ", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -136,7 +134,7 @@ export default function AdminQuestionsTab() {
     setFormData(prev => ({ ...prev, chapter_id: "" }));
   };
 
-  // ── Effects ──────────────────────────────────────────────────────────────────
+  // ── Effects ───────────────────────────��──────────────────────────────────────
   useEffect(() => { fetchCategories(); }, []);
   useEffect(() => { fetchSubjectsForFilter(selectedCategory); }, [selectedCategory]);
   useEffect(() => { fetchChaptersForFilter(selectedSubject); },  [selectedSubject]);
