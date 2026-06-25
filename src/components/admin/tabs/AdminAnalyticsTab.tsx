@@ -136,7 +136,7 @@ export default function AdminAnalyticsTab() {
       const categoryBreakdown = Object.entries(catMap).map(([name, questions]) => ({ name, questions })).sort((a, b) => b.questions - a.questions);
 
       // Score band
-      const bands: Record<string, number> = { "৮০%+": 0, "৬০-৮০%": 0, "৪০-৬০%": 0, "৪০%-এর নিচে": 0 };
+      const bands: Record<string, number> = { "৮০%+": 0, "৬০-৮০%": 0, "৪০-��০%": 0, "৪০%-এর নিচে": 0 };
       attempts.forEach(a => {
         const pct = a.max_score > 0 ? (a.score / a.max_score) * 100 : 0;
         if (pct >= 80) bands["৮০%+"]++;
@@ -196,209 +196,96 @@ export default function AdminAnalyticsTab() {
     setGenerating(true);
     try {
       const { default: jsPDF } = await import("jspdf");
-      const { default: html2canvas } = await import("html2canvas");
+      const {
+        createReport, finalizePages,
+        drawSectionHeading, drawKpiGrid, drawTable,
+        BRAND,
+      } = await import("@/lib/reportUtils");
 
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const W = 210;
-      const H = 297;
-      const margin = 15;
+      const dateLabel =
+        filters.dateRange === "7d" ? "গত ৭ দিন" :
+        filters.dateRange === "30d" ? "গত ৩০ দিন" :
+        filters.dateRange === "90d" ? "গত ৯০ দিন" : "সর্বকালীন";
+      const catLabel = filters.category === "all"
+        ? "সব ক্যাটেগরি"
+        : (categories.find(c => c.id === filters.category)?.name ?? filters.category);
+      const diffLabel = filters.difficulty === "all"
+        ? "সব কঠিনতা"
+        : (DIFFICULTY_LABELS[filters.difficulty] ?? filters.difficulty);
 
-      // ── Cover / Header ──
-      doc.setFillColor(37, 99, 235); // primary blue
-      doc.rect(0, 0, W, 40, "F");
+      const page = await createReport(
+        jsPDF,
+        "প্রশ্নব্যাংক — বিশ্লেষণ রিপোর্ট",
+        "পরীক্ষা কার্যক্রমের বিস্তারিত পরিসংখ্যান",
+        [
+          { label: "সময়সীমা", value: dateLabel },
+          { label: "ক্যাটেগরি", value: catLabel },
+          { label: "কঠিনতা", value: diffLabel },
+        ],
+      );
 
-      // Logo
-      try {
-        const img = new Image();
-        img.src = "/logo.png";
-        await new Promise((res) => { img.onload = res; img.onerror = res; });
-        doc.addImage(img, "PNG", margin, 8, 30, 24);
-      } catch { /* logo optional */ }
+      // ── KPI Cards ──────────────────────────────────────────────────────────
+      drawSectionHeading(page, "সারসংক্ষেপ (মূল পরিসংখ্যান)");
+      drawKpiGrid(page, [
+        { label: "মোট প্রশ্ন",       value: String(data.totalQuestions) },
+        { label: "মোট ব্যবহারকারী",  value: String(data.totalUsers) },
+        { label: "মোট পরীক্ষা",      value: String(data.totalAttempts) },
+        { label: "গড় নির্ভুলতা",    value: `${data.avgAccuracyPct}%` },
+        { label: "ক্যাটেগরি",        value: String(data.totalCategories) },
+        { label: "বিষয়",             value: String(data.totalSubjects) },
+      ]);
 
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(20);
-      doc.setFont("helvetica", "bold");
-      doc.text("ProshnoBank", 52, 20);
-      doc.setFontSize(10);
-      doc.setFont("helvetica", "normal");
-      doc.text("Bangladesh's Online Exam Platform", 52, 27);
+      // ── Subject Breakdown Table ─────────────────────────────────────────────
+      drawSectionHeading(page, "বিষয়ভিত্তিক বিশ্লেষণ");
+      const totalQ = data.subjectBreakdown.reduce((s, r) => s + r.questions, 0) || 1;
+      drawTable(page, [
+        { header: "বিষয়",         key: "name",      width: 75 },
+        { header: "প্রশ্ন সংখ্যা", key: "questions", width: 30, align: "right" },
+        { header: "পরীক্ষার সংখ্যা", key: "attempts", width: 35, align: "right" },
+        { header: "অংশ (%)",       key: "share",     width: 22, align: "right" },
+        { header: "গড় স্কোর",      key: "avgScore",  width: 18, align: "right" },
+      ], data.subjectBreakdown.map(r => ({
+        ...r,
+        share: `${Math.round((r.questions / totalQ) * 100)}%`,
+        avgScore: r.avgScore != null ? `${Math.round(r.avgScore)}%` : "—",
+      })));
 
-      // Report title
-      doc.setFontSize(11);
-      doc.text(`Analytics Report  |  Generated: ${new Date().toLocaleDateString("en-GB")}`, 52, 34);
-
-      // ── Filter info ──
-      doc.setTextColor(100, 116, 139);
-      doc.setFontSize(9);
-      const filterLabel = filters.dateRange === "7d" ? "Last 7 Days" : filters.dateRange === "30d" ? "Last 30 Days" : filters.dateRange === "90d" ? "Last 90 Days" : "All Time";
-      doc.text(`Period: ${filterLabel}   |   Category: ${filters.category === "all" ? "All" : categories.find(c => c.id === filters.category)?.name || filters.category}   |   Difficulty: ${filters.difficulty === "all" ? "All" : DIFFICULTY_LABELS[filters.difficulty] || filters.difficulty}`, margin, 48);
-
-      // ── KPI grid ──
-      const kpis = [
-        { label: "Total Questions", value: data.totalQuestions },
-        { label: "Total Users", value: data.totalUsers },
-        { label: "Total Attempts", value: data.totalAttempts },
-        { label: "Avg Accuracy", value: `${data.avgAccuracyPct}%` },
-        { label: "Categories", value: data.totalCategories },
-        { label: "Subjects", value: data.totalSubjects },
-      ];
-
-      const kpiCols = 3;
-      const kpiW = (W - margin * 2) / kpiCols;
-      const kpiStartY = 54;
-
-      kpis.forEach((kpi, i) => {
-        const col = i % kpiCols;
-        const row = Math.floor(i / kpiCols);
-        const x = margin + col * kpiW;
-        const y = kpiStartY + row * 22;
-
-        doc.setFillColor(248, 250, 252);
-        doc.roundedRect(x + 1, y, kpiW - 2, 19, 2, 2, "F");
-        doc.setDrawColor(226, 232, 240);
-        doc.roundedRect(x + 1, y, kpiW - 2, 19, 2, 2, "S");
-
-        doc.setTextColor(100, 116, 139);
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "normal");
-        doc.text(kpi.label, x + 5, y + 7);
-
-        doc.setTextColor(37, 99, 235);
-        doc.setFontSize(15);
-        doc.setFont("helvetica", "bold");
-        doc.text(String(kpi.value), x + 5, y + 15);
-      });
-
-      let yPos = kpiStartY + 2 * 22 + 8;
-
-      // ── Subject breakdown table ──
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("Subject Breakdown", margin, yPos);
-      yPos += 6;
-
-      // Table header
-      doc.setFillColor(37, 99, 235);
-      doc.rect(margin, yPos, W - margin * 2, 7, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.text("Subject", margin + 3, yPos + 4.5);
-      doc.text("Questions", margin + 80, yPos + 4.5);
-      doc.text("Attempts", margin + 120, yPos + 4.5);
-      doc.text("Share", margin + 155, yPos + 4.5);
-      yPos += 7;
-
-      const totalQ2 = data.subjectBreakdown.reduce((s, r) => s + r.questions, 0) || 1;
-      data.subjectBreakdown.forEach((row, i) => {
-        const bg = i % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
-        doc.setFillColor(bg[0], bg[1], bg[2]);
-        doc.rect(margin, yPos, W - margin * 2, 7, "F");
-
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text(row.name.length > 30 ? row.name.slice(0, 28) + "…" : row.name, margin + 3, yPos + 4.5);
-        doc.text(String(row.questions), margin + 80, yPos + 4.5);
-        doc.text(String(row.attempts), margin + 120, yPos + 4.5);
-        doc.text(`${Math.round((row.questions / totalQ2) * 100)}%`, margin + 155, yPos + 4.5);
-
-        // Progress bar
-        const barW = 25 * (row.questions / Math.max(...data.subjectBreakdown.map(s => s.questions), 1));
-        doc.setFillColor(37, 99, 235);
-        doc.rect(margin + 167, yPos + 2, barW, 3, "F");
-
-        yPos += 7;
-        if (yPos > H - 40) {
-          doc.addPage();
-          yPos = 20;
-        }
-      });
-
-      yPos += 8;
-
-      // ── Difficulty breakdown table ──
-      doc.setTextColor(30, 41, 59);
-      doc.setFontSize(11);
-      doc.setFont("helvetica", "bold");
-      doc.text("Question Difficulty Distribution", margin, yPos);
-      yPos += 6;
-
-      doc.setFillColor(37, 99, 235);
-      doc.rect(margin, yPos, W - margin * 2, 7, "F");
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.text("Difficulty", margin + 3, yPos + 4.5);
-      doc.text("Count", margin + 80, yPos + 4.5);
-      doc.text("Percentage", margin + 120, yPos + 4.5);
-      yPos += 7;
-
+      // ── Difficulty Distribution ─────────────────────────────────────────────
+      drawSectionHeading(page, "প্রশ্নের কঠিনতার স্তর");
       const totalDiff = data.difficultyBreakdown.reduce((s, r) => s + r.value, 0) || 1;
-      data.difficultyBreakdown.forEach((row, i) => {
-        const bg = i % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
-        doc.setFillColor(bg[0], bg[1], bg[2]);
-        doc.rect(margin, yPos, W - margin * 2, 7, "F");
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "normal");
-        doc.text(row.name, margin + 3, yPos + 4.5);
-        doc.text(String(row.value), margin + 80, yPos + 4.5);
-        doc.text(`${Math.round((row.value / totalDiff) * 100)}%`, margin + 120, yPos + 4.5);
-        yPos += 7;
-      });
+      drawTable(page, [
+        { header: "কঠিনতার স্তর", key: "name",  width: 80 },
+        { header: "প্রশ্ন সংখ্যা", key: "value", width: 40, align: "right" },
+        { header: "শতাংশ",         key: "pct",   width: 40, align: "right" },
+      ], data.difficultyBreakdown.map(r => ({
+        ...r,
+        pct: `${Math.round((r.value / totalDiff) * 100)}%`,
+      })), BRAND.teal as [number, number, number]);
 
-      yPos += 8;
-
-      // ── Score bands ──
+      // ── Score Band Distribution ─────────────────────────────────────────────
       if (data.totalAttempts > 0) {
-        doc.setTextColor(30, 41, 59);
-        doc.setFontSize(11);
-        doc.setFont("helvetica", "bold");
-        doc.text("Score Band Distribution", margin, yPos);
-        yPos += 6;
-
-        doc.setFillColor(37, 99, 235);
-        doc.rect(margin, yPos, W - margin * 2, 7, "F");
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(8);
-        doc.setFont("helvetica", "bold");
-        doc.text("Score Range", margin + 3, yPos + 4.5);
-        doc.text("Students", margin + 80, yPos + 4.5);
-        doc.text("Percentage", margin + 120, yPos + 4.5);
-        yPos += 7;
-
-        data.scoreBandBreakdown.forEach((row, i) => {
-          const bg = i % 2 === 0 ? [255, 255, 255] : [248, 250, 252];
-          doc.setFillColor(bg[0], bg[1], bg[2]);
-          doc.rect(margin, yPos, W - margin * 2, 7, "F");
-          doc.setTextColor(30, 41, 59);
-          doc.setFontSize(8);
-          doc.setFont("helvetica", "normal");
-          doc.text(row.name, margin + 3, yPos + 4.5);
-          doc.text(String(row.value), margin + 80, yPos + 4.5);
-          doc.text(`${data.totalAttempts > 0 ? Math.round((row.value / data.totalAttempts) * 100) : 0}%`, margin + 120, yPos + 4.5);
-          yPos += 7;
-        });
+        drawSectionHeading(page, "স্কোর বিতরণ");
+        drawTable(page, [
+          { header: "স্কোর রেঞ্জ",   key: "name",  width: 80 },
+          { header: "শিক্ষার্থী সংখ্যা", key: "value", width: 40, align: "right" },
+          { header: "শতাংশ",          key: "pct",   width: 40, align: "right" },
+        ], data.scoreBandBreakdown.map(r => ({
+          ...r,
+          pct: `${data.totalAttempts > 0 ? Math.round((r.value / data.totalAttempts) * 100) : 0}%`,
+        })), BRAND.amber as [number, number, number]);
       }
 
-      // ── Footer ──
-      const pageCount = doc.getNumberOfPages();
-      for (let p = 1; p <= pageCount; p++) {
-        doc.setPage(p);
-        doc.setFillColor(248, 250, 252);
-        doc.rect(0, H - 12, W, 12, "F");
-        doc.setTextColor(148, 163, 184);
-        doc.setFontSize(7.5);
-        doc.setFont("helvetica", "normal");
-        doc.text("ProshnoBank — Confidential Report", margin, H - 5);
-        doc.text(`Page ${p} of ${pageCount}`, W - margin - 20, H - 5);
-        doc.text(`Generated: ${new Date().toLocaleString("en-GB")}`, W / 2 - 20, H - 5);
+      // ── Category Breakdown ──────────────────────────────────────────────────
+      if (data.categoryBreakdown.length > 0) {
+        drawSectionHeading(page, "ক্যাটেগরিভিত্তিক প্রশ্নের সংখ্যা");
+        drawTable(page, [
+          { header: "ক্যাটেগরি",      key: "name",      width: 100 },
+          { header: "প্রশ্ন সংখ্যা",  key: "questions", width: 60, align: "right" },
+        ], data.categoryBreakdown);
       }
 
-      const fileName = `ProshnoBank_Report_${new Date().toISOString().slice(0, 10)}.pdf`;
-      doc.save(fileName);
+      finalizePages(page.doc);
+      page.doc.save(`ProshnoBank_Analytics_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error("[v0] PDF generation error:", err);
     } finally {
