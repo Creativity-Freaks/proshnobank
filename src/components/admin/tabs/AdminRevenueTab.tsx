@@ -1,0 +1,645 @@
+import { useEffect, useState, useCallback, useRef } from "react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  Loader2, Download, RefreshCw, Banknote, Users, TrendingUp,
+  CreditCard, BookOpen, BarChart3, Filter,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell, AreaChart, Area, Legend,
+} from "recharts";
+
+// ─── Types ─────────────────────────────────────────────────────────────────────
+interface RevenueData {
+  totalRevenue: number;
+  subscriptionRevenue: number;
+  batchRevenue: number;
+  totalSubscribers: number;
+  activeSubscribers: number;
+  totalBatchEnrollments: number;
+  planBreakdown: { name: string; count: number; revenue: number }[];
+  batchBreakdown: { name: string; enrolled: number; revenue: number }[];
+  monthlyRevenue: { month: string; subscription: number; batch: number; total: number }[];
+  planTypeBreakdown: { name: string; value: number }[];
+  statusBreakdown: { name: string; value: number }[];
+}
+
+interface Filters {
+  dateRange: "7d" | "30d" | "90d" | "all";
+  planType: string;
+  status: string;
+}
+
+const CHART_COLORS = ["#2563eb", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#ec4899"];
+const MONTHS_BN = ["জানু", "ফেব্রু", "মার্চ", "এপ্রিল", "মে", "জুন", "জুলাই", "আগস্ট", "সেপ্ট", "অক্টো", "নভে", "ডিসে"];
+
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="bg-background border border-border rounded-lg shadow-lg p-3 text-sm">
+      <p className="font-semibold mb-1">{label}</p>
+      {payload.map((p: any, i: number) => (
+        <p key={i} style={{ color: p.color }}>
+          {p.name}: <span className="font-bold">৳{Number(p.value).toLocaleString()}</span>
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const PieTooltip = ({ active, payload }: any) => {
+  if (!active || !payload?.length) return null;
+  const d = payload[0];
+  return (
+    <div className="bg-background border border-border rounded-lg shadow-lg p-3 text-sm">
+      <p style={{ color: d.payload.fill }} className="font-semibold">{d.name}</p>
+      <p>সংখ্যা: <strong>{d.value}</strong></p>
+    </div>
+  );
+};
+
+// ─── Main Component ─────────────────────────────────────────────────────────────
+export default function AdminRevenueTab() {
+  const { toast } = useToast();
+  const [data, setData] = useState<RevenueData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [generating, setGenerating] = useState(false);
+  const [filters, setFilters] = useState<Filters>({ dateRange: "30d", planType: "all", status: "all" });
+  const [planTypes, setPlanTypes] = useState<{ id: string; name: string; plan_type: string }[]>([]);
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  // ── Load plan types for filter ────────────────────────────────────────────────
+  useEffect(() => {
+    supabase.from("subscription_plans").select("id, name, plan_type").order("sort_order")
+      .then(({ data: plans }) => setPlanTypes(plans || []));
+  }, []);
+
+  // ── Fetch data ─────────────────────────────────────────────────────────────────
+  const fetchData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const now = new Date();
+      const dateFrom = filters.dateRange === "7d"
+        ? new Date(now.getTime() - 7 * 86400000).toISOString()
+        : filters.dateRange === "30d"
+        ? new Date(now.getTime() - 30 * 86400000).toISOString()
+        : filters.dateRange === "90d"
+        ? new Date(now.getTime() - 90 * 86400000).toISOString()
+        : null;
+
+      // Subscriptions query
+      let subQuery = supabase
+        .from("user_subscriptions")
+        .select("id, status, billing_cycle, started_at, plan_id, subscription_plans(id, name, plan_type, price_monthly, price_yearly)");
+      if (dateFrom) subQuery = subQuery.gte("started_at", dateFrom);
+      if (filters.planType !== "all") subQuery = subQuery.eq("plan_id", filters.planType);
+      if (filters.status !== "all") subQuery = subQuery.eq("status", filters.status);
+
+      // Batch enrollments query
+      let batchQuery = supabase
+        .from("exam_batch_enrollments")
+        .select("id, status, created_at, batch_id, exam_batches(id, title, price)");
+      if (dateFrom) batchQuery = batchQuery.gte("created_at", dateFrom);
+
+      const [subRes, batchRes] = await Promise.all([subQuery, batchQuery]);
+
+      const subs = (subRes.data || []) as any[];
+      const enrollments = (batchRes.data || []) as any[];
+
+      // ── Subscription revenue ────────────────────────────────────────────────
+      let subscriptionRevenue = 0;
+      const planMap: Record<string, { name: string; count: number; revenue: number }> = {};
+
+      subs.forEach(s => {
+        const plan = s.subscription_plans;
+        if (!plan) return;
+        const price = s.billing_cycle === "yearly"
+          ? Number(plan.price_yearly || 0)
+          : Number(plan.price_monthly || 0);
+        subscriptionRevenue += price;
+        if (!planMap[plan.id]) planMap[plan.id] = { name: plan.name, count: 0, revenue: 0 };
+        planMap[plan.id].count += 1;
+        planMap[plan.id].revenue += price;
+      });
+
+      // ── Batch revenue ───────────────────────────────────────────────────────
+      let batchRevenue = 0;
+      const batchMap: Record<string, { name: string; enrolled: number; revenue: number }> = {};
+
+      enrollments.forEach(e => {
+        const batch = e.exam_batches;
+        if (!batch) return;
+        const price = Number(batch.price || 0);
+        batchRevenue += price;
+        if (!batchMap[batch.id]) batchMap[batch.id] = { name: batch.title, enrolled: 0, revenue: 0 };
+        batchMap[batch.id].enrolled += 1;
+        batchMap[batch.id].revenue += price;
+      });
+
+      // ── Monthly breakdown (last 6 months) ─────────────────────────────────
+      const monthlyMap: Record<string, { subscription: number; batch: number }> = {};
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        monthlyMap[key] = { subscription: 0, batch: 0 };
+      }
+
+      subs.forEach(s => {
+        const d = new Date(s.started_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (monthlyMap[key]) {
+          const plan = s.subscription_plans;
+          const price = s.billing_cycle === "yearly"
+            ? Number(plan?.price_yearly || 0)
+            : Number(plan?.price_monthly || 0);
+          monthlyMap[key].subscription += price;
+        }
+      });
+
+      enrollments.forEach(e => {
+        const d = new Date(e.created_at);
+        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+        if (monthlyMap[key]) {
+          monthlyMap[key].batch += Number(e.exam_batches?.price || 0);
+        }
+      });
+
+      const monthlyRevenue = Object.entries(monthlyMap).map(([key, val]) => {
+        const [y, m] = key.split("-");
+        return {
+          month: MONTHS_BN[parseInt(m) - 1] + " " + y,
+          subscription: val.subscription,
+          batch: val.batch,
+          total: val.subscription + val.batch,
+        };
+      });
+
+      // ── Plan type distribution ─────────────────────────────────────────────
+      const planTypeMap: Record<string, number> = {};
+      subs.forEach(s => {
+        const pt = s.subscription_plans?.plan_type || "unknown";
+        planTypeMap[pt] = (planTypeMap[pt] || 0) + 1;
+      });
+      const planTypeBreakdown = Object.entries(planTypeMap).map(([k, v]) => ({
+        name: planTypes.find(p => p.plan_type === k)?.name || k, value: v,
+      }));
+
+      // ── Status distribution ────────────────────────────────────────────────
+      const statusMap: Record<string, number> = {};
+      subs.forEach(s => { statusMap[s.status] = (statusMap[s.status] || 0) + 1; });
+      const statusBreakdown = Object.entries(statusMap).map(([k, v]) => ({
+        name: k === "active" ? "সক্রিয়" : k === "cancelled" ? "বাতিল" : k === "pending" ? "অপেক্ষমাণ" : k,
+        value: v,
+      }));
+
+      setData({
+        totalRevenue: subscriptionRevenue + batchRevenue,
+        subscriptionRevenue,
+        batchRevenue,
+        totalSubscribers: subs.length,
+        activeSubscribers: subs.filter(s => s.status === "active").length,
+        totalBatchEnrollments: enrollments.length,
+        planBreakdown: Object.values(planMap).sort((a, b) => b.revenue - a.revenue),
+        batchBreakdown: Object.values(batchMap).sort((a, b) => b.revenue - a.revenue).slice(0, 10),
+        monthlyRevenue,
+        planTypeBreakdown,
+        statusBreakdown,
+      });
+    } catch (err: any) {
+      toast({ title: "Error", description: err.message, variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, planTypes, toast]);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+
+  // ── PDF Report Generator ──────────────────────────────────────────────────────
+  const generatePDF = async () => {
+    if (!data) return;
+    setGenerating(true);
+    try {
+      const { default: jsPDF } = await import("jspdf");
+      const { default: html2canvas } = await import("html2canvas");
+
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const W = 210; const M = 15;
+
+      // ── Header ─────────────────────────────────────────────────────────────
+      doc.setFillColor(37, 99, 235);
+      doc.rect(0, 0, W, 32, "F");
+
+      try {
+        const img = new Image(); img.crossOrigin = "anonymous";
+        img.src = "/logo.png";
+        await new Promise((r, j) => { img.onload = r; img.onerror = j; });
+        doc.addImage(img, "PNG", M, 6, 20, 20);
+      } catch { /* skip logo */ }
+
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18); doc.setFont(undefined, "bold");
+      doc.text("ProshnoBank — রেভিনিউ রিপোর্ট", 40, 16);
+      doc.setFontSize(9); doc.setFont(undefined, "normal");
+      doc.text(`তৈরির তারিখ: ${new Date().toLocaleString("bn-BD")}`, 40, 24);
+
+      const dateLabel = filters.dateRange === "7d" ? "গত ৭ দিন" : filters.dateRange === "30d" ? "গত ৩০ দিন" : filters.dateRange === "90d" ? "গত ৯০ দিন" : "সর্বকালীন";
+      doc.text(`সময়সীমা: ${dateLabel}`, W - M - 40, 24);
+
+      let y = 42;
+      doc.setTextColor(0, 0, 0);
+
+      // ── KPI Section ────────────────────────────────────────────────────────
+      doc.setFontSize(12); doc.setFont(undefined, "bold");
+      doc.setFillColor(241, 245, 249);
+      doc.rect(M, y - 4, W - M * 2, 8, "F");
+      doc.text("সারসংক্ষেপ (KPI)", M + 3, y + 1);
+      y += 10;
+
+      const kpis = [
+        ["মোট আয়", `৳${data.totalRevenue.toLocaleString()}`],
+        ["সাবস্ক্রিপশন আয়", `৳${data.subscriptionRevenue.toLocaleString()}`],
+        ["ব্যাচ আয়", `৳${data.batchRevenue.toLocaleString()}`],
+        ["মোট গ্রাহক", String(data.totalSubscribers)],
+        ["সক্রিয় গ্রাহক", String(data.activeSubscribers)],
+        ["ব্যাচ এনরোলমেন্ট", String(data.totalBatchEnrollments)],
+      ];
+
+      const colW = (W - M * 2) / 3;
+      kpis.forEach(([label, val], i) => {
+        const cx = M + (i % 3) * colW;
+        const cy = y + Math.floor(i / 3) * 18;
+        doc.setFillColor(255, 255, 255);
+        doc.setDrawColor(226, 232, 240);
+        doc.roundedRect(cx, cy, colW - 2, 15, 2, 2, "FD");
+        doc.setFontSize(7); doc.setFont(undefined, "normal"); doc.setTextColor(100, 116, 139);
+        doc.text(label, cx + 4, cy + 6);
+        doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
+        doc.text(val, cx + 4, cy + 13);
+      });
+      y += Math.ceil(kpis.length / 3) * 18 + 8;
+
+      // ── Plan Breakdown Table ───────────────────────────────────────────────
+      if (data.planBreakdown.length > 0) {
+        doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(0, 0, 0);
+        doc.setFillColor(241, 245, 249);
+        doc.rect(M, y - 4, W - M * 2, 8, "F");
+        doc.text("প্ল্যান অনুযায়ী সাবস্ক্রিপশন", M + 3, y + 1);
+        y += 10;
+
+        const headers = ["প্ল্যানের নাম", "গ্রাহক সংখ্যা", "আয় (৳)"];
+        const colWidths = [90, 40, 45];
+        doc.setFontSize(8); doc.setFont(undefined, "bold");
+        doc.setFillColor(37, 99, 235); doc.setTextColor(255, 255, 255);
+        doc.rect(M, y, W - M * 2, 7, "F");
+        let xh = M + 2;
+        headers.forEach((h, i) => { doc.text(h, xh, y + 5); xh += colWidths[i]; });
+        y += 7;
+
+        data.planBreakdown.forEach((row, idx) => {
+          doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
+          doc.setTextColor(0, 0, 0);
+          doc.setFont(undefined, "normal");
+          doc.rect(M, y, W - M * 2, 7, "F");
+          let xr = M + 2;
+          [row.name, String(row.count), `৳${row.revenue.toLocaleString()}`].forEach((v, i) => {
+            doc.text(String(v), xr, y + 5);
+            xr += colWidths[i];
+          });
+          y += 7;
+          if (y > 260) { doc.addPage(); y = 20; }
+        });
+        y += 8;
+      }
+
+      // ── Batch Breakdown Table ──────────────────────────────────────────────
+      if (data.batchBreakdown.length > 0) {
+        if (y > 220) { doc.addPage(); y = 20; }
+        doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(0, 0, 0);
+        doc.setFillColor(241, 245, 249);
+        doc.rect(M, y - 4, W - M * 2, 8, "F");
+        doc.text("ব্যাচ অনুযায়ী আয়", M + 3, y + 1);
+        y += 10;
+
+        const headers2 = ["ব্যাচের নাম", "এনরোল্ড", "আয় (৳)"];
+        const colW2 = [90, 40, 45];
+        doc.setFontSize(8); doc.setFont(undefined, "bold");
+        doc.setFillColor(16, 185, 129); doc.setTextColor(255, 255, 255);
+        doc.rect(M, y, W - M * 2, 7, "F");
+        let xh2 = M + 2;
+        headers2.forEach((h, i) => { doc.text(h, xh2, y + 5); xh2 += colW2[i]; });
+        y += 7;
+
+        data.batchBreakdown.forEach((row, idx) => {
+          doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
+          doc.setTextColor(0, 0, 0); doc.setFont(undefined, "normal");
+          doc.rect(M, y, W - M * 2, 7, "F");
+          let xr2 = M + 2;
+          [row.name.slice(0, 38), String(row.enrolled), `৳${row.revenue.toLocaleString()}`].forEach((v, i) => {
+            doc.text(v, xr2, y + 5); xr2 += colW2[i];
+          });
+          y += 7;
+          if (y > 260) { doc.addPage(); y = 20; }
+        });
+      }
+
+      // ── Footer ──────────────────────────────────────────────────────────────
+      const pageCount = doc.getNumberOfPages();
+      for (let i = 1; i <= pageCount; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7); doc.setTextColor(156, 163, 175);
+        doc.text(`পৃষ্ঠা ${i} / ${pageCount}  |  ProshnoBank Admin Report  |  ${new Date().toLocaleDateString("bn-BD")}`, W / 2, 292, { align: "center" });
+      }
+
+      const fileName = `proshnobank-revenue-${new Date().toISOString().slice(0, 10)}.pdf`;
+      doc.save(fileName);
+      toast({ title: "রিপোর্ট তৈরি হয়েছে", description: fileName });
+    } catch (err: any) {
+      toast({ title: "Error", description: "PDF তৈরি করতে ব্যর্থ: " + err.message, variant: "destructive" });
+    } finally {
+      setGenerating(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!data) return null;
+
+  const dateRangeOptions = [
+    { value: "7d", label: "গত ৭ দিন" },
+    { value: "30d", label: "গত ৩০ দিন" },
+    { value: "90d", label: "গত ৯০ দিন" },
+    { value: "all", label: "সর্বকালীন" },
+  ];
+
+  const statusOptions = [
+    { value: "all", label: "সব স্ট্যাটাস" },
+    { value: "active", label: "সক্রিয়" },
+    { value: "cancelled", label: "বাতিল" },
+    { value: "pending", label: "অপেক্ষমাণ" },
+  ];
+
+  return (
+    <div className="space-y-6">
+      {/* Filter Bar */}
+      <Card>
+        <CardContent className="p-4 flex flex-wrap items-center gap-3">
+          <Filter className="h-4 w-4 text-muted-foreground shrink-0" />
+          <span className="text-sm font-medium text-muted-foreground mr-1">ফিল্টার:</span>
+
+          {dateRangeOptions.map(opt => (
+            <button
+              key={opt.value}
+              onClick={() => setFilters(f => ({ ...f, dateRange: opt.value as any }))}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                filters.dateRange === opt.value
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:bg-muted/80"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+
+          <div className="w-px h-5 bg-border mx-1" />
+
+          <select
+            value={filters.planType}
+            onChange={e => setFilters(f => ({ ...f, planType: e.target.value }))}
+            className="px-3 py-1.5 rounded-lg border border-input bg-background text-sm"
+          >
+            <option value="all">সব প্ল্যান</option>
+            {planTypes.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+
+          <select
+            value={filters.status}
+            onChange={e => setFilters(f => ({ ...f, status: e.target.value }))}
+            className="px-3 py-1.5 rounded-lg border border-input bg-background text-sm"
+          >
+            {statusOptions.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+          </select>
+
+          {(filters.dateRange !== "30d" || filters.planType !== "all" || filters.status !== "all") && (
+            <button
+              onClick={() => setFilters({ dateRange: "30d", planType: "all", status: "all" })}
+              className="px-3 py-1.5 rounded-lg text-sm text-destructive border border-destructive/30 hover:bg-destructive/10"
+            >
+              রিসেট
+            </button>
+          )}
+
+          <div className="ml-auto flex gap-2">
+            <Button variant="outline" size="sm" onClick={fetchData}>
+              <RefreshCw className="h-4 w-4 mr-1" /> রিফ্রেশ
+            </Button>
+            <Button size="sm" onClick={generatePDF} disabled={generating}>
+              {generating ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Download className="h-4 w-4 mr-1" />}
+              PDF রিপোর্ট
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        {[
+          { label: "মোট আয়", value: `৳${data.totalRevenue.toLocaleString()}`, icon: Banknote, color: "text-primary" },
+          { label: "সাবস্ক্রিপশন আয়", value: `৳${data.subscriptionRevenue.toLocaleString()}`, icon: CreditCard, color: "text-emerald-600" },
+          { label: "ব্যাচ আয়", value: `৳${data.batchRevenue.toLocaleString()}`, icon: BookOpen, color: "text-amber-600" },
+          { label: "মোট গ্রাহক", value: data.totalSubscribers, icon: Users, color: "text-sky-600" },
+          { label: "সক্রিয় গ্রাহক", value: data.activeSubscribers, icon: TrendingUp, color: "text-violet-600" },
+          { label: "ব্যাচ এনরোলমেন্ট", value: data.totalBatchEnrollments, icon: BarChart3, color: "text-rose-600" },
+        ].map(({ label, value, icon: Icon, color }) => (
+          <Card key={label}>
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <Icon className={`h-4 w-4 ${color}`} />
+                <span className="text-xs text-muted-foreground">{label}</span>
+              </div>
+              <p className="text-xl font-bold text-foreground">{value}</p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div ref={reportRef}>
+        {/* Monthly Revenue Chart */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle className="text-sm font-semibold">মাসিক আয়ের গতিধারা</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ResponsiveContainer width="100%" height={240}>
+              <AreaChart data={data.monthlyRevenue} margin={{ top: 4, right: 16, bottom: 4, left: 0 }}>
+                <defs>
+                  <linearGradient id="subGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0} />
+                  </linearGradient>
+                  <linearGradient id="batchGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.25} />
+                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `৳${(v / 1000).toFixed(0)}k`} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Area type="monotone" dataKey="subscription" name="সাবস্ক্রিপশন" stroke="#2563eb" fill="url(#subGrad)" strokeWidth={2} />
+                <Area type="monotone" dataKey="batch" name="ব্যাচ" stroke="#10b981" fill="url(#batchGrad)" strokeWidth={2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          {/* Plan distribution pie */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">প্ল্যান ধরন অনুযায়ী গ্রাহক</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.planTypeBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">কোনো ডেটা নেই</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={data.planTypeBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}`} labelLine>
+                      {data.planTypeBreakdown.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Status pie */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">সাবস্ক্রিপশন স্ট্যাটাস</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.statusBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-8">কোনো ডেটা নেই</p>
+              ) : (
+                <ResponsiveContainer width="100%" height={220}>
+                  <PieChart>
+                    <Pie data={data.statusBreakdown} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, value }) => `${name}: ${value}`} labelLine>
+                      {data.statusBreakdown.map((_, i) => (
+                        <Cell key={i} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<PieTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Plan Revenue Bar */}
+        {data.planBreakdown.length > 0 && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">প্ল্যান অনুযায়ী আয়</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={data.planBreakdown} margin={{ top: 4, right: 16, bottom: 24, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-15} textAnchor="end" />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={v => `৳${v}`} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Bar dataKey="revenue" name="আয়" fill="#2563eb" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Detailed Tables */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Plan table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">প্ল্যানভিত্তিক বিস্তারিত</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.planBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">কোনো সাবস্ক্রিপশন নেই</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 text-muted-foreground font-medium">প্ল্যান</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">গ্রাহক</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">আয়</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.planBreakdown.map(row => (
+                        <tr key={row.name} className="border-b border-border/50 last:border-0">
+                          <td className="py-2.5 font-medium">{row.name}</td>
+                          <td className="py-2.5 text-right">{row.count}</td>
+                          <td className="py-2.5 text-right font-semibold text-primary">৳{row.revenue.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Batch table */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">ব্যাচভিত্তিক আয় (শীর্ষ ১০)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {data.batchBreakdown.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">কোনো এনরোলমেন্ট নেই</p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left py-2 text-muted-foreground font-medium">ব্যাচ</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">এনরোল্ড</th>
+                        <th className="text-right py-2 text-muted-foreground font-medium">আয়</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {data.batchBreakdown.map(row => (
+                        <tr key={row.name} className="border-b border-border/50 last:border-0">
+                          <td className="py-2.5 font-medium truncate max-w-[160px]">{row.name}</td>
+                          <td className="py-2.5 text-right">{row.enrolled}</td>
+                          <td className="py-2.5 text-right font-semibold text-emerald-600">৳{row.revenue.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}

@@ -16,6 +16,8 @@ import {
   ChevronRight,
   GraduationCap,
   HelpCircle,
+  Banknote,
+  PackageOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -35,10 +37,14 @@ import AdminContentTab from "./tabs/AdminContentTab";
 import AdminTeachersTab from "./tabs/AdminTeachersTab";
 import AdminStudentsTab from "./tabs/AdminStudentsTab";
 import AdminDoubtsTab from "./tabs/AdminDoubtsTab";
+import AdminBatchesTab from "./tabs/AdminBatchesTab";
+import AdminRevenueTab from "./tabs/AdminRevenueTab";
 
 const TAB_CONFIG = [
   { id: "dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard },
   { id: "analytics", label: "বিশ্লেষণ", icon: BarChart3 },
+  { id: "revenue", label: "রেভিনিউ", icon: Banknote },
+  { id: "batches", label: "এক্সাম ব্যাচ", icon: PackageOpen },
   { id: "questions", label: "প্রশ্ন", icon: BookOpen },
   { id: "categories", label: "বেস ক্যাটেগরি", icon: Layers },
   { id: "subcategories", label: "পরীক্ষা ক্যাটেগরি", icon: Layers },
@@ -56,6 +62,8 @@ const TAB_CONFIG = [
 const TAB_COMPONENTS = {
   dashboard: AdminDashboardTab,
   analytics: AdminAnalyticsTab,
+  revenue: AdminRevenueTab,
+  batches: AdminBatchesTab,
   questions: AdminQuestionsTab,
   categories: AdminCategoriesTab,
   subcategories: AdminSubcategoriesTab,
