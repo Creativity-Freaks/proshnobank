@@ -16,6 +16,8 @@ import {
   ChevronRight,
   GraduationCap,
   HelpCircle,
+  Banknote,
+  PackageOpen,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAdmin } from "@/contexts/AdminContext";
@@ -35,10 +37,14 @@ import AdminContentTab from "./tabs/AdminContentTab";
 import AdminTeachersTab from "./tabs/AdminTeachersTab";
 import AdminStudentsTab from "./tabs/AdminStudentsTab";
 import AdminDoubtsTab from "./tabs/AdminDoubtsTab";
+import AdminBatchesTab from "./tabs/AdminBatchesTab";
+import AdminRevenueTab from "./tabs/AdminRevenueTab";
 
 const TAB_CONFIG = [
   { id: "dashboard", label: "ড্যাশবোর্ড", icon: LayoutDashboard },
   { id: "analytics", label: "বিশ্লেষণ", icon: BarChart3 },
+  { id: "revenue", label: "রেভিনিউ", icon: Banknote },
+  { id: "batches", label: "এক্সাম ব্যাচ", icon: PackageOpen },
   { id: "questions", label: "প্রশ্ন", icon: BookOpen },
   { id: "categories", label: "বেস ক্যাটেগরি", icon: Layers },
   { id: "subcategories", label: "পরীক্ষা ক্যাটেগরি", icon: Layers },
@@ -56,6 +62,8 @@ const TAB_CONFIG = [
 const TAB_COMPONENTS = {
   dashboard: AdminDashboardTab,
   analytics: AdminAnalyticsTab,
+  revenue: AdminRevenueTab,
+  batches: AdminBatchesTab,
   questions: AdminQuestionsTab,
   categories: AdminCategoriesTab,
   subcategories: AdminSubcategoriesTab,
@@ -119,12 +127,12 @@ export default function AdminDashboard() {
   const currentTabLabel = TAB_CONFIG.find((tab) => tab.id === currentTab)?.label || "Dashboard";
 
   return (
-    <div className="min-h-screen flex bg-muted/40 text-foreground font-bengali">
+    <div className="h-screen flex overflow-hidden bg-muted/40 text-foreground font-bengali">
       {/* Left Sidebar */}
       <aside
         className={`${
           sidebarOpen ? "w-64" : "w-20"
-        } shrink-0 border-r border-background/10 bg-foreground text-background transition-all duration-300 flex flex-col`}
+        } shrink-0 border-r border-background/10 bg-foreground text-background transition-all duration-300 flex flex-col h-full`}
       >
         {/* Logo Section */}
         <div className="flex h-16 items-center justify-between px-4 border-b border-background/10">
@@ -200,9 +208,9 @@ export default function AdminDashboard() {
       </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      <div className="flex-1 flex flex-col min-w-0 h-full">
         {/* Top Header */}
-        <div className="h-16 border-b border-background/10 bg-background flex items-center justify-between px-6 sticky top-0 z-10">
+        <div className="h-16 shrink-0 border-b border-background/10 bg-background flex items-center justify-between px-6 z-10">
           <h1 className="text-xl font-semibold text-foreground">{currentTabLabel}</h1>
           <div className="hidden md:flex items-center gap-2 text-sm text-muted-foreground">
             <span>Admin: {adminEmail}</span>
@@ -210,7 +218,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-y-auto p-6">
           <div className="max-w-7xl mx-auto">
             {CurrentTabComponent && <CurrentTabComponent />}
           </div>
