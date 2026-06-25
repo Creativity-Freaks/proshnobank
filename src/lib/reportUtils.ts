@@ -51,6 +51,108 @@ export const BRAND = {
 // A4 dimensions
 export const A4 = { W: 210, H: 297 };
 
+export type Language = "en" | "bn";
+
+// Bilingual text dictionary
+export const i18n: Record<Language, Record<string, string>> = {
+  en: {
+    // Footer
+    footer_official: "ProshnoBank — Official Report  |  Confidential",
+    footer_page: "Page",
+    footer_of: "of",
+    footer_generated: "Generated",
+    // Analytics report
+    analytics_title: "ProshnoBank — Analytics Report",
+    analytics_subtitle: "Detailed Exam Performance Statistics",
+    analytics_period: "Period",
+    analytics_category: "Category",
+    analytics_difficulty: "Difficulty",
+    analytics_summary: "Summary (Key Metrics)",
+    analytics_total_questions: "Total Questions",
+    analytics_total_users: "Total Users",
+    analytics_total_attempts: "Total Attempts",
+    analytics_avg_accuracy: "Avg Accuracy",
+    analytics_categories: "Categories",
+    analytics_subjects: "Subjects",
+    analytics_subject_breakdown: "Subject Breakdown",
+    analytics_difficulty_dist: "Question Difficulty Distribution",
+    analytics_score_dist: "Score Band Distribution",
+    analytics_category_breakdown: "Category-wise Question Count",
+    // Revenue report
+    revenue_title: "ProshnoBank — Revenue Report",
+    revenue_subtitle: "Detailed Subscription & Batch Revenue Analysis",
+    revenue_status: "Status",
+    revenue_plan: "Plan",
+    revenue_summary: "Key Metrics",
+    revenue_total: "Total Revenue",
+    revenue_subscription: "Subscription Revenue",
+    revenue_batch: "Batch Revenue",
+    revenue_total_subscribers: "Total Subscribers",
+    revenue_active_subscribers: "Active Subscribers",
+    revenue_batch_enrollments: "Batch Enrollments",
+    revenue_plan_breakdown: "Plan-wise Subscriptions",
+    revenue_batch_breakdown: "Batch-wise Revenue",
+    revenue_monthly_trend: "Monthly Revenue Trend",
+    // Shared UI
+    all: "All",
+    filter_context: "Filter Context",
+    date: "Date",
+    month: "Month",
+    status: "Status",
+    students: "Students",
+    share: "Share",
+    percentage: "%",
+  },
+  bn: {
+    // Footer
+    footer_official: "ProshnoBank — অফিসিয়াল রিপোর্ট  |  গোপনীয়",
+    footer_page: "পৃষ্ঠা",
+    footer_of: "/",
+    footer_generated: "তৈরি হয়েছে",
+    // Analytics report
+    analytics_title: "প্রশ্নব্যাংক — বিশ্লেষণ রিপোর্ট",
+    analytics_subtitle: "পরীক্ষা কার্যক্রমের বিস্তারিত পরিসংখ্যান",
+    analytics_period: "সময়সীমা",
+    analytics_category: "ক্যাটেগরি",
+    analytics_difficulty: "কঠিনতা",
+    analytics_summary: "সারসংক্ষেপ (মূল পরিসংখ্যান)",
+    analytics_total_questions: "মোট প্রশ্ন",
+    analytics_total_users: "মোট ব্যবহারকারী",
+    analytics_total_attempts: "মোট পরীক্ষা",
+    analytics_avg_accuracy: "গড় নির্ভুলতা",
+    analytics_categories: "ক্যাটেগরি",
+    analytics_subjects: "বিষয়",
+    analytics_subject_breakdown: "বিষয়ভিত্তিক বিশ্লেষণ",
+    analytics_difficulty_dist: "প্রশ্নের কঠিনতার স্তর",
+    analytics_score_dist: "স্কোর বিতরণ",
+    analytics_category_breakdown: "ক্যাটেগরিভিত্তিক প্রশ্নের সংখ্যা",
+    // Revenue report
+    revenue_title: "প্রশ্নব্যাংক — রেভিনিউ রিপোর্ট",
+    revenue_subtitle: "সাবস্ক্রিপশন ও ব্যাচ আয়ের বিস্তারিত বিশ্লেষণ",
+    revenue_status: "স্ট্যাটাস",
+    revenue_plan: "প্ল্যান",
+    revenue_summary: "মূল পরিসংখ্যান",
+    revenue_total: "মোট আয়",
+    revenue_subscription: "সাবস্ক্রিপশন আয়",
+    revenue_batch: "ব্যাচ আয়",
+    revenue_total_subscribers: "মোট গ্রাহক",
+    revenue_active_subscribers: "সক্রিয় গ্রাহক",
+    revenue_batch_enrollments: "ব্যাচ এনরোলমেন্ট",
+    revenue_plan_breakdown: "প্ল্যান অনুযায়ী সাবস্ক্রিপশন",
+    revenue_batch_breakdown: "ব্যাচ অনুযায়ী আয়",
+    revenue_monthly_trend: "মাসিক আয়ের ধারা",
+    // Shared UI
+    all: "সব",
+    filter_context: "ফিল্টার প্রসঙ্গ",
+    date: "তারিখ",
+    month: "মাস",
+    status: "স্ট্যাটাস",
+    students: "শিক্ষার্থী",
+    share: "অংশ",
+    percentage: "%",
+  },
+};
+
 export interface ReportPage {
   doc: any;       // jsPDF instance
   y: number;      // current Y cursor (mm)
@@ -58,6 +160,7 @@ export interface ReportPage {
   H: number;
   M: number;      // horizontal margin
   contentW: number;
+  lang: Language; // Report language
 }
 
 /** Loads logo as HTMLImageElement (resolves or rejects silently) */
@@ -86,12 +189,14 @@ function drawHeader(
   subtitle: string,
   logo: HTMLImageElement | null,
   meta: { label: string; value: string }[],
+  lang: Language = "en",
 ): number {
   const { W, M, blue, blueLight, blueFade, white, muted, dark, border } = {
     ...BRAND,
     W: A4.W,
     M: BRAND.pageGutter,
   };
+  const t = i18n[lang];
 
   // ── Deep blue background band ─────────────────────────────────────────────
   doc.setFillColor(...blue);
@@ -120,10 +225,11 @@ function drawHeader(
 
   // ── Meta badges (right side) ──────────────────────────────────────────────
   let rx = W - M;
-  const now = new Date().toLocaleDateString("bn-BD", {
+  const now = new Date().toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", {
     year: "numeric", month: "long", day: "numeric",
   });
-  const allMeta = [{ label: "তারিখ", value: now }, ...meta];
+  const dateLabel = lang === "bn" ? "তারিখ" : "Date";
+  const allMeta = [{ label: dateLabel, value: now }, ...meta];
   // draw right-to-left
   for (const m of [...allMeta].reverse()) {
     const txt = `${m.label}: ${m.value}`;
@@ -139,12 +245,10 @@ function drawHeader(
   doc.rect(0, 32.5, W, 8, "F");
   setF(doc, 7.5);
   doc.setTextColor(...muted);
-  doc.text(
-    "প্রশ্নব্যাংক  |  www.proshnobank.com  |  এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি করা হয়েছে — গোপনীয়",
-    W / 2,
-    37.5,
-    { align: "center" },
-  );
+  const infoText = lang === "bn"
+    ? "প্রশ্নব্যাংক  |  www.proshnobank.com  |  এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি করা হয়েছে — গোপনীয়"
+    : "ProshnoBank  |  www.proshnobank.com  |  This report was generated automatically — Confidential";
+  doc.text(infoText, W / 2, 37.5, { align: "center" });
 
   // ── Thin bottom border ────────────────────────────────────────────────────
   doc.setDrawColor(...border);
@@ -157,13 +261,14 @@ function drawHeader(
 /**
  * Draw the footer on a specific page.
  */
-function drawFooter(doc: any, pageNum: number, total: number) {
+function drawFooter(doc: any, pageNum: number, total: number, lang: Language = "en") {
   const { W, M, blue, muted, border, blueFade } = {
     ...BRAND,
     W: A4.W,
     M: BRAND.pageGutter,
   };
   const H = A4.H;
+  const t = i18n[lang];
 
   doc.setFillColor(...blueFade);
   doc.rect(0, H - 12, W, 12, "F");
@@ -173,23 +278,21 @@ function drawFooter(doc: any, pageNum: number, total: number) {
 
   setF(doc, 7.5);
   doc.setTextColor(...muted);
-  doc.text("ProshnoBank — Official Report  |  Confidential", M, H - 5);
-  doc.text(
-    `পৃষ্ঠা ${pageNum} / ${total}`,
-    W / 2,
-    H - 5,
-    { align: "center" },
-  );
-  const ts = new Date().toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
-  doc.text(`Generated: ${ts}`, W - M, H - 5, { align: "right" });
+  doc.text(t.footer_official, M, H - 5);
+  const pageText = lang === "bn"
+    ? `${t.footer_page} ${pageNum} ${t.footer_of} ${total}`
+    : `${t.footer_page} ${pageNum} ${t.footer_of} ${total}`;
+  doc.text(pageText, W / 2, H - 5, { align: "center" });
+  const ts = new Date().toLocaleString(lang === "bn" ? "bn-BD" : "en-GB", { dateStyle: "short", timeStyle: "short" });
+  doc.text(`${t.footer_generated}: ${ts}`, W - M, H - 5, { align: "right" });
 }
 
 /** Add footers to all pages after content is done */
-export function finalizePages(doc: any) {
+export function finalizePages(doc: any, lang: Language = "en") {
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
-    drawFooter(doc, p, total);
+    drawFooter(doc, p, total, lang);
   }
 }
 
@@ -202,6 +305,7 @@ export async function createReport(
   title: string,
   subtitle: string,
   meta: { label: string; value: string }[],
+  lang: Language = "en",
 ): Promise<ReportPage> {
   const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
   const W = A4.W;
@@ -210,9 +314,9 @@ export async function createReport(
 
   registerFont(doc);
   const logo = await loadLogoImage();
-  const y = drawHeader(doc, title, subtitle, logo, meta);
+  const y = drawHeader(doc, title, subtitle, logo, meta, lang);
 
-  return { doc, y, W, H, M, contentW: W - M * 2 };
+  return { doc, y, W, H, M, contentW: W - M * 2, lang };
 }
 
 /**
@@ -295,7 +399,7 @@ export function drawKpiGrid(
   page.y += rows * (cardH + 2) + 4;
 }
 
-// ─── Table ───────────────────────────────────────────────────────────────────
+// ─── Table ───────────────────────────────────────────────────���───────────────
 export interface TableColumn {
   header: string;
   key: string;
