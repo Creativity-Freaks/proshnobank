@@ -16,7 +16,7 @@ export default function AdminSubcategoriesTab() {
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({ name: "", description: "" });
+  const [formData, setFormData] = useState({ name: "", description: "", parentCategoryId: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -46,6 +46,7 @@ export default function AdminSubcategoriesTab() {
       setCategories(data || []);
       if (data && data.length > 0 && !selectedCategory) {
         setSelectedCategory(data[0].id);
+        setFormData(prev => ({ ...prev, parentCategoryId: data[0].id }));
       }
     } catch (error) {
       console.error("[v0] Failed to fetch categories:", error);
@@ -57,7 +58,7 @@ export default function AdminSubcategoriesTab() {
       setLoading(true);
       const { data } = await supabase
         .from("exam_categories")
-        .select("id, name, slug, description, is_active, sort_order")
+        .select("id, name, slug, description, is_active, sort_order, parent_id")
         .eq("parent_id", selectedCategory)
         .order("sort_order", { ascending: true });
       setSubcategories(data || []);
@@ -84,11 +85,19 @@ export default function AdminSubcategoriesTab() {
         toast({ title: "Error", description: "নাম পূরণ করুন", variant: "destructive" });
         return;
       }
+      if (!formData.parentCategoryId) {
+        toast({ title: "Error", description: "বেস ক্যাটেগরি নির্বাচন করুন", variant: "destructive" });
+        return;
+      }
 
       if (editingId) {
         const { error } = await supabase
           .from("exam_categories")
-          .update({ name: formData.name, description: formData.description || null })
+          .update({
+            name: formData.name,
+            description: formData.description || null,
+            parent_id: formData.parentCategoryId,
+          })
           .eq("id", editingId);
         if (error) throw error;
         toast({ title: "সাফল্য", description: "পরীক্ষা ক্যাটেগরি আপডেট হয়েছে" });
@@ -96,7 +105,7 @@ export default function AdminSubcategoriesTab() {
         const slug = generateSlug(formData.name) + `-${Date.now().toString(36)}`;
         const { error } = await supabase.from("exam_categories").insert([
           {
-            parent_id: selectedCategory,
+            parent_id: formData.parentCategoryId,
             name: formData.name,
             slug,
             description: formData.description || null,
@@ -107,7 +116,7 @@ export default function AdminSubcategoriesTab() {
         if (error) throw error;
         toast({ title: "সাফল্য", description: "পরীক্ষা ক্যাটেগরি তৈরি হয়েছে" });
       }
-      setFormData({ name: "", description: "" });
+      setFormData({ name: "", description: "", parentCategoryId: selectedCategory });
       setEditingId(null);
       setShowForm(false);
       fetchSubcategories();
@@ -118,7 +127,11 @@ export default function AdminSubcategoriesTab() {
 
   const handleEdit = (item: any) => {
     setEditingId(item.id);
-    setFormData({ name: item.name, description: item.description || "" });
+    setFormData({
+      name: item.name,
+      description: item.description || "",
+      parentCategoryId: item.parent_id || selectedCategory,
+    });
     setShowForm(true);
   };
 
@@ -147,7 +160,7 @@ export default function AdminSubcategoriesTab() {
           onClick={() => {
             setShowForm(!showForm);
             setEditingId(null);
-            setFormData({ name: "", description: "" });
+            setFormData({ name: "", description: "", parentCategoryId: selectedCategory });
           }}
           className="gap-2"
           disabled={!selectedCategory}
@@ -205,7 +218,23 @@ export default function AdminSubcategoriesTab() {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <Label>নাম</Label>
+              <Label>বেস ক্যাটেগরি <span className="text-destructive">*</span></Label>
+              <select
+                value={formData.parentCategoryId}
+                onChange={e => {
+                  setFormData({ ...formData, parentCategoryId: e.target.value });
+                  setSelectedCategory(e.target.value);
+                }}
+                className="w-full mt-1 px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
+              >
+                <option value="">-- ক্যাটেগরি বেছে নিন --</option>
+                {categories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>নাম <span className="text-destructive">*</span></Label>
               <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -227,6 +256,7 @@ export default function AdminSubcategoriesTab() {
                 onClick={() => {
                   setShowForm(false);
                   setEditingId(null);
+                  setFormData({ name: "", description: "", parentCategoryId: selectedCategory });
                 }}
               >
                 বাতিল করুন
