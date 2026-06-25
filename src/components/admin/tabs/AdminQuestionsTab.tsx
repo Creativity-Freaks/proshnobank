@@ -106,9 +106,14 @@ export default function AdminQuestionsTab() {
       if (selectedChapter)  query = query.eq("chapter_id",  selectedChapter);
       if (searchQuery)      query = query.ilike("question_text", `%${searchQuery}%`);
 
-      const { data } = await query;
+      const { data, error } = await query;
+      if (error) {
+        console.error("[v0] fetchQuestions error:", error.message, error.details, error.hint);
+        toast({ title: "Error", description: error.message || "প্রশ্ন লোড করতে ব্যর্থ", variant: "destructive" });
+      }
       setQuestions(data || []);
-    } catch {
+    } catch (err: any) {
+      console.error("[v0] fetchQuestions catch:", err);
       toast({ title: "Error", description: "প্রশ্ন লোড করতে ব্যর্থ", variant: "destructive" });
     } finally {
       setLoading(false);
@@ -292,7 +297,7 @@ export default function AdminQuestionsTab() {
               <div className="space-y-2">
                 <Label className="flex items-center gap-1.5">
                   <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold shrink-0">২</span>
-                  বিষয় <span className="text-destructive">*</span>
+                  বিষ��় <span className="text-destructive">*</span>
                 </Label>
                 {formSubjects.length === 0 ? (
                   <p className="text-xs text-muted-foreground">এই ক্যাটেগরিতে কোনো বিষয় নেই</p>
