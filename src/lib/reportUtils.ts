@@ -1,385 +1,288 @@
 /**
  * ProshnoBank — Official Report Generator
- * Shared PDF utility for all admin reports.
  *
- * Layout per page:
- *   ┌──────────────────────────────────┐
- *   │  HEADER  (logo + title + meta)   │  h=38mm
- *   │  thin accent line                │
- *   │  CONTENT                         │
- *   │  thin accent line                │
- *   │  FOOTER  (page X/Y + date)       │  h=12mm
- *   └──────────────────────────────────┘
+ * Approach: Build a styled HTML string, inject it into a hidden off-screen
+ * div, capture it with html2canvas (so the browser handles Bengali font
+ * rendering), then slice the resulting image into A4 pages inside jsPDF.
+ *
+ * This avoids ALL jsPDF font-embedding issues with Bengali Unicode.
  */
-import { NOTO_SANS_BENGALI_REGULAR_B64, NOTO_SANS_BENGALI_BOLD_B64 } from "./fonts/notoBengaliB64";
 
-const FONT_NAME = "NotoSansBengali";
-
-/** Register Regular + SemiBold Bengali fonts into a jsPDF instance */
-function registerFont(doc: any) {
-  doc.addFileToVFS("NotoSansBengali-Regular.ttf", NOTO_SANS_BENGALI_REGULAR_B64);
-  doc.addFont("NotoSansBengali-Regular.ttf", FONT_NAME, "normal");
-  doc.addFileToVFS("NotoSansBengali-SemiBold.ttf", NOTO_SANS_BENGALI_BOLD_B64);
-  doc.addFont("NotoSansBengali-SemiBold.ttf", FONT_NAME, "bold");
-  doc.setFont(FONT_NAME, "normal");
-}
-
-/** Shorthand: set font + size */
-function setF(doc: any, size: number, bold = false) {
-  doc.setFont(FONT_NAME, bold ? "bold" : "normal");
-  doc.setFontSize(size);
-}
-
-// Brand palette
-export const BRAND = {
-  blue:        [30,  64, 175] as [number, number, number],   // #1e40af
-  blueLight:   [59,  130, 246] as [number, number, number],  // #3b82f6
-  blueFade:    [239, 246, 255] as [number, number, number],  // #eff6ff
-  teal:        [15,  118, 110] as [number, number, number],  // #0f766e
-  green:       [22,  163, 74]  as [number, number, number],  // #16a34a
-  amber:       [217, 119, 6]   as [number, number, number],  // #d97706
-  red:         [220, 38,  38]  as [number, number, number],  // #dc2626
-  dark:        [15,  23,  42]  as [number, number, number],  // #0f172a
-  slate:       [51,  65,  85]  as [number, number, number],  // #334155
-  muted:       [100, 116, 139] as [number, number, number],  // #64748b
-  border:      [203, 213, 225] as [number, number, number],  // #cbd5e1
-  rowAlt:      [248, 250, 252] as [number, number, number],  // #f8fafc
-  white:       [255, 255, 255] as [number, number, number],
-  pageGutter:  15, // mm left/right margin
+// ── Brand tokens ─────────────────────────────────────────────────────────────
+const C = {
+  blue:      "#1e40af",
+  blueMid:   "#2563eb",
+  blueLight: "#3b82f6",
+  blueFade:  "#eff6ff",
+  teal:      "#0f766e",
+  amber:     "#d97706",
+  dark:      "#0f172a",
+  slate:     "#334155",
+  muted:     "#64748b",
+  border:    "#cbd5e1",
+  rowAlt:    "#f8fafc",
+  white:     "#ffffff",
 };
 
-// A4 dimensions
-export const A4 = { W: 210, H: 297 };
+export const BRAND = {
+  blue:        [30,  64, 175] as [number, number, number],
+  blueLight:   [59,  130, 246] as [number, number, number],
+  blueFade:    [239, 246, 255] as [number, number, number],
+  teal:        [15,  118, 110] as [number, number, number],
+  amber:       [217, 119, 6]   as [number, number, number],
+  dark:        [15,  23,  42]  as [number, number, number],
+  muted:       [100, 116, 139] as [number, number, number],
+  white:       [255, 255, 255] as [number, number, number],
+};
 
-export interface ReportPage {
-  doc: any;       // jsPDF instance
-  y: number;      // current Y cursor (mm)
-  W: number;
-  H: number;
-  M: number;      // horizontal margin
-  contentW: number;
+// ── HTML helpers ──────────────────────────────────────────────────────────────
+
+function css(styles: Record<string, string | number>): string {
+  return Object.entries(styles)
+    .map(([k, v]) => `${k.replace(/([A-Z])/g, "-$1").toLowerCase()}:${v}`)
+    .join(";");
 }
 
-/** Loads logo as HTMLImageElement (resolves or rejects silently) */
-async function loadLogoImage(): Promise<HTMLImageElement | null> {
-  try {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.src = "/proshnobank.png";
-    await new Promise<void>((res, rej) => {
-      img.onload = () => res();
-      img.onerror = () => rej(new Error("logo load fail"));
-    });
-    return img;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Draw the full header on the current page.
- * Returns the Y position right after the header separator line.
- */
-function drawHeader(
-  doc: any,
-  title: string,
-  subtitle: string,
-  logo: HTMLImageElement | null,
-  meta: { label: string; value: string }[],
-): number {
-  const { W, M, blue, blueLight, blueFade, white, muted, dark, border } = {
-    ...BRAND,
-    W: A4.W,
-    M: BRAND.pageGutter,
-  };
-
-  // ── Deep blue background band ─────────────────────────────────────────────
-  doc.setFillColor(...blue);
-  doc.rect(0, 0, W, 30, "F");
-
-  // ── Accent gradient strip ─────────────────────────────────────────────────
-  doc.setFillColor(...blueLight);
-  doc.rect(0, 30, W, 2.5, "F");
-
-  // ── Logo ──────────────────────────────────────────────────────────────────
-  const logoH = 20; // mm height inside header
-  const logoW = logoH * (1536 / 1024); // keep 3:2 aspect ratio
-  if (logo) {
-    doc.addImage(logo, "PNG", M, (30 - logoH) / 2, logoW, logoH);
-  }
-
-  // ── Title & subtitle ──────────────────────────────────────────────────────
-  const textX = logo ? M + logoW + 5 : M;
-  doc.setTextColor(...white);
-  setF(doc, 15, true);
-  doc.text(title, textX, 13);
-
-  setF(doc, 8.5);
-  doc.setTextColor(186, 213, 255);
-  doc.text(subtitle, textX, 21);
-
-  // ── Meta badges (right side) ──────────────────────────────────────────────
-  let rx = W - M;
-  const now = new Date().toLocaleDateString("bn-BD", {
-    year: "numeric", month: "long", day: "numeric",
-  });
-  const allMeta = [{ label: "তারিখ", value: now }, ...meta];
-  // draw right-to-left
-  for (const m of [...allMeta].reverse()) {
-    const txt = `${m.label}: ${m.value}`;
-    setF(doc, 7.5);
-    doc.setTextColor(186, 213, 255);
-    const tw = doc.getTextWidth(txt);
-    doc.text(txt, rx - tw, 26);
-    rx = rx - tw - 8;
-  }
-
-  // ── Light background for info stripe ──────────────────────────────────────
-  doc.setFillColor(...blueFade);
-  doc.rect(0, 32.5, W, 8, "F");
-  setF(doc, 7.5);
-  doc.setTextColor(...muted);
-  doc.text(
-    "প্রশ্নব্যাংক  |  www.proshnobank.com  |  এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি করা হয়েছে — গোপনীয়",
-    W / 2,
-    37.5,
-    { align: "center" },
-  );
-
-  // ── Thin bottom border ────────────────────────────────────────────────────
-  doc.setDrawColor(...border);
-  doc.setLineWidth(0.3);
-  doc.line(M, 40.5, W - M, 40.5);
-
-  return 46; // content starts at y=46
-}
-
-/**
- * Draw the footer on a specific page.
- */
-function drawFooter(doc: any, pageNum: number, total: number) {
-  const { W, M, blue, muted, border, blueFade } = {
-    ...BRAND,
-    W: A4.W,
-    M: BRAND.pageGutter,
-  };
-  const H = A4.H;
-
-  doc.setFillColor(...blueFade);
-  doc.rect(0, H - 12, W, 12, "F");
-  doc.setDrawColor(...border);
-  doc.setLineWidth(0.3);
-  doc.line(M, H - 12, W - M, H - 12);
-
-  setF(doc, 7.5);
-  doc.setTextColor(...muted);
-  doc.text("ProshnoBank — Official Report  |  Confidential", M, H - 5);
-  doc.text(
-    `পৃষ্ঠা ${pageNum} / ${total}`,
-    W / 2,
-    H - 5,
-    { align: "center" },
-  );
-  const ts = new Date().toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
-  doc.text(`Generated: ${ts}`, W - M, H - 5, { align: "right" });
-}
-
-/** Add footers to all pages after content is done */
-export function finalizePages(doc: any) {
-  const total = doc.getNumberOfPages();
-  for (let p = 1; p <= total; p++) {
-    doc.setPage(p);
-    drawFooter(doc, p, total);
-  }
-}
-
-/**
- * Initialise a new A4 jsPDF and draw the first page header.
- * Returns a ReportPage object that tracks the Y cursor.
- */
-export async function createReport(
-  jsPDF: any,
+function headerHtml(
   title: string,
   subtitle: string,
   meta: { label: string; value: string }[],
-): Promise<ReportPage> {
-  const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const W = A4.W;
-  const H = A4.H;
-  const M = BRAND.pageGutter;
+  now: string,
+): string {
+  const metaItems = [{ label: "তারিখ", value: now }, ...meta]
+    .map(m => `<span style="${css({ marginLeft: "16px", fontSize: "11px", color: "#bfdbfe" })}">${m.label}: <b>${m.value}</b></span>`)
+    .join("");
 
-  registerFont(doc);
-  const logo = await loadLogoImage();
-  const y = drawHeader(doc, title, subtitle, logo, meta);
-
-  return { doc, y, W, H, M, contentW: W - M * 2 };
+  return `
+    <div style="${css({ background: C.blue, padding: "20px 28px 14px", display: "flex", alignItems: "center", gap: "20px" })}">
+      <img src="/proshnobank.png" crossorigin="anonymous"
+           style="${css({ height: "52px", width: "78px", objectFit: "contain", borderRadius: "6px", background: C.white, padding: "4px" })}" />
+      <div style="${css({ flex: "1" })}">
+        <div style="${css({ fontSize: "20px", fontWeight: "700", color: C.white, letterSpacing: "-0.3px" })}">${title}</div>
+        <div style="${css({ fontSize: "12px", color: "#bfdbfe", marginTop: "3px" })}">${subtitle}</div>
+        <div style="${css({ marginTop: "6px" })}">${metaItems}</div>
+      </div>
+    </div>
+    <div style="${css({ background: C.blueFade, borderBottom: `1px solid ${C.border}`, padding: "6px 28px", fontSize: "11px", color: C.muted, display: "flex", justifyContent: "space-between" })}">
+      <span>প্রশ্নব্যাংক  |  www.proshnobank.com</span>
+      <span>এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি — গোপনীয়</span>
+    </div>`;
 }
 
-/**
- * Checks if adding `neededMm` of content would overflow.
- * If so, adds a new page with header.
- */
-export async function ensureSpace(
-  page: ReportPage,
-  neededMm: number,
-  title: string,
-  subtitle: string,
-  meta: { label: string; value: string }[],
-): Promise<void> {
-  const bottomLimit = page.H - 18; // leave 18mm for footer
-  if (page.y + neededMm > bottomLimit) {
-    const logo = await loadLogoImage();
-    page.doc.addPage();
-    page.y = drawHeader(page.doc, title, subtitle, logo, meta);
-  }
+function sectionHtml(text: string, accentColor = C.blue): string {
+  return `
+    <div style="${css({
+      background: accentColor,
+      margin: "18px 0 8px",
+      padding: "7px 12px 7px 16px",
+      borderLeft: `4px solid ${C.blueLight}`,
+      borderRadius: "3px",
+      fontSize: "13px",
+      fontWeight: "700",
+      color: C.white,
+      letterSpacing: "0.2px",
+    })}">${text}</div>`;
 }
 
-// ─── Section Heading ─────────────────────────────────────────────────────────
-export function drawSectionHeading(page: ReportPage, text: string) {
-  const { doc, M, contentW } = page;
-  doc.setFillColor(...BRAND.blue);
-  doc.rect(M, page.y, contentW, 7, "F");
-  doc.setFillColor(...BRAND.blueLight);
-  doc.rect(M, page.y, 3, 7, "F");
-  doc.setTextColor(...BRAND.white);
-  setF(doc, 9, true);
-  doc.text(text, M + 6, page.y + 4.8);
-  page.y += 10;
+function kpiHtml(kpis: { label: string; value: string; sub?: string }[]): string {
+  const cards = kpis.map(k => `
+    <div style="${css({
+      background: C.white,
+      border: `1px solid ${C.border}`,
+      borderLeft: `4px solid ${C.blueLight}`,
+      borderRadius: "6px",
+      padding: "10px 14px",
+      minWidth: "0",
+    })}">
+      <div style="${css({ fontSize: "10px", color: C.muted, marginBottom: "4px" })}">${k.label}</div>
+      <div style="${css({ fontSize: "20px", fontWeight: "700", color: C.blue })}">${k.value}</div>
+      ${k.sub ? `<div style="${css({ fontSize: "10px", color: C.muted, marginTop: "2px" })}">${k.sub}</div>` : ""}
+    </div>`).join("");
+
+  return `<div style="${css({
+    display: "grid",
+    gridTemplateColumns: "repeat(3, 1fr)",
+    gap: "10px",
+    margin: "0 0 6px",
+  })}">${cards}</div>`;
 }
 
-// ─── KPI Cards (3 per row) ───────────────────────────────────────────────────
-export function drawKpiGrid(
-  page: ReportPage,
-  kpis: { label: string; value: string; sub?: string }[],
-) {
-  const { doc, M, contentW } = page;
-  const cols = 3;
-  const colW = contentW / cols;
-  const cardH = 16;
-  const rows = Math.ceil(kpis.length / cols);
-
-  for (let i = 0; i < kpis.length; i++) {
-    const col = i % cols;
-    const row = Math.floor(i / cols);
-    const cx = M + col * colW;
-    const cy = page.y + row * (cardH + 2);
-
-    // card bg
-    doc.setFillColor(...BRAND.white);
-    doc.setDrawColor(...BRAND.border);
-    doc.setLineWidth(0.25);
-    doc.roundedRect(cx + 1, cy, colW - 2, cardH, 1.5, 1.5, "FD");
-
-    // left accent
-    doc.setFillColor(...BRAND.blueLight);
-    doc.rect(cx + 1, cy, 2.5, cardH, "F");
-
-    // label
-    setF(doc, 7);
-    doc.setTextColor(...BRAND.muted);
-    doc.text(kpis[i].label, cx + 6, cy + 5.5);
-
-    // value
-    setF(doc, 12, true);
-    doc.setTextColor(...BRAND.dark);
-    doc.text(kpis[i].value, cx + 6, cy + 12.5);
-
-    // sub
-    if (kpis[i].sub) {
-      setF(doc, 6.5);
-      doc.setTextColor(...BRAND.muted);
-      doc.text(kpis[i].sub!, cx + colW - 5, cy + 5.5, { align: "right" });
-    }
-  }
-
-  page.y += rows * (cardH + 2) + 4;
-}
-
-// ─── Table ───────────────────────────────────────────────────────────────────
-export interface TableColumn {
-  header: string;
-  key: string;
-  width: number;       // mm
-  align?: "left" | "right" | "center";
-}
-
-export function drawTable(
-  page: ReportPage,
-  columns: TableColumn[],
+function tableHtml(
+  columns: { header: string; key: string; align?: string }[],
   rows: Record<string, any>[],
-  accentColor: [number, number, number] = BRAND.blue,
-) {
-  const { doc, M } = page;
-  const rowH = 7;
+  accentColor = C.blue,
+): string {
+  const thStyle = css({ padding: "7px 10px", textAlign: "left", fontSize: "11px", fontWeight: "700", color: C.white, whiteSpace: "nowrap" });
+  const headers = columns.map(c =>
+    `<th style="${thStyle}; text-align:${c.align ?? "left"}">${c.header}</th>`
+  ).join("");
 
-  // Header row
-  let x = M;
-  doc.setFillColor(...accentColor);
-  const totalW = columns.reduce((s, c) => s + c.width, 0);
-  doc.rect(M, page.y, totalW, rowH, "F");
+  const dataRows = rows.map((row, i) => {
+    const bg = i % 2 === 0 ? C.white : C.rowAlt;
+    const tds = columns.map(c => {
+      const val = row[c.key] ?? "";
+      return `<td style="${css({ padding: "6px 10px", fontSize: "11px", color: C.dark, textAlign: c.align ?? "left", borderBottom: `1px solid ${C.border}` })}">${val}</td>`;
+    }).join("");
+    return `<tr style="background:${bg}">${tds}</tr>`;
+  }).join("");
 
-  setF(doc, 7.5, true);
-  doc.setTextColor(...BRAND.white);
-  columns.forEach(col => {
-    const tx = col.align === "right" ? x + col.width - 2 :
-               col.align === "center" ? x + col.width / 2 : x + 2;
-    doc.text(col.header, tx, page.y + 4.8, { align: col.align ?? "left" });
-    x += col.width;
-  });
-  page.y += rowH;
-
-  // Data rows
-  rows.forEach((row, idx) => {
-    // Page break check
-    if (page.y + rowH > page.H - 18) {
-      doc.addPage();
-      registerFont(doc);
-      page.y = 46; // approximate restart without new header (simple continuation)
-    }
-
-    const bg = idx % 2 === 0 ? BRAND.white : BRAND.rowAlt;
-    doc.setFillColor(...bg);
-    doc.setDrawColor(...BRAND.border);
-    doc.setLineWidth(0.15);
-    doc.rect(M, page.y, totalW, rowH, "FD");
-
-    setF(doc, 7.5);
-    doc.setTextColor(...BRAND.dark);
-
-    let rx = M;
-    columns.forEach(col => {
-      const raw = row[col.key] ?? "";
-      const str = String(raw);
-      // truncate if too wide
-      const maxChars = Math.floor(col.width / 2.2);
-      const display = str.length > maxChars ? str.slice(0, maxChars - 1) + "…" : str;
-      const tx = col.align === "right" ? rx + col.width - 2 :
-                 col.align === "center" ? rx + col.width / 2 : rx + 2;
-      doc.text(display, tx, page.y + 4.8, { align: col.align ?? "left" });
-      rx += col.width;
-    });
-
-    page.y += rowH;
-  });
-
-  // Bottom border
-  doc.setDrawColor(...BRAND.border);
-  doc.setLineWidth(0.3);
-  const totalW2 = columns.reduce((s, c) => s + c.width, 0);
-  doc.line(M, page.y, M + totalW2, page.y);
-
-  page.y += 6;
+  return `
+    <table style="${css({ width: "100%", borderCollapse: "collapse", marginBottom: "6px", border: `1px solid ${C.border}`, borderRadius: "4px", overflow: "hidden" })}">
+      <thead>
+        <tr style="background:${accentColor}">${headers}</tr>
+      </thead>
+      <tbody>${dataRows}</tbody>
+    </table>`;
 }
 
-// ─── Inline bar (for progress column) ────────────────────────────────────────
-export function inlineBar(
-  doc: any,
-  x: number, y: number, w: number, h: number,
-  pct: number,
-  color: [number, number, number] = BRAND.blueLight,
-) {
-  doc.setFillColor(...BRAND.rowAlt);
-  doc.rect(x, y, w, h, "F");
-  doc.setFillColor(...color);
-  doc.rect(x, y, w * Math.max(0, Math.min(pct, 1)), h, "F");
+function footerHtml(page: number, total: number): string {
+  const ts = new Date().toLocaleString("en-GB", { dateStyle: "short", timeStyle: "short" });
+  return `
+    <div style="${css({
+      background: C.blueFade,
+      borderTop: `1px solid ${C.border}`,
+      padding: "6px 28px",
+      display: "flex",
+      justifyContent: "space-between",
+      fontSize: "10px",
+      color: C.muted,
+      marginTop: "auto",
+    })}">
+      <span>ProshnoBank — Official Report | Confidential</span>
+      <span>পৃষ্ঠা ${page} / ${total}</span>
+      <span>Generated: ${ts}</span>
+    </div>`;
+}
+
+// ── ReportBuilder ─────────────────────────────────────────────────────────────
+
+export class ReportBuilder {
+  private title: string;
+  private subtitle: string;
+  private meta: { label: string; value: string }[];
+  private sections: string[] = [];
+  private now: string;
+
+  constructor(title: string, subtitle: string, meta: { label: string; value: string }[]) {
+    this.title = title;
+    this.subtitle = subtitle;
+    this.meta = meta;
+    this.now = new Date().toLocaleDateString("bn-BD", { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  addSection(text: string, accentColor?: string): this {
+    this.sections.push(sectionHtml(text, accentColor));
+    return this;
+  }
+
+  addKpiGrid(kpis: { label: string; value: string; sub?: string }[]): this {
+    this.sections.push(kpiHtml(kpis));
+    return this;
+  }
+
+  addTable(
+    columns: { header: string; key: string; align?: string }[],
+    rows: Record<string, any>[],
+    accentColor?: string,
+  ): this {
+    this.sections.push(tableHtml(columns, rows, accentColor));
+    return this;
+  }
+
+  addRaw(html: string): this {
+    this.sections.push(html);
+    return this;
+  }
+
+  private buildHtml(): string {
+    return `
+      <div id="__report_root__" style="${css({
+        width: "794px",          // A4 at 96dpi
+        fontFamily: "'Noto Sans Bengali', 'SolaimanLipi', 'Hind Siliguri', Arial, sans-serif",
+        background: C.white,
+        color: C.dark,
+        display: "flex",
+        flexDirection: "column",
+        minHeight: "1123px",
+      })}">
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;600;700&display=swap" rel="stylesheet" />
+        ${headerHtml(this.title, this.subtitle, this.meta, this.now)}
+        <div style="${css({ flex: "1", padding: "12px 28px 20px" })}">
+          ${this.sections.join("\n")}
+        </div>
+        ${footerHtml(1, 1)}
+      </div>`;
+  }
+
+  /** Render to PDF and trigger download */
+  async savePdf(filename: string): Promise<void> {
+    const { default: jsPDF } = await import("jspdf");
+    const { default: html2canvas } = await import("html2canvas");
+
+    // Inject into document
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = "position:fixed;left:-9999px;top:-9999px;z-index:-1;";
+    wrapper.innerHTML = this.buildHtml();
+    document.body.appendChild(wrapper);
+
+    const root = wrapper.querySelector("#__report_root__") as HTMLElement;
+
+    // Wait a tick for images / fonts to load
+    await new Promise(r => setTimeout(r, 600));
+
+    try {
+      const canvas = await html2canvas(root, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: false,
+        backgroundColor: C.white,
+        logging: false,
+        windowWidth: 794,
+      });
+
+      const imgData = canvas.toDataURL("image/png");
+      const imgW = 210; // A4 mm width
+      const imgH = (canvas.height * imgW) / canvas.width;
+
+      const doc = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+        compress: true,
+      });
+
+      const A4H = 297;
+
+      if (imgH <= A4H) {
+        doc.addImage(imgData, "PNG", 0, 0, imgW, imgH);
+      } else {
+        // Slice into pages
+        const pageCanvas = document.createElement("canvas");
+        const ctx = pageCanvas.getContext("2d")!;
+        const pageHeightPx = Math.floor((A4H / imgW) * canvas.width);
+
+        let yOffset = 0;
+        let isFirst = true;
+        while (yOffset < canvas.height) {
+          const sliceH = Math.min(pageHeightPx, canvas.height - yOffset);
+          pageCanvas.width = canvas.width;
+          pageCanvas.height = sliceH;
+          ctx.clearRect(0, 0, pageCanvas.width, pageCanvas.height);
+          ctx.drawImage(canvas, 0, yOffset, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+
+          const sliceData = pageCanvas.toDataURL("image/png");
+          const sliceH_mm = (sliceH * imgW) / canvas.width;
+
+          if (!isFirst) doc.addPage();
+          doc.addImage(sliceData, "PNG", 0, 0, imgW, sliceH_mm);
+          isFirst = false;
+          yOffset += sliceH;
+        }
+      }
+
+      doc.save(filename);
+    } finally {
+      document.body.removeChild(wrapper);
+    }
+  }
 }
