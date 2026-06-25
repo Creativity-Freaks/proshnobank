@@ -321,7 +321,7 @@ export default function AdminRevenueTab() {
         })), BRAND.amber as [number, number, number]);
       }
 
-      finalizePages(page.doc);
+      finalizePages(page.doc, lang);
       const fileName = `ProshnoBank_Revenue_${new Date().toISOString().slice(0, 10)}.pdf`;
       page.doc.save(fileName);
       const successMsg = lang === "bn" ? "রিপোর্ট তৈরি হয়েছে" : "Report generated";

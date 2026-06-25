@@ -189,12 +189,14 @@ function drawHeader(
   subtitle: string,
   logo: HTMLImageElement | null,
   meta: { label: string; value: string }[],
+  lang: Language = "en",
 ): number {
   const { W, M, blue, blueLight, blueFade, white, muted, dark, border } = {
     ...BRAND,
     W: A4.W,
     M: BRAND.pageGutter,
   };
+  const t = i18n[lang];
 
   // ── Deep blue background band ─────────────────────────────────────────────
   doc.setFillColor(...blue);
@@ -223,10 +225,11 @@ function drawHeader(
 
   // ── Meta badges (right side) ──────────────────────────────────────────────
   let rx = W - M;
-  const now = new Date().toLocaleDateString("bn-BD", {
+  const now = new Date().toLocaleDateString(lang === "bn" ? "bn-BD" : "en-GB", {
     year: "numeric", month: "long", day: "numeric",
   });
-  const allMeta = [{ label: "তারিখ", value: now }, ...meta];
+  const dateLabel = lang === "bn" ? "তারিখ" : "Date";
+  const allMeta = [{ label: dateLabel, value: now }, ...meta];
   // draw right-to-left
   for (const m of [...allMeta].reverse()) {
     const txt = `${m.label}: ${m.value}`;
@@ -242,12 +245,10 @@ function drawHeader(
   doc.rect(0, 32.5, W, 8, "F");
   setF(doc, 7.5);
   doc.setTextColor(...muted);
-  doc.text(
-    "প্রশ্নব্যাংক  |  www.proshnobank.com  |  এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি করা হয়েছে — গোপনীয়",
-    W / 2,
-    37.5,
-    { align: "center" },
-  );
+  const infoText = lang === "bn"
+    ? "প্রশ্নব্যাংক  |  www.proshnobank.com  |  এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি করা হয়েছে — গোপনীয়"
+    : "ProshnoBank  |  www.proshnobank.com  |  This report was generated automatically — Confidential";
+  doc.text(infoText, W / 2, 37.5, { align: "center" });
 
   // ── Thin bottom border ────────────────────────────────────────────────────
   doc.setDrawColor(...border);
@@ -260,13 +261,14 @@ function drawHeader(
 /**
  * Draw the footer on a specific page.
  */
-function drawFooter(doc: any, pageNum: number, total: number) {
+function drawFooter(doc: any, pageNum: number, total: number, lang: Language = "en") {
   const { W, M, blue, muted, border, blueFade } = {
     ...BRAND,
     W: A4.W,
     M: BRAND.pageGutter,
   };
   const H = A4.H;
+  const t = i18n[lang];
 
   doc.setFillColor(...blueFade);
   doc.rect(0, H - 12, W, 12, "F");
@@ -276,21 +278,21 @@ function drawFooter(doc: any, pageNum: number, total: number) {
 
   setF(doc, 7.5);
   doc.setTextColor(...muted);
-  doc.text(i18n[page.lang].footer_official, M, H - 5);
-  const pageText = page.lang === "bn"
-    ? `${i18n.bn.footer_page} ${pageNum} ${i18n.bn.footer_of} ${total}`
-    : `${i18n.en.footer_page} ${pageNum} ${i18n.en.footer_of} ${total}`;
+  doc.text(t.footer_official, M, H - 5);
+  const pageText = lang === "bn"
+    ? `${t.footer_page} ${pageNum} ${t.footer_of} ${total}`
+    : `${t.footer_page} ${pageNum} ${t.footer_of} ${total}`;
   doc.text(pageText, W / 2, H - 5, { align: "center" });
-  const ts = new Date().toLocaleString(page.lang === "bn" ? "bn-BD" : "en-GB", { dateStyle: "short", timeStyle: "short" });
-  doc.text(`${i18n[page.lang].footer_generated}: ${ts}`, W - M, H - 5, { align: "right" });
+  const ts = new Date().toLocaleString(lang === "bn" ? "bn-BD" : "en-GB", { dateStyle: "short", timeStyle: "short" });
+  doc.text(`${t.footer_generated}: ${ts}`, W - M, H - 5, { align: "right" });
 }
 
 /** Add footers to all pages after content is done */
-export function finalizePages(doc: any) {
+export function finalizePages(doc: any, lang: Language = "en") {
   const total = doc.getNumberOfPages();
   for (let p = 1; p <= total; p++) {
     doc.setPage(p);
-    drawFooter(doc, p, total);
+    drawFooter(doc, p, total, lang);
   }
 }
 
@@ -312,7 +314,7 @@ export async function createReport(
 
   registerFont(doc);
   const logo = await loadLogoImage();
-  const y = drawHeader(doc, title, subtitle, logo, meta);
+  const y = drawHeader(doc, title, subtitle, logo, meta, lang);
 
   return { doc, y, W, H, M, contentW: W - M * 2, lang };
 }
@@ -397,7 +399,7 @@ export function drawKpiGrid(
   page.y += rows * (cardH + 2) + 4;
 }
 
-// ─── Table ───────────────────────────────────────────────────────────────────
+// ─── Table ───────────────────────────────────────────────────���───────────────
 export interface TableColumn {
   header: string;
   key: string;

@@ -290,7 +290,7 @@ export default function AdminAnalyticsTab() {
         ], data.categoryBreakdown);
       }
 
-      finalizePages(page.doc);
+      finalizePages(page.doc, lang);
       page.doc.save(`ProshnoBank_Analytics_${new Date().toISOString().slice(0, 10)}.pdf`);
     } catch (err) {
       console.error("[v0] PDF generation error:", err);
@@ -575,7 +575,7 @@ export default function AdminAnalyticsTab() {
         </Card>
       )}
 
-      {/* ── Summary card ─────────────────────────────────────────────── */}
+      {/* ── Summary card ��────────────────────────────────────────────── */}
       <Card className="bg-primary text-primary-foreground">
         <CardContent className="p-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
