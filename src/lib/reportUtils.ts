@@ -11,6 +11,22 @@
  *   │  FOOTER  (page X/Y + date)       │  h=12mm
  *   └──────────────────────────────────┘
  */
+import { NOTO_SANS_BENGALI_B64 } from "./fonts/notoBengaliB64";
+
+const FONT_NAME = "NotoSansBengali";
+
+/** Register the Bengali font into a jsPDF instance (idempotent) */
+function registerFont(doc: any) {
+  doc.addFileToVFS("NotoSansBengali.ttf", NOTO_SANS_BENGALI_B64);
+  doc.addFont("NotoSansBengali.ttf", FONT_NAME, "normal");
+  doc.setFont(FONT_NAME, "normal");
+}
+
+/** Shorthand: set font size + weight-emulation via size boost */
+function setF(doc: any, size: number, bold = false) {
+  doc.setFont(FONT_NAME, "normal");
+  doc.setFontSize(bold ? size + 0.5 : size);
+}
 
 // Brand palette
 export const BRAND = {
@@ -93,12 +109,10 @@ function drawHeader(
   // ── Title & subtitle ──────────────────────────────────────────────────────
   const textX = logo ? M + logoW + 5 : M;
   doc.setTextColor(...white);
-  doc.setFontSize(15);
-  doc.setFont("helvetica", "bold");
+  setF(doc, 15, true);
   doc.text(title, textX, 13);
 
-  doc.setFontSize(8.5);
-  doc.setFont("helvetica", "normal");
+  setF(doc, 8.5);
   doc.setTextColor(186, 213, 255);
   doc.text(subtitle, textX, 21);
 
@@ -111,8 +125,7 @@ function drawHeader(
   // draw right-to-left
   for (const m of [...allMeta].reverse()) {
     const txt = `${m.label}: ${m.value}`;
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "normal");
+    setF(doc, 7.5);
     doc.setTextColor(186, 213, 255);
     const tw = doc.getTextWidth(txt);
     doc.text(txt, rx - tw, 26);
@@ -122,8 +135,7 @@ function drawHeader(
   // ── Light background for info stripe ──────────────────────────────────────
   doc.setFillColor(...blueFade);
   doc.rect(0, 32.5, W, 8, "F");
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "normal");
+  setF(doc, 7.5);
   doc.setTextColor(...muted);
   doc.text(
     "প্রশ্নব্যাংক  |  www.proshnobank.com  |  এই রিপোর্টটি স্বয়ংক্রিয়ভাবে তৈরি করা হয়েছে — গোপনীয়",
@@ -157,8 +169,7 @@ function drawFooter(doc: any, pageNum: number, total: number) {
   doc.setLineWidth(0.3);
   doc.line(M, H - 12, W - M, H - 12);
 
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "normal");
+  setF(doc, 7.5);
   doc.setTextColor(...muted);
   doc.text("ProshnoBank — Official Report  |  Confidential", M, H - 5);
   doc.text(
@@ -195,6 +206,7 @@ export async function createReport(
   const H = A4.H;
   const M = BRAND.pageGutter;
 
+  registerFont(doc);
   const logo = await loadLogoImage();
   const y = drawHeader(doc, title, subtitle, logo, meta);
 
@@ -228,8 +240,7 @@ export function drawSectionHeading(page: ReportPage, text: string) {
   doc.setFillColor(...BRAND.blueLight);
   doc.rect(M, page.y, 3, 7, "F");
   doc.setTextColor(...BRAND.white);
-  doc.setFontSize(9);
-  doc.setFont("helvetica", "bold");
+  setF(doc, 9, true);
   doc.text(text, M + 6, page.y + 4.8);
   page.y += 10;
 }
@@ -262,21 +273,18 @@ export function drawKpiGrid(
     doc.rect(cx + 1, cy, 2.5, cardH, "F");
 
     // label
-    doc.setFontSize(7);
-    doc.setFont("helvetica", "normal");
+    setF(doc, 7);
     doc.setTextColor(...BRAND.muted);
     doc.text(kpis[i].label, cx + 6, cy + 5.5);
 
     // value
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
+    setF(doc, 12, true);
     doc.setTextColor(...BRAND.dark);
     doc.text(kpis[i].value, cx + 6, cy + 12.5);
 
     // sub
     if (kpis[i].sub) {
-      doc.setFontSize(6.5);
-      doc.setFont("helvetica", "normal");
+      setF(doc, 6.5);
       doc.setTextColor(...BRAND.muted);
       doc.text(kpis[i].sub!, cx + colW - 5, cy + 5.5, { align: "right" });
     }
@@ -308,8 +316,7 @@ export function drawTable(
   const totalW = columns.reduce((s, c) => s + c.width, 0);
   doc.rect(M, page.y, totalW, rowH, "F");
 
-  doc.setFontSize(7.5);
-  doc.setFont("helvetica", "bold");
+  setF(doc, 7.5, true);
   doc.setTextColor(...BRAND.white);
   columns.forEach(col => {
     const tx = col.align === "right" ? x + col.width - 2 :
@@ -324,6 +331,7 @@ export function drawTable(
     // Page break check
     if (page.y + rowH > page.H - 18) {
       doc.addPage();
+      registerFont(doc);
       page.y = 46; // approximate restart without new header (simple continuation)
     }
 
@@ -333,8 +341,7 @@ export function drawTable(
     doc.setLineWidth(0.15);
     doc.rect(M, page.y, totalW, rowH, "FD");
 
-    doc.setFontSize(7.5);
-    doc.setFont("helvetica", "normal");
+    setF(doc, 7.5);
     doc.setTextColor(...BRAND.dark);
 
     let rx = M;
