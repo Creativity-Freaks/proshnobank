@@ -151,6 +151,8 @@ Deno.serve(async (req: Request) => {
       const userIsTeacher = user ? await hasRole(supabase, user.id, "teacher") : false;
 
       const subject = url.searchParams.get("subject");
+      const subject_id = url.searchParams.get("subject_id");
+      const category_id = url.searchParams.get("category_id");
       const topic = url.searchParams.get("topic");
       const difficulty = url.searchParams.get("difficulty");
       const search = url.searchParams.get("search");
@@ -200,7 +202,11 @@ Deno.serve(async (req: Request) => {
         .select(action === "groups" ? "subject, topic, difficulty, question_text" : baseSelect, { count: "exact" })
         .order("created_at", { ascending: false });
 
-      if (subject && subject !== "all") {
+      if (subject_id) {
+        query = query.eq("subject_id", subject_id);
+      } else if (category_id) {
+        query = query.eq("category_id", category_id);
+      } else if (subject && subject !== "all") {
         const candidates = subjectCandidates(subject);
         query = candidates.length > 1 ? query.in("subject", candidates) : query.eq("subject", candidates[0]);
       }

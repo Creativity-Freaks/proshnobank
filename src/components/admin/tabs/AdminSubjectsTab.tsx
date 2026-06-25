@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, Trash2, Edit2, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ export default function AdminSubjectsTab() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: "", key: "", category_id: "", description: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [filterCategory, setFilterCategory] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
   useEffect(() => {
     fetchCategories();
@@ -28,6 +30,7 @@ export default function AdminSubjectsTab() {
       const { data } = await supabase
         .from("exam_categories")
         .select("id, name, parent_id")
+        .is("parent_id", null)
         .order("sort_order", { ascending: true });
       setCategories(data || []);
     } catch (error) {
@@ -138,6 +141,15 @@ export default function AdminSubjectsTab() {
   // Show root-level and all categories for selection
   const allCategories = categories;
 
+  // Filtered subjects based on filterCategory + searchQuery
+  const filteredSubjects = useMemo(() => {
+    return subjects.filter(sub => {
+      const matchesCat = !filterCategory || sub.category_id === filterCategory;
+      const matchesSearch = !searchQuery || sub.name.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCat && matchesSearch;
+    });
+  }, [subjects, filterCategory, searchQuery]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -231,8 +243,38 @@ export default function AdminSubjectsTab() {
         </Card>
       )}
 
+      {/* ── Filter Card ─────────────────────────────────────────────────── */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">ফিল্টার এবং অনুসন্ধান</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="বিষয়ের নাম দিয়ে খুঁজুন..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">ক্যাটেগরি অনুযায়ী ফিল্টার</Label>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant={filterCategory === "" ? "default" : "outline"}
+                onClick={() => setFilterCategory("")}>সব</Button>
+              {categories.map(cat => (
+                <Button key={cat.id} size="sm" variant={filterCategory === cat.id ? "default" : "outline"}
+                  onClick={() => setFilterCategory(cat.id === filterCategory ? "" : cat.id)}>{cat.name}</Button>
+              ))}
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">দেখাচ্ছে: {filteredSubjects.length}/{subjects.length}টি বিষয়</p>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {subjects.map((subject) => (
+        {filteredSubjects.map((subject) => (
           <Card key={subject.id}>
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{subject.name}</CardTitle>

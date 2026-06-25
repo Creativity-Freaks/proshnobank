@@ -95,6 +95,8 @@ export const questionsApi = {
 
   groups: (filters?: {
     subject?: string;
+    subject_id?: string;
+    category_id?: string;
     difficulty?: string;
     search?: string;
     limit?: number;
@@ -108,7 +110,9 @@ export const questionsApi = {
       offset: number;
     }>("questions", {
       action: "groups",
-      subject: filters?.subject,
+      ...(filters?.subject_id  ? { subject_id:  filters.subject_id  } : {}),
+      ...(filters?.category_id ? { category_id: filters.category_id } : {}),
+      ...(filters?.subject && !filters.subject_id ? { subject: filters.subject } : {}),
       difficulty: filters?.difficulty,
       search: filters?.search,
       limit: String(filters?.limit || 120),

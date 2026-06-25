@@ -159,8 +159,9 @@ export default function Doubts() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [subjectFilter, setSubjectFilter] = useState<string>("all");
-  const [subjects, setSubjects] = useState<string[]>([]);
+  // cascade filter: category → subject
+  const [filterCategoryId, setFilterCategoryId] = useState<string>("");
+  const [filterSubjectId, setFilterSubjectId] = useState<string>("");
 
   // Thread view
   const [selectedDoubt, setSelectedDoubt] = useState<Doubt | null>(null);
@@ -175,6 +176,7 @@ export default function Doubts() {
   const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
   const [allSubjects, setAllSubjects] = useState<{ id: string; name: string; category_id: string }[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
+  const [selectedSubjectId, setSelectedSubjectId] = useState("");
 
   // Ask form
   const [showAskForm, setShowAskForm] = useState(false);
@@ -203,7 +205,8 @@ export default function Doubts() {
         .order("created_at", { ascending: false });
 
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
-      if (subjectFilter !== "all") query = query.eq("subject", subjectFilter);
+      if (filterSubjectId) query = query.eq("subject_id", filterSubjectId);
+      else if (filterCategoryId) query = query.eq("category_id", filterCategoryId);
 
       const { data, error } = await query;
       if (error) throw error;
@@ -234,7 +237,7 @@ export default function Doubts() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, subjectFilter, toast]);
+  }, [statusFilter, filterCategoryId, filterSubjectId, toast]);
 
   const fetchMonthlyUsage = useCallback(async () => {
     if (!user) return;
@@ -329,10 +332,16 @@ export default function Doubts() {
         image_url = await uploadDoubtImage(doubtImageFile, `doubts/${user.id}`);
         setUploadingDoubtImage(false);
       }
-      await doubtApi.createDoubt({ ...newDoubt, image_url } as any);
+      await doubtApi.createDoubt({
+        ...newDoubt,
+        image_url,
+        category_id: selectedCategoryId || null,
+        subject_id:  selectedSubjectId  || null,
+      } as any);
       toast({ title: "সাফল্য", description: "আপনার প্রশ্ন জমা দেওয়া হয়েছে" });
       setNewDoubt({ title: "", description: "", subject: "", topic: "", priority: "medium" });
       setSelectedCategoryId("");
+      setSelectedSubjectId("");
       setDoubtImageFile(null);
       setDoubtImagePreview(null);
       setShowAskForm(false);
@@ -398,7 +407,7 @@ export default function Doubts() {
     !searchQuery ||
     d.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    d.subject.toLowerCase().includes(searchQuery.toLowerCase())
+    (d.subject || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
@@ -461,13 +470,25 @@ export default function Doubts() {
             {Object.entries(STATUS_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
           </select>
           <select
-            value={subjectFilter}
-            onChange={e => setSubjectFilter(e.target.value)}
+            value={filterCategoryId}
+            onChange={e => { setFilterCategoryId(e.target.value); setFilterSubjectId(""); }}
             className="px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
           >
-            <option value="all">সব বিষয়</option>
-            {subjects.map(s => <option key={s} value={s}>{s}</option>)}
+            <option value="">সব ক্যাটেগরি</option>
+            {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
+          {filterCategoryId && (
+            <select
+              value={filterSubjectId}
+              onChange={e => setFilterSubjectId(e.target.value)}
+              className="px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
+            >
+              <option value="">সব বিষয়</option>
+              {allSubjects.filter(s => s.category_id === filterCategoryId).map(s => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+          )}
 
           {!user ? (
             <Button onClick={() => navigate("/login")}>লগইন করুন</Button>
@@ -502,6 +523,7 @@ export default function Doubts() {
                     value={selectedCategoryId}
                     onChange={e => {
                       setSelectedCategoryId(e.target.value);
+                      setSelectedSubjectId("");
                       setNewDoubt(prev => ({ ...prev, subject: "" }));
                     }}
                     required
@@ -516,8 +538,13 @@ export default function Doubts() {
                   <label className="block text-sm font-medium text-foreground mb-1">বিষয় <span className="text-red-500">*</span></label>
                   <select
                     className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring disabled:opacity-50"
-                    value={newDoubt.subject}
-                    onChange={e => setNewDoubt(prev => ({ ...prev, subject: e.target.value }))}
+                    value={selectedSubjectId}
+                    onChange={e => {
+                      const subId = e.target.value;
+                      const sub = allSubjects.find(s => s.id === subId);
+                      setSelectedSubjectId(subId);
+                      setNewDoubt(prev => ({ ...prev, subject: sub?.name || "" }));
+                    }}
                     required
                     disabled={!selectedCategoryId}
                   >
@@ -525,7 +552,7 @@ export default function Doubts() {
                     {allSubjects
                       .filter(s => s.category_id === selectedCategoryId)
                       .map(s => (
-                        <option key={s.id} value={s.name}>{s.name}</option>
+                        <option key={s.id} value={s.id}>{s.name}</option>
                       ))
                     }
                   </select>

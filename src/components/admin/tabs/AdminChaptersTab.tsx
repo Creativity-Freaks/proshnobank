@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   Plus, Trash2, Edit2, Loader2, BookOpen,
-  Layers, GraduationCap, ChevronRight, X, Check,
+  Layers, GraduationCap, ChevronRight, X, Check, Search,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -62,6 +62,9 @@ export default function AdminChaptersTab() {
   const [editingId,  setEditingId]  = useState<string | null>(null);
   const [formData,   setFormData]   = useState<FormState>(emptyForm);
   const [saving,     setSaving]     = useState(false);
+
+  // Search/filter
+  const [chapterSearch, setChapterSearch] = useState("");
 
   // ── fetch categories ────────────────────────────────────────────────────────
   const fetchCategories = useCallback(async () => {
@@ -217,6 +220,14 @@ export default function AdminChaptersTab() {
   // ── Derived ────────────────────────────────────────────────────────────────
   const selectedCategoryName = categories.find((c) => c.id === selectedCategory)?.name;
   const selectedSubjectName  = subjects.find((s) => s.id === selectedSubject)?.name;
+
+  const filteredChapters = useMemo(() => {
+    if (!chapterSearch.trim()) return chapters;
+    const q = chapterSearch.toLowerCase();
+    return chapters.filter(
+      (c) => c.chapter_name_bn.toLowerCase().includes(q) || (c.chapter_name_en || "").toLowerCase().includes(q)
+    );
+  }, [chapters, chapterSearch]);
 
   // ── Render ─────────────────────────────────────────────────────────────────
   if (loadingCats) {
@@ -419,14 +430,29 @@ export default function AdminChaptersTab() {
       {/* ── Step 3 — Chapters List ─────────────────────────────────────────── */}
       {selectedSubject && (
         <div className="space-y-3">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <span className="h-5 w-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center font-bold">৩</span>
               <h3 className="font-semibold font-bengali text-sm">
                 {selectedSubjectName} — অধ্যায়সমূহ
               </h3>
             </div>
-            {!loadingChaps && <Badge variant="outline" className="text-xs">{chapters.length}টি</Badge>}
+            <div className="flex items-center gap-2 flex-1 min-w-0 max-w-xs">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  placeholder="অধ্যায় খুঁজুন..."
+                  value={chapterSearch}
+                  onChange={e => setChapterSearch(e.target.value)}
+                  className="pl-8 h-8 text-sm font-bengali"
+                />
+              </div>
+              {!loadingChaps && (
+                <Badge variant="outline" className="text-xs shrink-0">
+                  {filteredChapters.length}/{chapters.length}টি
+                </Badge>
+              )}
+            </div>
           </div>
 
           {loadingChaps ? (
@@ -451,9 +477,17 @@ export default function AdminChaptersTab() {
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredChapters.length === 0 && chapterSearch ? (
+            <Card>
+              <CardContent className="py-8 text-center">
+                <p className="font-bengali text-sm text-muted-foreground">
+                  &quot;{chapterSearch}&quot; নামে কোনো অধ্যায় পাওয়া যায়নি
+                </p>
+              </CardContent>
+            </Card>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {chapters.map((item) => (
+              {filteredChapters.map((item) => (
                 <Card
                   key={item.id}
                   className={`group transition-opacity ${item.is_active ? "" : "opacity-60"}`}

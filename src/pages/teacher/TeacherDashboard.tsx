@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
@@ -139,8 +139,12 @@ export default function TeacherDashboard() {
 
   const [questionSearch, setQuestionSearch] = useState("");
   const [builderSearch, setBuilderSearch] = useState("");
+  const [builderCategory, setBuilderCategory] = useState<string>("");
+  const [builderSubjectId, setBuilderSubjectId] = useState<string>("all");
   const [builderSubject, setBuilderSubject] = useState<string>("all");
   const [builderDifficulty, setBuilderDifficulty] = useState<string>("all");
+  const [builderCategories, setBuilderCategories] = useState<{ id: string; name: string }[]>([]);
+  const [builderSubjects, setBuilderSubjects] = useState<{ id: string; name: string }[]>([]);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const [templateTitle, setTemplateTitle] = useState("");
@@ -173,6 +177,19 @@ export default function TeacherDashboard() {
     title: "টিচার ড্যাশবোর্ড",
     description: "প্রশ্ন তৈরি, প্রশ্ন সেট বানানো, এক্সাম শিডিউল এবং প্রশ্নপত্র আপলোড করুন।",
   });
+
+  // Load categories once on mount
+  useEffect(() => {
+    supabase.from("exam_categories").select("id, name").is("parent_id", null).order("sort_order", { ascending: true })
+      .then(({ data }) => setBuilderCategories(data || []));
+  }, []);
+
+  // Load subjects when builder category changes
+  useEffect(() => {
+    if (!builderCategory) { setBuilderSubjects([]); setBuilderSubjectId("all"); setBuilderSubject("all"); return; }
+    supabase.from("subjects").select("id, name").eq("category_id", builderCategory).order("name")
+      .then(({ data }) => { setBuilderSubjects(data || []); setBuilderSubjectId("all"); setBuilderSubject("all"); });
+  }, [builderCategory]);
 
   const handleLogout = async () => {
     await signOut();
@@ -890,56 +907,85 @@ export default function TeacherDashboard() {
                       <CardTitle>ডাটাবেজ থেকে প্রশ্ন সিলেক্ট</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="grid gap-3 mb-4 md:grid-cols-3">
-                        <div>
-                          <Label>সার্চ</Label>
-                          <div className="relative mt-2">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input
-                              placeholder="কিওয়ার্ড..."
-                              className="pl-10"
-                              value={builderSearch}
-                              onChange={(e) => setBuilderSearch(e.target.value)}
-                            />
+                      <div className="space-y-3 mb-4">
+                        {/* Search */}
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input
+                            placeholder="কিওয়ার্ড দিয়ে খুঁজুন..."
+                            className="pl-10"
+                            value={builderSearch}
+                            onChange={(e) => setBuilderSearch(e.target.value)}
+                          />
+                        </div>
+
+                        {/* Category filter */}
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">ক্যাটেগরি</Label>
+                          <div className="flex flex-wrap gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => { setBuilderCategory(""); setBuilderSubject("all"); }}
+                              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${!builderCategory ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-muted"}`}
+                            >সব</button>
+                            {builderCategories.map(cat => (
+                              <button key={cat.id} type="button"
+                                onClick={() => setBuilderCategory(cat.id === builderCategory ? "" : cat.id)}
+                                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-colors ${builderCategory === cat.id ? "bg-primary text-primary-foreground border-primary" : "bg-background border-border hover:bg-muted"}`}
+                              >{cat.name}</button>
+                            ))}
                           </div>
                         </div>
 
-                        <div>
-                          <Label>বিষয়</Label>
-                          <Select value={builderSubject} onValueChange={setBuilderSubject}>
-                            <SelectTrigger className="mt-2">
-                              <SelectValue placeholder="বিষয়" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">সব</SelectItem>
-                              <SelectItem value="bangla">Bangla</SelectItem>
-                              <SelectItem value="english">English</SelectItem>
-                              <SelectItem value="math">Math</SelectItem>
-                              <SelectItem value="physics">Physics</SelectItem>
-                              <SelectItem value="chemistry">Chemistry</SelectItem>
-                              <SelectItem value="biology">Biology</SelectItem>
-                              <SelectItem value="gk">GK</SelectItem>
-                              <SelectItem value="ict">ICT</SelectItem>
-                              <SelectItem value="science">Science</SelectItem>
-                              <SelectItem value="computer">Computer</SelectItem>
-                              <SelectItem value="iq">IQ</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Subject filter (cascades from category) */}
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">বিষয়</Label>
+                            <Select
+                              value={builderSubjectId}
+                              onValueChange={val => {
+                                setBuilderSubjectId(val);
+                                const sub = builderSubjects.find(s => s.id === val);
+                                setBuilderSubject(sub ? sub.name : "all");
+                              }}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="বিষয় নির্বাচন" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">সব বিষয়</SelectItem>
+                                {builderSubjects.map(sub => (
+                                  <SelectItem key={sub.id} value={sub.id}>{sub.name}</SelectItem>
+                                ))}
+                                {/* legacy fallback if no subjects loaded */}
+                                {builderSubjects.length === 0 && !builderCategory && <>
+                                  <SelectItem value="__bangla">বাংলা</SelectItem>
+                                  <SelectItem value="__english">ইংরেজি</SelectItem>
+                                  <SelectItem value="__math">গণিত</SelectItem>
+                                  <SelectItem value="__physics">পদার্থবিজ্ঞান</SelectItem>
+                                  <SelectItem value="__chemistry">রসায়ন</SelectItem>
+                                  <SelectItem value="__biology">জীববিজ্ঞান</SelectItem>
+                                  <SelectItem value="__gk">সাধারণ জ্ঞান</SelectItem>
+                                  <SelectItem value="__ict">ICT</SelectItem>
+                                </>}
+                              </SelectContent>
+                            </Select>
+                          </div>
 
-                        <div>
-                          <Label>কঠিনতা</Label>
-                          <Select value={builderDifficulty} onValueChange={setBuilderDifficulty}>
-                            <SelectTrigger className="mt-2">
-                              <SelectValue placeholder="কঠিনতা" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">সব</SelectItem>
-                              <SelectItem value="easy">সহজ</SelectItem>
-                              <SelectItem value="medium">মাঝারি</SelectItem>
-                              <SelectItem value="hard">কঠিন</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">কঠিনতা</Label>
+                            <Select value={builderDifficulty} onValueChange={setBuilderDifficulty}>
+                              <SelectTrigger>
+                                <SelectValue placeholder="কঠিনতা" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="all">সব</SelectItem>
+                                <SelectItem value="easy">সহজ</SelectItem>
+                                <SelectItem value="medium">মাঝারি</SelectItem>
+                                <SelectItem value="hard">কঠিন</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
                         </div>
                       </div>
 
