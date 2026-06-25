@@ -224,138 +224,98 @@ export default function AdminRevenueTab() {
     setGenerating(true);
     try {
       const { default: jsPDF } = await import("jspdf");
-      const { default: html2canvas } = await import("html2canvas");
+      const {
+        createReport, finalizePages,
+        drawSectionHeading, drawKpiGrid, drawTable,
+        BRAND,
+      } = await import("@/lib/reportUtils");
 
-      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const W = 210; const M = 15;
+      const dateLabel =
+        filters.dateRange === "7d"  ? "গত ৭ দিন"  :
+        filters.dateRange === "30d" ? "গত ৩০ দিন" :
+        filters.dateRange === "90d" ? "গত ৯০ দিন" : "সর্বকালীন";
+      const statusLabel =
+        filters.status === "all"       ? "সব স্ট্যাটাস" :
+        filters.status === "active"    ? "সক্রিয়"        :
+        filters.status === "cancelled" ? "বাতিল"         : "অপেক্ষমাণ";
+      const planLabel =
+        filters.planType === "all"     ? "সব প্ল্যান"    :
+        filters.planType === "student" ? "স্টুডেন্ট"     :
+        filters.planType === "teacher" ? "টিচার"         : "কোচিং";
 
-      // ── Header ─────────────────────────────────────────────────────────────
-      doc.setFillColor(37, 99, 235);
-      doc.rect(0, 0, W, 32, "F");
+      const page = await createReport(
+        jsPDF,
+        "প্রশ্নব্যাংক — রেভিনিউ রিপোর্ট",
+        "সাবস্ক্রিপশন ও ব্যাচ আয়ের বিস্তারিত বিশ্লেষণ",
+        [
+          { label: "সময়সীমা",  value: dateLabel  },
+          { label: "প্ল্যান",   value: planLabel  },
+          { label: "স্ট্যাটাস", value: statusLabel },
+        ],
+      );
 
-      try {
-        const img = new Image(); img.crossOrigin = "anonymous";
-        img.src = "/logo.png";
-        await new Promise((r, j) => { img.onload = r; img.onerror = j; });
-        doc.addImage(img, "PNG", M, 6, 20, 20);
-      } catch { /* skip logo */ }
+      // ── KPI Cards ────────────────────────────────────────────────────────
+      drawSectionHeading(page, "মূল পরিসংখ্যান");
+      drawKpiGrid(page, [
+        { label: "মোট আয়",            value: `৳${data.totalRevenue.toLocaleString()}` },
+        { label: "সাবস্ক্রিপশন আয়",   value: `৳${data.subscriptionRevenue.toLocaleString()}` },
+        { label: "ব্যাচ আয়",           value: `৳${data.batchRevenue.toLocaleString()}` },
+        { label: "মোট গ্রাহক",         value: String(data.totalSubscribers) },
+        { label: "সক্রিয় গ্রাহক",      value: String(data.activeSubscribers) },
+        { label: "ব্যাচ এনরোলমেন্ট",   value: String(data.totalBatchEnrollments) },
+      ]);
 
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18); doc.setFont(undefined, "bold");
-      doc.text("ProshnoBank — রেভিনিউ রিপোর্ট", 40, 16);
-      doc.setFontSize(9); doc.setFont(undefined, "normal");
-      doc.text(`তৈরির তারিখ: ${new Date().toLocaleString("bn-BD")}`, 40, 24);
-
-      const dateLabel = filters.dateRange === "7d" ? "গত ৭ দিন" : filters.dateRange === "30d" ? "গত ৩০ দিন" : filters.dateRange === "90d" ? "গত ৯০ দিন" : "সর্বকালীন";
-      doc.text(`সময়সীমা: ${dateLabel}`, W - M - 40, 24);
-
-      let y = 42;
-      doc.setTextColor(0, 0, 0);
-
-      // ── KPI Section ────────────────────────────────────────────────────────
-      doc.setFontSize(12); doc.setFont(undefined, "bold");
-      doc.setFillColor(241, 245, 249);
-      doc.rect(M, y - 4, W - M * 2, 8, "F");
-      doc.text("সারসংক্ষেপ (KPI)", M + 3, y + 1);
-      y += 10;
-
-      const kpis = [
-        ["মোট আয়", `৳${data.totalRevenue.toLocaleString()}`],
-        ["সাবস্ক্রিপশন আয়", `৳${data.subscriptionRevenue.toLocaleString()}`],
-        ["ব্যাচ আয়", `৳${data.batchRevenue.toLocaleString()}`],
-        ["মোট গ্রাহক", String(data.totalSubscribers)],
-        ["সক্রিয় গ্রাহক", String(data.activeSubscribers)],
-        ["ব্যাচ এনরোলমেন্ট", String(data.totalBatchEnrollments)],
-      ];
-
-      const colW = (W - M * 2) / 3;
-      kpis.forEach(([label, val], i) => {
-        const cx = M + (i % 3) * colW;
-        const cy = y + Math.floor(i / 3) * 18;
-        doc.setFillColor(255, 255, 255);
-        doc.setDrawColor(226, 232, 240);
-        doc.roundedRect(cx, cy, colW - 2, 15, 2, 2, "FD");
-        doc.setFontSize(7); doc.setFont(undefined, "normal"); doc.setTextColor(100, 116, 139);
-        doc.text(label, cx + 4, cy + 6);
-        doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(15, 23, 42);
-        doc.text(val, cx + 4, cy + 13);
-      });
-      y += Math.ceil(kpis.length / 3) * 18 + 8;
-
-      // ── Plan Breakdown Table ───────────────────────────────────────────────
+      // ── Plan Breakdown ────────────────────────────────────────────────────
       if (data.planBreakdown.length > 0) {
-        doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(0, 0, 0);
-        doc.setFillColor(241, 245, 249);
-        doc.rect(M, y - 4, W - M * 2, 8, "F");
-        doc.text("প্ল্যান অনুযায়ী সাবস্ক্রিপশন", M + 3, y + 1);
-        y += 10;
-
-        const headers = ["প্ল্যানের নাম", "গ্রাহক সংখ্যা", "আয় (৳)"];
-        const colWidths = [90, 40, 45];
-        doc.setFontSize(8); doc.setFont(undefined, "bold");
-        doc.setFillColor(37, 99, 235); doc.setTextColor(255, 255, 255);
-        doc.rect(M, y, W - M * 2, 7, "F");
-        let xh = M + 2;
-        headers.forEach((h, i) => { doc.text(h, xh, y + 5); xh += colWidths[i]; });
-        y += 7;
-
-        data.planBreakdown.forEach((row, idx) => {
-          doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
-          doc.setTextColor(0, 0, 0);
-          doc.setFont(undefined, "normal");
-          doc.rect(M, y, W - M * 2, 7, "F");
-          let xr = M + 2;
-          [row.name, String(row.count), `৳${row.revenue.toLocaleString()}`].forEach((v, i) => {
-            doc.text(String(v), xr, y + 5);
-            xr += colWidths[i];
-          });
-          y += 7;
-          if (y > 260) { doc.addPage(); y = 20; }
-        });
-        y += 8;
+        drawSectionHeading(page, "প্ল্যান অনুযায়ী সাবস্ক্রিপশন");
+        drawTable(page, [
+          { header: "প্ল্যানের নাম", key: "name",       width: 85 },
+          { header: "গ্রাহক",        key: "count",      width: 30, align: "right" },
+          { header: "আয় (৳)",        key: "revenueStr", width: 40, align: "right" },
+          { header: "অংশ (%)",        key: "pct",        width: 25, align: "right" },
+        ], data.planBreakdown.map(r => ({
+          ...r,
+          revenueStr: `৳${r.revenue.toLocaleString()}`,
+          pct: data.subscriptionRevenue > 0
+            ? `${Math.round((r.revenue / data.subscriptionRevenue) * 100)}%`
+            : "০%",
+        })));
       }
 
-      // ── Batch Breakdown Table ──────────────────────────────────────────────
+      // ── Batch Breakdown ───────────────────────────────────────────────────
       if (data.batchBreakdown.length > 0) {
-        if (y > 220) { doc.addPage(); y = 20; }
-        doc.setFontSize(11); doc.setFont(undefined, "bold"); doc.setTextColor(0, 0, 0);
-        doc.setFillColor(241, 245, 249);
-        doc.rect(M, y - 4, W - M * 2, 8, "F");
-        doc.text("ব্যাচ অনুযায়ী আয়", M + 3, y + 1);
-        y += 10;
-
-        const headers2 = ["ব্যাচের নাম", "এনরোল্ড", "আয় (৳)"];
-        const colW2 = [90, 40, 45];
-        doc.setFontSize(8); doc.setFont(undefined, "bold");
-        doc.setFillColor(16, 185, 129); doc.setTextColor(255, 255, 255);
-        doc.rect(M, y, W - M * 2, 7, "F");
-        let xh2 = M + 2;
-        headers2.forEach((h, i) => { doc.text(h, xh2, y + 5); xh2 += colW2[i]; });
-        y += 7;
-
-        data.batchBreakdown.forEach((row, idx) => {
-          doc.setFillColor(idx % 2 === 0 ? 255 : 248, idx % 2 === 0 ? 255 : 250, idx % 2 === 0 ? 255 : 252);
-          doc.setTextColor(0, 0, 0); doc.setFont(undefined, "normal");
-          doc.rect(M, y, W - M * 2, 7, "F");
-          let xr2 = M + 2;
-          [row.name.slice(0, 38), String(row.enrolled), `৳${row.revenue.toLocaleString()}`].forEach((v, i) => {
-            doc.text(v, xr2, y + 5); xr2 += colW2[i];
-          });
-          y += 7;
-          if (y > 260) { doc.addPage(); y = 20; }
-        });
+        drawSectionHeading(page, "ব্যাচ অনুযায়ী আয়");
+        drawTable(page, [
+          { header: "ব্যাচের নাম",    key: "name",       width: 90 },
+          { header: "এনরোল্ড",        key: "enrolled",   width: 25, align: "right" },
+          { header: "মূল্য (৳)",       key: "priceStr",   width: 30, align: "right" },
+          { header: "মোট আয় (৳)",     key: "revenueStr", width: 35, align: "right" },
+        ], data.batchBreakdown.map(r => ({
+          ...r,
+          priceStr:   r.price != null ? `৳${r.price.toLocaleString()}` : "—",
+          revenueStr: `৳${r.revenue.toLocaleString()}`,
+        })), BRAND.teal as [number, number, number]);
       }
 
-      // ── Footer ──────────────────────────────────────────────────────────────
-      const pageCount = doc.getNumberOfPages();
-      for (let i = 1; i <= pageCount; i++) {
-        doc.setPage(i);
-        doc.setFontSize(7); doc.setTextColor(156, 163, 175);
-        doc.text(`পৃষ্ঠা ${i} / ${pageCount}  |  ProshnoBank Admin Report  |  ${new Date().toLocaleDateString("bn-BD")}`, W / 2, 292, { align: "center" });
+      // ── Monthly Trend ─────────────────────────────────────────────────────
+      if (data.monthlyRevenue.length > 0) {
+        drawSectionHeading(page, "মাসিক আয়ের ধারা");
+        drawTable(page, [
+          { header: "মাস",                  key: "month",    width: 55 },
+          { header: "সাবস্ক্রিপশন আয় (৳)", key: "subStr",   width: 55, align: "right" },
+          { header: "ব্যাচ আয় (৳)",         key: "batchStr", width: 45, align: "right" },
+          { header: "মোট (৳)",               key: "totalStr", width: 25, align: "right" },
+        ], data.monthlyRevenue.map(r => ({
+          ...r,
+          subStr:   `৳${r.subscription.toLocaleString()}`,
+          batchStr: `৳${r.batch.toLocaleString()}`,
+          totalStr: `৳${(r.subscription + r.batch).toLocaleString()}`,
+        })), BRAND.amber as [number, number, number]);
       }
 
-      const fileName = `proshnobank-revenue-${new Date().toISOString().slice(0, 10)}.pdf`;
-      doc.save(fileName);
+      finalizePages(page.doc);
+      const fileName = `ProshnoBank_Revenue_${new Date().toISOString().slice(0, 10)}.pdf`;
+      page.doc.save(fileName);
       toast({ title: "রিপোর্ট তৈরি হয়েছে", description: fileName });
     } catch (err: any) {
       toast({ title: "Error", description: "PDF তৈরি করতে ব্যর্থ: " + err.message, variant: "destructive" });
@@ -363,6 +323,8 @@ export default function AdminRevenueTab() {
       setGenerating(false);
     }
   };
+
+
 
   if (loading) {
     return (
