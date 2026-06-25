@@ -199,51 +199,57 @@ export default function AdminAnalyticsTab() {
       const {
         createReport, finalizePages,
         drawSectionHeading, drawKpiGrid, drawTable,
-        BRAND,
+        BRAND, i18n,
       } = await import("@/lib/reportUtils");
 
+      // Detect language from user's browser or localStorage
+      const lang = (localStorage.getItem("appLanguage") ?? navigator.language.split("-")[0]) === "bn" ? "bn" : "en";
+      const t = i18n[lang];
+
       const dateLabel =
-        filters.dateRange === "7d" ? "গত ৭ দিন" :
-        filters.dateRange === "30d" ? "গত ৩০ দিন" :
-        filters.dateRange === "90d" ? "গত ৯০ দিন" : "সর্বকালীন";
+        filters.dateRange === "7d" ? (lang === "bn" ? "গত ৭ দিন" : "Last 7 Days") :
+        filters.dateRange === "30d" ? (lang === "bn" ? "গত ৩০ দিন" : "Last 30 Days") :
+        filters.dateRange === "90d" ? (lang === "bn" ? "গত ৯০ দিন" : "Last 90 Days") :
+        (lang === "bn" ? "সর্বকালীন" : "All Time");
       const catLabel = filters.category === "all"
-        ? "সব ক্যাটেগরি"
+        ? t.all
         : (categories.find(c => c.id === filters.category)?.name ?? filters.category);
       const diffLabel = filters.difficulty === "all"
-        ? "সব কঠিনতা"
-        : (DIFFICULTY_LABELS[filters.difficulty] ?? filters.difficulty);
+        ? t.all
+        : (lang === "bn" ? (DIFFICULTY_LABELS[filters.difficulty] ?? filters.difficulty) : filters.difficulty);
 
       const page = await createReport(
         jsPDF,
-        "প্রশ্নব্যাংক — বিশ্লেষণ রিপোর্ট",
-        "পরীক্ষা কার্যক্রমের বিস্তারিত পরিসংখ্যান",
+        t.analytics_title,
+        t.analytics_subtitle,
         [
-          { label: "সময়সীমা", value: dateLabel },
-          { label: "ক্যাটেগরি", value: catLabel },
-          { label: "কঠিনতা", value: diffLabel },
+          { label: t.analytics_period, value: dateLabel },
+          { label: t.analytics_category, value: catLabel },
+          { label: t.analytics_difficulty, value: diffLabel },
         ],
+        lang,
       );
 
       // ── KPI Cards ──────────────────────────────────────────────────────────
-      drawSectionHeading(page, "সারসংক্ষেপ (মূল পরিসংখ্যান)");
+      drawSectionHeading(page, t.analytics_summary);
       drawKpiGrid(page, [
-        { label: "মোট প্রশ্ন",       value: String(data.totalQuestions) },
-        { label: "মোট ব্যবহারকারী",  value: String(data.totalUsers) },
-        { label: "মোট পরীক্ষা",      value: String(data.totalAttempts) },
-        { label: "গড় নির্ভুলতা",    value: `${data.avgAccuracyPct}%` },
-        { label: "ক্যাটেগরি",        value: String(data.totalCategories) },
-        { label: "বিষয়",             value: String(data.totalSubjects) },
+        { label: t.analytics_total_questions, value: String(data.totalQuestions) },
+        { label: t.analytics_total_users,    value: String(data.totalUsers) },
+        { label: t.analytics_total_attempts,   value: String(data.totalAttempts) },
+        { label: t.analytics_avg_accuracy,   value: `${data.avgAccuracyPct}%` },
+        { label: t.analytics_categories,     value: String(data.totalCategories) },
+        { label: t.analytics_subjects,       value: String(data.totalSubjects) },
       ]);
 
       // ── Subject Breakdown Table ─────────────────────────────────────────────
-      drawSectionHeading(page, "বিষয়ভিত্তিক বিশ্লেষণ");
+      drawSectionHeading(page, t.analytics_subject_breakdown);
       const totalQ = data.subjectBreakdown.reduce((s, r) => s + r.questions, 0) || 1;
       drawTable(page, [
-        { header: "বিষয়",         key: "name",      width: 75 },
-        { header: "প্রশ্ন সংখ্যা", key: "questions", width: 30, align: "right" },
-        { header: "পরীক্ষার সংখ্যা", key: "attempts", width: 35, align: "right" },
-        { header: "অংশ (%)",       key: "share",     width: 22, align: "right" },
-        { header: "গড় স্কোর",      key: "avgScore",  width: 18, align: "right" },
+        { header: lang === "bn" ? "বিষয়" : "Subject",         key: "name",      width: 75 },
+        { header: lang === "bn" ? "প্রশ্ন সংখ্যা" : "Questions", key: "questions", width: 30, align: "right" },
+        { header: lang === "bn" ? "পরীক্ষার সংখ্যা" : "Attempts", key: "attempts", width: 35, align: "right" },
+        { header: t.share, key: "share",     width: 22, align: "right" },
+        { header: lang === "bn" ? "গড় স্কোর" : "Avg Score",      key: "avgScore",  width: 18, align: "right" },
       ], data.subjectBreakdown.map(r => ({
         ...r,
         share: `${Math.round((r.questions / totalQ) * 100)}%`,
@@ -251,12 +257,12 @@ export default function AdminAnalyticsTab() {
       })));
 
       // ── Difficulty Distribution ─────────────────────────────────────────────
-      drawSectionHeading(page, "প্রশ্নের কঠিনতার স্তর");
+      drawSectionHeading(page, t.analytics_difficulty_dist);
       const totalDiff = data.difficultyBreakdown.reduce((s, r) => s + r.value, 0) || 1;
       drawTable(page, [
-        { header: "কঠিনতার স্তর", key: "name",  width: 80 },
-        { header: "প্রশ্ন সংখ্যা", key: "value", width: 40, align: "right" },
-        { header: "শতাংশ",         key: "pct",   width: 40, align: "right" },
+        { header: lang === "bn" ? "কঠিনতার স্তর" : "Difficulty", key: "name",  width: 80 },
+        { header: lang === "bn" ? "প্রশ্ন সংখ্যা" : "Count", key: "value", width: 40, align: "right" },
+        { header: t.percentage, key: "pct",   width: 40, align: "right" },
       ], data.difficultyBreakdown.map(r => ({
         ...r,
         pct: `${Math.round((r.value / totalDiff) * 100)}%`,
@@ -264,11 +270,11 @@ export default function AdminAnalyticsTab() {
 
       // ── Score Band Distribution ─────────────────────────────────────────────
       if (data.totalAttempts > 0) {
-        drawSectionHeading(page, "স্কোর বিতরণ");
+        drawSectionHeading(page, t.analytics_score_dist);
         drawTable(page, [
-          { header: "স্কোর রেঞ্জ",   key: "name",  width: 80 },
-          { header: "শিক্ষার্থী সংখ্যা", key: "value", width: 40, align: "right" },
-          { header: "শতাংশ",          key: "pct",   width: 40, align: "right" },
+          { header: lang === "bn" ? "স্কোর রেঞ্জ" : "Score Range",   key: "name",  width: 80 },
+          { header: lang === "bn" ? "শিক্ষার্থী সংখ্যা" : "Count", key: "value", width: 40, align: "right" },
+          { header: t.percentage, key: "pct",   width: 40, align: "right" },
         ], data.scoreBandBreakdown.map(r => ({
           ...r,
           pct: `${data.totalAttempts > 0 ? Math.round((r.value / data.totalAttempts) * 100) : 0}%`,
@@ -277,10 +283,10 @@ export default function AdminAnalyticsTab() {
 
       // ── Category Breakdown ──────────────────────────────────────────────────
       if (data.categoryBreakdown.length > 0) {
-        drawSectionHeading(page, "ক্যাটেগরিভিত্তিক প্রশ্নের সংখ্যা");
+        drawSectionHeading(page, t.analytics_category_breakdown);
         drawTable(page, [
-          { header: "ক্যাটেগরি",      key: "name",      width: 100 },
-          { header: "প্রশ্ন সংখ্যা",  key: "questions", width: 60, align: "right" },
+          { header: lang === "bn" ? "ক্যাটেগরি" : "Category",      key: "name",      width: 100 },
+          { header: lang === "bn" ? "প্রশ্ন সংখ্যা" : "Questions",  key: "questions", width: 60, align: "right" },
         ], data.categoryBreakdown);
       }
 

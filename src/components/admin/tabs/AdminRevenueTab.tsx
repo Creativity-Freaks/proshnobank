@@ -227,52 +227,60 @@ export default function AdminRevenueTab() {
       const {
         createReport, finalizePages,
         drawSectionHeading, drawKpiGrid, drawTable,
-        BRAND,
+        BRAND, i18n,
       } = await import("@/lib/reportUtils");
 
+      // Detect language from user's browser or localStorage
+      const lang = (localStorage.getItem("appLanguage") ?? navigator.language.split("-")[0]) === "bn" ? "bn" : "en";
+      const t = i18n[lang];
+
       const dateLabel =
-        filters.dateRange === "7d"  ? "গত ৭ দিন"  :
-        filters.dateRange === "30d" ? "গত ৩০ দিন" :
-        filters.dateRange === "90d" ? "গত ৯০ দিন" : "সর্বকালীন";
+        filters.dateRange === "7d"  ? (lang === "bn" ? "গত ৭ দিন" : "Last 7 Days") :
+        filters.dateRange === "30d" ? (lang === "bn" ? "গত ৩০ দিন" : "Last 30 Days") :
+        filters.dateRange === "90d" ? (lang === "bn" ? "গত ৯০ দিন" : "Last 90 Days") :
+        (lang === "bn" ? "সর্বকালীন" : "All Time");
       const statusLabel =
-        filters.status === "all"       ? "সব স্ট্যাটাস" :
-        filters.status === "active"    ? "সক্রিয়"        :
-        filters.status === "cancelled" ? "বাতিল"         : "অপেক্ষমাণ";
+        filters.status === "all"       ? t.all :
+        filters.status === "active"    ? (lang === "bn" ? "সক্রিয়" : "Active") :
+        filters.status === "cancelled" ? (lang === "bn" ? "বাতিল" : "Cancelled") :
+        (lang === "bn" ? "অপেক্ষমাণ" : "Pending");
       const planLabel =
-        filters.planType === "all"     ? "সব প্ল্যান"    :
-        filters.planType === "student" ? "স্টুডেন্ট"     :
-        filters.planType === "teacher" ? "টিচার"         : "কোচিং";
+        filters.planType === "all"     ? t.all :
+        filters.planType === "student" ? (lang === "bn" ? "স্টুডেন্ট" : "Student") :
+        filters.planType === "teacher" ? (lang === "bn" ? "টিচার" : "Teacher") :
+        (lang === "bn" ? "কোচিং" : "Coaching");
 
       const page = await createReport(
         jsPDF,
-        "প্রশ্নব্যাংক — রেভিনিউ রিপোর্ট",
-        "সাবস্ক্রিপশন ও ব্যাচ আয়ের বিস্তারিত বিশ্লেষণ",
+        t.revenue_title,
+        t.revenue_subtitle,
         [
-          { label: "সময়সীমা",  value: dateLabel  },
-          { label: "প্ল্যান",   value: planLabel  },
-          { label: "স্ট্যাটাস", value: statusLabel },
+          { label: t.analytics_period, value: dateLabel },
+          { label: t.revenue_plan,     value: planLabel  },
+          { label: t.revenue_status,   value: statusLabel },
         ],
+        lang,
       );
 
       // ── KPI Cards ────────────────────────────────────────────────────────
-      drawSectionHeading(page, "মূল পরিসংখ্যান");
+      drawSectionHeading(page, t.revenue_summary);
       drawKpiGrid(page, [
-        { label: "মোট আয়",            value: `৳${data.totalRevenue.toLocaleString()}` },
-        { label: "সাবস্ক্রিপশন আয়",   value: `৳${data.subscriptionRevenue.toLocaleString()}` },
-        { label: "ব্যাচ আয়",           value: `৳${data.batchRevenue.toLocaleString()}` },
-        { label: "মোট গ্রাহক",         value: String(data.totalSubscribers) },
-        { label: "সক্রিয় গ্রাহক",      value: String(data.activeSubscribers) },
-        { label: "ব্যাচ এনরোলমেন্ট",   value: String(data.totalBatchEnrollments) },
+        { label: t.revenue_total,            value: `৳${data.totalRevenue.toLocaleString()}` },
+        { label: t.revenue_subscription,   value: `৳${data.subscriptionRevenue.toLocaleString()}` },
+        { label: t.revenue_batch,           value: `৳${data.batchRevenue.toLocaleString()}` },
+        { label: t.revenue_total_subscribers,         value: String(data.totalSubscribers) },
+        { label: t.revenue_active_subscribers,      value: String(data.activeSubscribers) },
+        { label: t.revenue_batch_enrollments,   value: String(data.totalBatchEnrollments) },
       ]);
 
       // ── Plan Breakdown ────────────────────────────────────────────────────
       if (data.planBreakdown.length > 0) {
-        drawSectionHeading(page, "প্ল্যান অনুযায়ী সাবস্ক্রিপশন");
+        drawSectionHeading(page, t.revenue_plan_breakdown);
         drawTable(page, [
-          { header: "প্ল্যানের নাম", key: "name",       width: 85 },
-          { header: "গ্রাহক",        key: "count",      width: 30, align: "right" },
-          { header: "আয় (৳)",        key: "revenueStr", width: 40, align: "right" },
-          { header: "অংশ (%)",        key: "pct",        width: 25, align: "right" },
+          { header: lang === "bn" ? "প্ল্যানের নাম" : "Plan Name", key: "name",       width: 85 },
+          { header: lang === "bn" ? "গ্রাহক" : "Subscribers",        key: "count",      width: 30, align: "right" },
+          { header: lang === "bn" ? "আয় (৳)" : "Revenue (৳)",        key: "revenueStr", width: 40, align: "right" },
+          { header: t.share,        key: "pct",        width: 25, align: "right" },
         ], data.planBreakdown.map(r => ({
           ...r,
           revenueStr: `৳${r.revenue.toLocaleString()}`,
@@ -284,12 +292,12 @@ export default function AdminRevenueTab() {
 
       // ── Batch Breakdown ───────────────────────────────────────────────────
       if (data.batchBreakdown.length > 0) {
-        drawSectionHeading(page, "ব্যাচ অনুযায়ী আয়");
+        drawSectionHeading(page, t.revenue_batch_breakdown);
         drawTable(page, [
-          { header: "ব্যাচের নাম",    key: "name",       width: 90 },
-          { header: "এনরোল্ড",        key: "enrolled",   width: 25, align: "right" },
-          { header: "মূল্য (৳)",       key: "priceStr",   width: 30, align: "right" },
-          { header: "মোট আয় (৳)",     key: "revenueStr", width: 35, align: "right" },
+          { header: lang === "bn" ? "ব্যাচের নাম" : "Batch Name",    key: "name",       width: 90 },
+          { header: lang === "bn" ? "এনরোল্ড" : "Enrolled",        key: "enrolled",   width: 25, align: "right" },
+          { header: lang === "bn" ? "মূল্য (৳)" : "Price (৳)",       key: "priceStr",   width: 30, align: "right" },
+          { header: lang === "bn" ? "মোট আয় (৳)" : "Total (৳)",     key: "revenueStr", width: 35, align: "right" },
         ], data.batchBreakdown.map(r => ({
           ...r,
           priceStr:   r.price != null ? `৳${r.price.toLocaleString()}` : "—",
@@ -299,12 +307,12 @@ export default function AdminRevenueTab() {
 
       // ── Monthly Trend ─────────────────────────────────────────────────────
       if (data.monthlyRevenue.length > 0) {
-        drawSectionHeading(page, "মাসিক আয়ের ধারা");
+        drawSectionHeading(page, t.revenue_monthly_trend);
         drawTable(page, [
-          { header: "মাস",                  key: "month",    width: 55 },
-          { header: "সাবস্ক্রিপশন আয় (৳)", key: "subStr",   width: 55, align: "right" },
-          { header: "ব্যাচ আয় (৳)",         key: "batchStr", width: 45, align: "right" },
-          { header: "মোট (৳)",               key: "totalStr", width: 25, align: "right" },
+          { header: t.month,                  key: "month",    width: 55 },
+          { header: lang === "bn" ? "সাবস্ক্রিপশন আয় (৳)" : "Subscription (৳)", key: "subStr",   width: 55, align: "right" },
+          { header: lang === "bn" ? "ব্যাচ আয় (৳)" : "Batch (৳)",         key: "batchStr", width: 45, align: "right" },
+          { header: lang === "bn" ? "মোট (৳)" : "Total (৳)",               key: "totalStr", width: 25, align: "right" },
         ], data.monthlyRevenue.map(r => ({
           ...r,
           subStr:   `৳${r.subscription.toLocaleString()}`,
@@ -316,9 +324,11 @@ export default function AdminRevenueTab() {
       finalizePages(page.doc);
       const fileName = `ProshnoBank_Revenue_${new Date().toISOString().slice(0, 10)}.pdf`;
       page.doc.save(fileName);
-      toast({ title: "রিপোর্ট তৈরি হয়েছে", description: fileName });
+      const successMsg = lang === "bn" ? "রিপোর্ট তৈরি হয়েছে" : "Report generated";
+      toast({ title: successMsg, description: fileName });
     } catch (err: any) {
-      toast({ title: "Error", description: "PDF তৈরি করতে ব্যর্থ: " + err.message, variant: "destructive" });
+      const errorMsg = lang === "bn" ? "PDF তৈরি করতে ব্যর্থ" : "Failed to generate PDF";
+      toast({ title: "Error", description: errorMsg + ": " + err.message, variant: "destructive" });
     } finally {
       setGenerating(false);
     }
