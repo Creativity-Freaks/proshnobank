@@ -11,21 +11,23 @@
  *   │  FOOTER  (page X/Y + date)       │  h=12mm
  *   └──────────────────────────────────┘
  */
-import { NOTO_SANS_BENGALI_B64 } from "./fonts/notoBengaliB64";
+import { NOTO_SANS_BENGALI_REGULAR_B64, NOTO_SANS_BENGALI_BOLD_B64 } from "./fonts/notoBengaliB64";
 
 const FONT_NAME = "NotoSansBengali";
 
-/** Register the Bengali font into a jsPDF instance (idempotent) */
+/** Register Regular + SemiBold Bengali fonts into a jsPDF instance */
 function registerFont(doc: any) {
-  doc.addFileToVFS("NotoSansBengali.ttf", NOTO_SANS_BENGALI_B64);
-  doc.addFont("NotoSansBengali.ttf", FONT_NAME, "normal");
+  doc.addFileToVFS("NotoSansBengali-Regular.ttf", NOTO_SANS_BENGALI_REGULAR_B64);
+  doc.addFont("NotoSansBengali-Regular.ttf", FONT_NAME, "normal");
+  doc.addFileToVFS("NotoSansBengali-SemiBold.ttf", NOTO_SANS_BENGALI_BOLD_B64);
+  doc.addFont("NotoSansBengali-SemiBold.ttf", FONT_NAME, "bold");
   doc.setFont(FONT_NAME, "normal");
 }
 
-/** Shorthand: set font size + weight-emulation via size boost */
+/** Shorthand: set font + size */
 function setF(doc: any, size: number, bold = false) {
-  doc.setFont(FONT_NAME, "normal");
-  doc.setFontSize(bold ? size + 0.5 : size);
+  doc.setFont(FONT_NAME, bold ? "bold" : "normal");
+  doc.setFontSize(size);
 }
 
 // Brand palette
