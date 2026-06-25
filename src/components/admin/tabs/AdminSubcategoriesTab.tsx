@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, Trash2, Edit2, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -18,6 +18,13 @@ export default function AdminSubcategoriesTab() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: "", description: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredSubcategories = useMemo(() => {
+    if (!searchQuery.trim()) return subcategories;
+    const q = searchQuery.toLowerCase();
+    return subcategories.filter(c => c.name.toLowerCase().includes(q));
+  }, [subcategories, searchQuery]);
 
   useEffect(() => {
     fetchCategories();
@@ -135,7 +142,7 @@ export default function AdminSubcategoriesTab() {
         <p className="text-sm text-muted-foreground mt-1">বেস ক্যাটেগরির অধীনে পরীক্ষার ধরন (যেমন: SSC বিজ্ঞান, SSC মানবিক)</p>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <Button
           onClick={() => {
             setShowForm(!showForm);
@@ -148,6 +155,20 @@ export default function AdminSubcategoriesTab() {
           <Plus className="w-4 h-4" />
           নতুন পরীক্ষা ক্যাটেগরি
         </Button>
+        {selectedCategory && (
+          <div className="flex items-center gap-2 flex-1 sm:max-w-xs">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="সাব-ক্যাটেগরি খুঁজুন..."
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="pl-9 h-9"
+              />
+            </div>
+            <span className="text-sm text-muted-foreground whitespace-nowrap">{filteredSubcategories.length}/{subcategories.length}টি</span>
+          </div>
+        )}
       </div>
 
       {/* Parent Category Filter */}
@@ -230,8 +251,14 @@ export default function AdminSubcategoriesTab() {
                 </p>
               </CardContent>
             </Card>
+          ) : filteredSubcategories.length === 0 ? (
+            <Card className="md:col-span-2 lg:col-span-3">
+              <CardContent className="pt-6">
+                <p className="text-muted-foreground text-center">&quot;{searchQuery}&quot; নামে কিছু পাওয়া যায়নি</p>
+              </CardContent>
+            </Card>
           ) : (
-            subcategories.map((item) => (
+            filteredSubcategories.map((item) => (
               <Card key={item.id} className="border-l-4 border-l-primary/60">
                 <CardHeader>
                   <CardTitle className="text-base">{item.name}</CardTitle>

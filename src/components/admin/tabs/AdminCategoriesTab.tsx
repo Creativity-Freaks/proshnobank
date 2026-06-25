@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit2, Loader2 } from "lucide-react";
+import { useEffect, useState, useMemo } from "react";
+import { Plus, Trash2, Edit2, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -25,6 +25,7 @@ export default function AdminCategoriesTab() {
   const [showForm, setShowForm] = useState(false);
   const [formData, setFormData] = useState({ name: "", slug: "", description: "" });
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     fetchCategories();
@@ -98,6 +99,12 @@ export default function AdminCategoriesTab() {
     }
   };
 
+  const filteredCategories = useMemo(() => {
+    if (!searchQuery.trim()) return categories;
+    const q = searchQuery.toLowerCase();
+    return categories.filter(c => c.name.toLowerCase().includes(q) || (c.slug || "").toLowerCase().includes(q));
+  }, [categories, searchQuery]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -113,7 +120,7 @@ export default function AdminCategoriesTab() {
         <p className="text-sm text-muted-foreground mt-1">মূল পরীক্ষা ক্যাটেগরি (SSC, HSC, মেডিকেল, ইঞ্জিনিয়ারিং, বিশ্ববিদ্যালয়, চাকরি)</p>
       </div>
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <Button
           onClick={() => {
             setShowForm(!showForm);
@@ -125,7 +132,18 @@ export default function AdminCategoriesTab() {
           <Plus className="w-4 h-4" />
           নতুন বেস ক্যাটেগরি
         </Button>
-        <span className="text-sm text-muted-foreground">মোট {categories.length}টি</span>
+        <div className="flex items-center gap-3 flex-1 sm:max-w-xs">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="ক্যাটেগরি খুঁজুন..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          <span className="text-sm text-muted-foreground whitespace-nowrap">{filteredCategories.length}/{categories.length}টি</span>
+        </div>
       </div>
 
       {showForm && (
@@ -179,7 +197,7 @@ export default function AdminCategoriesTab() {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {categories.map((category) => (
+        {filteredCategories.map((category) => (
           <Card key={category.id} className="border-l-4 border-l-primary">
             <CardHeader className="pb-2">
               <CardTitle className="text-lg">{category.name}</CardTitle>

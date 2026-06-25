@@ -81,6 +81,12 @@ export default function AdminDoubtsTab() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [priorityFilter, setPriorityFilter] = useState("all");
 
+  // Category → Subject cascade filter
+  const [filterCategories, setFilterCategories] = useState<{ id: string; name: string }[]>([]);
+  const [filterSubjectsAll, setFilterSubjectsAll] = useState<{ id: string; name: string; category_id: string }[]>([]);
+  const [filterCategoryId, setFilterCategoryId] = useState("");
+  const [filterSubjectId, setFilterSubjectId] = useState("");
+
   // Thread view
   const [selectedDoubt, setSelectedDoubt] = useState<Doubt | null>(null);
   const [answers, setAnswers] = useState<DoubtAnswer[]>([]);
@@ -101,6 +107,8 @@ export default function AdminDoubtsTab() {
 
       if (statusFilter !== "all") query = query.eq("status", statusFilter);
       if (priorityFilter !== "all") query = query.eq("priority", priorityFilter);
+      if (filterSubjectId) query = query.eq("subject_id", filterSubjectId);
+      else if (filterCategoryId) query = query.eq("category_id", filterCategoryId);
 
       const { data, error } = await query;
       if (error) throw new Error(error.message);
@@ -137,9 +145,19 @@ export default function AdminDoubtsTab() {
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, priorityFilter, toast]);
+  }, [statusFilter, priorityFilter, filterCategoryId, filterSubjectId, toast]);
 
   useEffect(() => { fetchDoubts(); }, [fetchDoubts]);
+
+  useEffect(() => {
+    Promise.all([
+      supabase.from("exam_categories").select("id, name").is("parent_id", null).order("sort_order"),
+      supabase.from("subjects").select("id, name, category_id").order("name"),
+    ]).then(([{ data: cats }, { data: subs }]) => {
+      setFilterCategories(cats || []);
+      setFilterSubjectsAll(subs || []);
+    });
+  }, []);
 
   const openThread = async (doubt: Doubt) => {
     setSelectedDoubt(doubt);
@@ -312,6 +330,26 @@ export default function AdminDoubtsTab() {
           <option value="all">সব অগ্রাধিকার</option>
           {Object.entries(PRIORITY_LABELS).map(([v, l]) => <option key={v} value={v}>{l}</option>)}
         </select>
+        <select
+          value={filterCategoryId}
+          onChange={e => { setFilterCategoryId(e.target.value); setFilterSubjectId(""); }}
+          className="px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
+        >
+          <option value="">সব ক্যাটেগরি</option>
+          {filterCategories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        {filterCategoryId && (
+          <select
+            value={filterSubjectId}
+            onChange={e => setFilterSubjectId(e.target.value)}
+            className="px-3 py-2 rounded-md border border-input bg-background text-sm text-foreground"
+          >
+            <option value="">সব বিষয়</option>
+            {filterSubjectsAll.filter(s => s.category_id === filterCategoryId).map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        )}
       </div>
 
       {/* Doubt list */}
@@ -361,7 +399,7 @@ export default function AdminDoubtsTab() {
                       <DropdownMenuContent align="end" className="font-bengali">
                         {STATUS_OPTIONS.filter(o => o.value !== doubt.status).map(o => (
                           <DropdownMenuItem key={o.value} onClick={() => handleStatusChange(doubt.id, o.value)}>
-                            {o.label} হিসেবে চিহ্নিত করুন
+                            {o.label} হিসেবে চিহ্��িত করুন
                           </DropdownMenuItem>
                         ))}
                         <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteDoubt(doubt.id)}>

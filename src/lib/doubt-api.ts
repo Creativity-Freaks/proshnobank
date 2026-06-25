@@ -10,6 +10,9 @@ export const doubtApi = {
     question_id?: string;
     exam_attempt_id?: string;
     priority?: "low" | "medium" | "high";
+    category_id?: string | null;
+    subject_id?: string | null;
+    chapter_id?: string | null;
   }) {
     const { data: doubt, error } = await supabase
       .from("doubts")

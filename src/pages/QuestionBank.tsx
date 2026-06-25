@@ -89,11 +89,13 @@ const QuestionBank = () => {
     isLoading,
     isError,
   } = useQuery({
-    queryKey: ["question-groups", selectedSubject, searchQuery],
+    queryKey: ["question-groups", selectedSubjectId, selectedCategory, searchQuery],
     queryFn: () =>
       questionsApi.groups({
         limit: 120,
-        subject: selectedSubject !== "all" ? selectedSubject : undefined,
+        subject_id:  selectedSubjectId  || undefined,
+        category_id: !selectedSubjectId && selectedCategory ? selectedCategory : undefined,
+        subject:     !selectedSubjectId && !selectedCategory && selectedSubject !== "all" ? selectedSubject : undefined,
         search: searchQuery || undefined,
       }),
   });
