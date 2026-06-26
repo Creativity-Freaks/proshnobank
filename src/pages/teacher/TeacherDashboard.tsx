@@ -615,14 +615,14 @@ export default function TeacherDashboard() {
   );
 
   return (
-    <div className="min-h-[100dvh] w-full font-bengali">
-      <div className="flex h-full w-full">
+    <div className="h-[100dvh] w-full overflow-hidden font-bengali">
+      <div className="flex h-full w-full overflow-hidden">
         <TeacherSidebar
           activeView={activeView}
           onChangeView={setActiveView}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
           <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">
             <div className="min-w-0 flex-1">
               <div className="text-sm font-semibold text-foreground truncate">{viewTitle(activeView)}</div>
@@ -1123,7 +1123,7 @@ export default function TeacherDashboard() {
                           />
                         </div>
                         <div>
-                          <Label>কলাম</Label>
+                          <Label>ক��াম</Label>
                           <Select value={paperColumns} onValueChange={(v) => setPaperColumns(v === "1" ? "1" : "2")}>
                             <SelectTrigger className="mt-2">
                               <SelectValue />
