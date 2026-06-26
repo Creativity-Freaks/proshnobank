@@ -38,13 +38,18 @@ export function useSubscription(): SubscriptionState {
   const [plan, setPlan] = useState<ActivePlan | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
 
-  // Track auth state
+  // Track auth state — only update userId on real sign-in/sign-out, not TOKEN_REFRESHED
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => setUserId(session?.user?.id ?? null)
-    );
     supabase.auth.getSession().then(({ data: { session } }) =>
       setUserId(session?.user?.id ?? null)
+    );
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        // TOKEN_REFRESHED fires on every tab focus — ignore it to prevent loading flicker
+        if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+          setUserId(session?.user?.id ?? null);
+        }
+      }
     );
     return () => subscription.unsubscribe();
   }, []);
