@@ -457,9 +457,9 @@ const calculateMarks = (
 ## Questions & Support
 
 - 💬 **GitHub Discussions**: [Start a discussion](https://github.com/Creativity-Freaks/proshnobank/discussions)
-- 📧 **Email**: [dev@proshnobank.io](mailto:dev@proshnobank.io)
-- 🐦 **Twitter**: [@ProshnoBank](https://twitter.com/proshnobank)
-- 📚 **Documentation**: [Full Docs](https://docs.proshnobank.io)
+- 📧 **Email**: [info.proshnobank@gmail.com](mailto:info.proshnobank@gmail.com)
+- 🐦 **Facebook**: [@ProshnoBank](https://facebook.com/aacwith10ms)
+- 📚 **Documentation**: [Full Docs](https://docs.proshnobank.app)
 
 ## Recognition
 

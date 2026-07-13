@@ -80,7 +80,7 @@ Community leaders will follow these Community Impact Guidelines in determining t
 
 ## Appeal Process
 
-If you believe a decision was made in error, you may appeal by contacting **conduct-appeals@proshnobank.io** within 30 days of the decision. Appeals will be reviewed by a separate group of community leaders.
+If you believe a decision was made in error, you may appeal by contacting **info.proshnobank@gmail.com** within 30 days of the decision. Appeals will be reviewed by a separate group of community leaders.
 
 ## Attribution
 
@@ -92,7 +92,7 @@ For answers to common questions about this code of conduct, see the FAQ at https
 
 ## Questions?
 
-If you have questions about this Code of Conduct or need to report a violation, please contact us at **conduct@proshnobank.io**.
+If you have questions about this Code of Conduct or need to report a violation, please contact us at **info.proshnobank@gmail.com**.
 
 ---
 

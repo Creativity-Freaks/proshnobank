@@ -634,7 +634,7 @@ This project would not have been possible without:
 
 **ProshnoBank** - Transforming Digital Education
 
-[GitHub](https://github.com/Creativity-Freaks/proshnobank) • [Website](https://proshnobank.io) • [Docs](https://docs.proshnobank.io)
+[GitHub](https://github.com/Creativity-Freaks/proshnobank) • [Website](https://proshnobank.app) • [Docs](https://docs.proshnobank.app)
 
 ---
 

@@ -255,10 +255,10 @@ See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a complete list.
 
 ## 📞 Support & Contact
 
-- 📧 **Email**: [support@proshnobank.io](mailto:support@proshnobank.io)
+- 📧 **Email**: [info.proshnobank@gmail.com](mailto:info.proshnobank@gmail.com)
 - 💬 **GitHub Discussions**: [Start a discussion](https://github.com/Creativity-Freaks/proshnobank/discussions)
-- 🐦 **Twitter**: [@ProshnoBank](https://twitter.com/proshnobank)
-- 📚 **Documentation**: [Full Docs](https://docs.proshnobank.io)
+- 🐦 **Facebook**: [@ProshnoBank](https://facebook.com/aacwith10ms)
+- 📚 **Documentation**: [Full Docs](https://docs.proshnobank.app)
 
 ## 🗺️ Roadmap
 
