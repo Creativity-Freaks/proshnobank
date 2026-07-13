@@ -7,6 +7,10 @@ export default defineConfig(() => ({
   server: {
     host: "::",
     port: 8080,
+    watch: {
+      usePolling: true,
+      interval: 1000,
+    },
     hmr: {
       overlay: false,
     },
