@@ -143,7 +143,7 @@ const Footer = () => {
             <p>
               Powered by{' '}
               <a
-                href="https://cf-techlab.tech"
+                href="https://cftechlab.tech"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-background/60 hover:text-background transition-colors underline"
