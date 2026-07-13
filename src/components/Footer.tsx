@@ -97,8 +97,10 @@ const Footer = () => {
 
           <div className="pt-6 text-center text-sm text-background/50 font-bengali">
             © ২০২৬ প্রশ্নব্যাংক। সর্বস্বত্ব সংরক্ষিত।
-          </div>
-        </div>
+          </div>          
+          <div className=\"pt-4 text-center text-xs text-background/40 font-bengali\">
+            <p>Powered by <a href=\"https://cf-techlab.tech\" target=\"_blank\" rel=\"noopener noreferrer\" className=\"text-background/60 hover:text-background transition-colors underline\">CF Techlab</a></p>
+          </div>        </div>
       </div>
     </footer>
   );

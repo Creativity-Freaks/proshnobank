@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"
+     xmlns:content="http://purl.org/rss/1.0/modules/content/"
+     xmlns:atom="http://www.w3.org/2005/Atom">
+
+  <channel>
+    <title>প্রশ্নব্যাংক - অনলাইন পরীক্ষা প্ল্যাটফর্ম</title>
+    <link>https://proshnobank.app</link>
+    <description>বাংলাদেশের সেরা অনলাইন পরীক্ষা প্ল্যাটফর্ম - লাইভ এক্সাম, প্রশ্নব্যাংক এবং OMR মূল্যায়ন</description>
+    <language>bn-BD</language>
+    <copyright>© २०२६ প্রশ্নব্যাংক। সর্বস্বত্ব সংরক্ষিত।</copyright>
+    <atom:link href="https://proshnobank.app/feed.xml" rel="self" type="application/rss+xml" />
+
+    <item>
+      <title>লাইভ পরীক্ষা চলছে - আপনার দক্ষতা যাচাই করুন</title>
+      <link>https://proshnobank.app/live-exams</link>
+      <description>এই সপ্তাহে নতুন লাইভ পরীক্ষা শুরু হচ্ছে। সারাদেশের শিক্ষার্থীদের সাথে প্রতিযোগিতায় অংশ নিন এবং আপনার স্থান তৈরি করুন।</description>
+      <pubDate>Sat, 13 Jul 2024 10:00:00 +0600</pubDate>
+    </item>
+
+    <item>
+      <title>প্রশ্নব্যাংক আপডেট - নতুন ক্যাটাগরি এবং প্রশ্ন</title>
+      <link>https://proshnobank.app/question-bank</link>
+      <description>আমরা নতুন প্রশ্ন এবং ক্যাটাগরি যোগ করেছি যা সর্বশেষ পরীক্ষার সিলেবাসের সাথে সংগতিপূর্ণ।</description>
+      <pubDate>Fri, 12 Jul 2024 09:30:00 +0600</pubDate>
+    </item>
+
+    <item>
+      <title>টিচারদের জন্য - এখন আরও সহজে পরীক্ষা তৈরি করুন</title>
+      <link>https://proshnobank.app/teachers</link>
+      <description>নতুন ফিচার যোগ হয়েছে যা আপনার অনলাইন পরীক্ষা পরিচালনা আরও সহজ করে তুলবে।</description>
+      <pubDate>Thu, 11 Jul 2024 14:00:00 +0600</pubDate>
+    </item>
+
+  </channel>
+
+</rss>
