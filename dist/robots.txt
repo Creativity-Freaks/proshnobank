@@ -1,8 +1,22 @@
+# ProshnoBank - SEO Robots Configuration
+# This file tells search engines how to crawl the site
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /private
+Disallow: /.env
+Disallow: /node_modules
+
+# Specific rules for search engines
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 1
 
 User-agent: Twitterbot
 Allow: /
@@ -10,5 +24,6 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
+# Sitemap location
+Sitemap: https://proshnobank.app/sitemap.xml
+Sitemap: https://proshnobank.app/sitemap-en.xml

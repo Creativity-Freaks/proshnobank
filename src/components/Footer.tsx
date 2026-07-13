@@ -119,24 +119,24 @@ const Footer = () => {
         <div className="border-t border-background/20 mt-12 pt-6">
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-background/70 font-bengali">
             <Link to="/about" className="hover:text-background transition-colors">
-              About Us
+              আমাদের সম্পর্কে
             </Link>
             <span className="text-background/30">|</span>
             <Link to="/privacy-policy" className="hover:text-background transition-colors">
-              Privacy Policy
+              প্রাইভেসি পলিসি
             </Link>
             <span className="text-background/30">|</span>
             <Link to="/refund-policy" className="hover:text-background transition-colors">
-              Refund Policy
+              রিফান্ড পলিসি
             </Link>
             <span className="text-background/30">|</span>
             <Link to="/terms-and-conditions" className="hover:text-background transition-colors">
-              Terms and Conditions
+              শর্তাবলি
             </Link>
           </div>
 
           <div className="pt-6 text-center text-sm text-background/50 font-bengali">
-            © २०२६ प्रश्नब्यांक। सर्वस्वत्ष संरक्षित।
+            © ২০২৬ প্রশ্নব্যাংক। সর্বস্বত্ব সংরক্ষিত।
           </div>
 
           <div className="pt-4 text-center text-xs text-background/40 font-bengali">

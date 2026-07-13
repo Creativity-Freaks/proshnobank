@@ -25,6 +25,8 @@ export default defineConfig(() => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      jspdf: path.resolve(__dirname, "./src/vendor/jspdf.ts"),
+      html2canvas: path.resolve(__dirname, "./src/vendor/html2canvas.ts"),
     },
   },
 }));
