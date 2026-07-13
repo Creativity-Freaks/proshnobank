@@ -12,21 +12,24 @@
 
 ### Key Features
 
-✨ **Student Features**
+**✨ Student Features**
+
 - 📝 Take live and practice exams with real-time tracking
 - 📊 View detailed performance analytics and progress
 - 🏆 Compete on leaderboards and earn achievements
 - 💬 Ask doubts in an integrated forum
 - 📱 Responsive design for all devices
 
-🎓 **Teacher Features**
+**🎓 Teacher Features**
+
 - ❓ Create and manage question banks with category-based organization
 - 📋 Setup and configure exam batches
 - 👥 Monitor student performance and engagement
 - 📈 Generate comprehensive analytics reports
 - 🔐 Role-based access control for secure management
 
-🛡️ **Admin Features**
+**🛡️ Admin Features**
+
 - 👨‍💼 Complete user management system
 - 📊 System-wide analytics and monitoring
 - 🎨 Theme and configuration management
@@ -36,6 +39,7 @@
 ## 🚀 Tech Stack
 
 ### Frontend
+
 - **React 18** - Modern UI library with hooks
 - **TypeScript** - Type-safe development
 - **Vite** - Next-generation build tool
@@ -46,11 +50,13 @@
 - **Zustand** - Client state management
 
 ### Backend
+
 - **Supabase** - Open-source Firebase alternative
 - **PostgreSQL** - Robust relational database
 - **Row Level Security (RLS)** - Database-level security
 
 ### Tools & Services
+
 - **ESLint** - Code quality
 - **TypeScript Compiler** - Type checking
 - **Vitest** - Unit testing framework
@@ -59,6 +65,7 @@
 ## 📋 Prerequisites
 
 Before you begin, ensure you have the following installed:
+
 - **Node.js** (v18.0.0 or higher)
 - **npm** or **yarn** package manager
 - **Git** for version control
@@ -66,17 +73,20 @@ Before you begin, ensure you have the following installed:
 ## ⚙️ Installation & Setup
 
 ### 1. Clone the Repository
+
 ```bash
 git clone https://github.com/Creativity-Freaks/proshnobank.git
 cd proshnobank
 ```
 
 ### 2. Install Dependencies
+
 ```bash
 npm install
 ```
 
 ### 3. Environment Configuration
+
 ```bash
 # Copy the environment template
 cp .env.example .env.local
@@ -89,6 +99,7 @@ cp .env.example .env.local
 ```
 
 ### 4. Start Development Server
+
 ```bash
 npm run dev
 ```
@@ -151,11 +162,13 @@ proshnobank/
 ## 🔐 Authentication & Authorization
 
 ### User Roles
+
 - **Admin** - Full system access and management
 - **Teacher** - Can create exams and manage questions
 - **Student** - Can take exams and view results
 
 ### Security Features
+
 - JWT-based authentication via Supabase Auth
 - Row Level Security (RLS) on database tables
 - Role-based access control (RBAC)
@@ -165,6 +178,7 @@ proshnobank/
 ## 🗄️ Database Schema
 
 Key tables in the PostgreSQL database:
+
 - `users` - User accounts and profile information
 - `exam_batches` - Exam collections and metadata
 - `questions` - Question bank with multiple types
@@ -188,6 +202,7 @@ git push origin main
 ### Deploy to Other Platforms
 
 The project can be deployed to:
+
 - Netlify
 - GitHub Pages
 - Self-hosted servers
@@ -196,6 +211,7 @@ The project can be deployed to:
 ## 🤝 Contributing
 
 We welcome contributions from the community! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on:
+
 - How to submit issues and feature requests
 - Development setup and workflow
 - Code style and standards
@@ -208,6 +224,7 @@ We are committed to providing a welcoming and inclusive environment. Please revi
 ## 🐛 Bug Reports & Feature Requests
 
 Found a bug? Have a feature idea?
+
 - 🐛 **Report bugs** on [GitHub Issues](https://github.com/Creativity-Freaks/proshnobank/issues)
 - 💡 **Request features** with detailed descriptions
 - 🔄 **Check existing issues** before creating duplicates
@@ -219,9 +236,11 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 👥 Team & Contributors
 
 ### Project Maintainers
+
 - **Creativity-Freaks Team** - Core development team
 
 ### Contributors
+
 We appreciate all contributors! Your name will appear here once your PR is merged.
 
 See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a complete list.
@@ -236,7 +255,7 @@ See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a complete list.
 
 ## 📞 Support & Contact
 
-- 📧 **Email**: support@proshnobank.io
+- 📧 **Email**: [support@proshnobank.io](mailto:support@proshnobank.io)
 - 💬 **GitHub Discussions**: [Start a discussion](https://github.com/Creativity-Freaks/proshnobank/discussions)
 - 🐦 **Twitter**: [@ProshnoBank](https://twitter.com/proshnobank)
 - 📚 **Documentation**: [Full Docs](https://docs.proshnobank.io)
@@ -244,13 +263,14 @@ See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a complete list.
 ## 🗺️ Roadmap
 
 ### Upcoming Features
-- [ ] Mobile app (React Native)
-- [ ] AI-powered question generation
-- [ ] Advanced analytics dashboard
-- [ ] Live proctoring capabilities
-- [ ] Integration with video conferencing
-- [ ] Multi-language support
-- [ ] Offline exam mode
+
+- Mobile app (React Native)
+- AI-powered question generation
+- Advanced analytics dashboard
+- Live proctoring capabilities
+- Integration with video conferencing
+- Multi-language support
+- Offline exam mode
 
 ## 📊 Statistics
 
@@ -269,10 +289,6 @@ See [CONTRIBUTORS.md](CONTRIBUTORS.md) for a complete list.
 
 ---
 
-<div align="center">
-
 Made with ❤️ by the [Creativity-Freaks](https://github.com/Creativity-Freaks) Team
 
 [⬆ Back to Top](#-proshnobank---online-examination-platform)
-
-</div>

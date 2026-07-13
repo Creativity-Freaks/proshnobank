@@ -233,10 +233,10 @@ Upload to: /public/google-site-verification.html
 
 **Built by**: Creativity-Freaks Team  
 **Design & Development**: CF Techlab  
-**Website**: https://cf-techlab.tech
+**Website**: https://cftechlab.tech
 
 **Questions?** Contact us:
-- Email: support@proshnobank.app
+- Email: info.proshnobank@gmail.com
 - Facebook: https://facebook.com/aacwith10ms
 - YouTube: https://youtube.com/@DevPreneur
 

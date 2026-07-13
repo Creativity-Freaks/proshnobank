@@ -48,20 +48,52 @@ const Footer = () => {
           <div>
             <h4 className="font-bold font-bengali text-lg mb-4">দ্রুত লিংক</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link to="/batches" className="text-background/70 hover:text-background font-bengali transition-colors">এক্সাম ব্যাচ</Link></li>
-              <li><Link to="/question-bank" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্নব্যাংক</Link></li>
-              <li><Link to="/live-exams" className="text-background/70 hover:text-background font-bengali transition-colors">লাইভ এক্সাম</Link></li>
-              <li><Link to="/leaderboard" className="text-background/70 hover:text-background font-bengali transition-colors">লিডারবোর্ড</Link></li>
+              <li>
+                <Link to="/batches" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  এক্সাম ব্যাচ
+                </Link>
+              </li>
+              <li>
+                <Link to="/question-bank" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  প্রশ্নব্যাংক
+                </Link>
+              </li>
+              <li>
+                <Link to="/live-exams" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  লাইভ এক্সাম
+                </Link>
+              </li>
+              <li>
+                <Link to="/leaderboard" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  লিডারবোর্ড
+                </Link>
+              </li>
             </ul>
           </div>
 
           <div>
             <h4 className="font-bold font-bengali text-lg mb-4">শিক্ষকদের জন্য</h4>
             <ul className="space-y-3 text-sm">
-              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">প্রশ্ন তৈরী করুন</Link></li>
-              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">OMR মূল্যায়ন</Link></li>
-              <li><Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">অনলাইন পরীক্ষা</Link></li>
-              <li><Link to="/teacher-dashboard" className="text-background/70 hover:text-background font-bengali transition-colors">টিচার প্যানেল</Link></li>
+              <li>
+                <Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  প্রশ্ন তৈরী করুন
+                </Link>
+              </li>
+              <li>
+                <Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  OMR মূল্যায়ন
+                </Link>
+              </li>
+              <li>
+                <Link to="/teachers" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  অনলাইন পরীক্ষা
+                </Link>
+              </li>
+              <li>
+                <Link to="/teacher-dashboard" className="text-background/70 hover:text-background font-bengali transition-colors">
+                  টিচার প্যানেল
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -86,21 +118,41 @@ const Footer = () => {
 
         <div className="border-t border-background/20 mt-12 pt-6">
           <div className="flex flex-wrap items-center justify-center gap-3 text-sm text-background/70 font-bengali">
-            <Link to="/about" className="hover:text-background transition-colors">About Us</Link>
+            <Link to="/about" className="hover:text-background transition-colors">
+              About Us
+            </Link>
             <span className="text-background/30">|</span>
-            <Link to="/privacy-policy" className="hover:text-background transition-colors">Privacy Policy</Link>
+            <Link to="/privacy-policy" className="hover:text-background transition-colors">
+              Privacy Policy
+            </Link>
             <span className="text-background/30">|</span>
-            <Link to="/refund-policy" className="hover:text-background transition-colors">Refund Policy</Link>
+            <Link to="/refund-policy" className="hover:text-background transition-colors">
+              Refund Policy
+            </Link>
             <span className="text-background/30">|</span>
-            <Link to="/terms-and-conditions" className="hover:text-background transition-colors">Terms and Conditions</Link>
+            <Link to="/terms-and-conditions" className="hover:text-background transition-colors">
+              Terms and Conditions
+            </Link>
           </div>
 
           <div className="pt-6 text-center text-sm text-background/50 font-bengali">
-            © ২০২৬ প্রশ্নব্যাংক। সর্বস্বত্ব সংরক্ষিত।
-          </div>          
-          <div className=\"pt-4 text-center text-xs text-background/40 font-bengali\">
-            <p>Powered by <a href=\"https://cf-techlab.tech\" target=\"_blank\" rel=\"noopener noreferrer\" className=\"text-background/60 hover:text-background transition-colors underline\">CF Techlab</a></p>
-          </div>        </div>
+            © २०२६ प्रश्नब्यांक। सर्वस्वत्ष संरक्षित।
+          </div>
+
+          <div className="pt-4 text-center text-xs text-background/40 font-bengali">
+            <p>
+              Powered by{' '}
+              <a
+                href="https://cf-techlab.tech"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-background/60 hover:text-background transition-colors underline"
+              >
+                CF Techlab
+              </a>
+            </p>
+          </div>
+        </div>
       </div>
     </footer>
   );

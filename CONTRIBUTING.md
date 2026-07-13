@@ -1,6 +1,7 @@
 # 🤝 Contributing to ProshnoBank
 
 Thank you for considering contributing to ProshnoBank! We appreciate every contribution, whether it's:
+
 - 🐛 Bug reports
 - ✨ Feature suggestions
 - 📝 Documentation improvements
@@ -92,6 +93,7 @@ We use GitHub Pull Requests for code contributions.
 ## Development Setup
 
 ### Prerequisites
+
 - Node.js 18.0.0 or higher
 - npm 9.0.0 or higher
 - Git
@@ -177,39 +179,46 @@ git commit -m "test: add unit tests for question validation"
 ### Before Creating a PR
 
 1. **Fetch latest changes**
-   ```bash
-   git fetch upstream
-   git rebase upstream/main
-   ```
+
+```bash
+git fetch upstream
+git rebase upstream/main
+```
 
 2. **Run linting**
-   ```bash
-   npm run lint
-   ```
+
+```bash
+npm run lint
+```
 
 3. **Type check**
-   ```bash
-   npm run typecheck
-   ```
+
+```bash
+npm run typecheck
+```
 
 4. **Run tests**
-   ```bash
-   npm run test
-   ```
+
+```bash
+npm run test
+```
 
 5. **Build for production**
-   ```bash
-   npm run build
-   ```
+
+```bash
+npm run build
+```
 
 ### Creating Your PR
 
 1. **Push your branch**
-   ```bash
-   git push origin feature/your-feature-name
-   ```
+
+```bash
+git push origin feature/your-feature-name
+```
 
 2. **Create PR on GitHub**
+
    - Go to https://github.com/Creativity-Freaks/proshnobank
    - Click "New Pull Request"
    - Select your branch
@@ -310,10 +319,10 @@ interface ButtonProps {
   variant?: 'primary' | 'secondary';
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  onClick, 
-  children, 
-  variant = 'primary' 
+const Button: React.FC<ButtonProps> = ({
+  onClick,
+  children,
+  variant = 'primary'
 }) => {
   return (
     <button className={`btn btn-${variant}`} onClick={onClick}>
@@ -448,15 +457,14 @@ const calculateMarks = (
 ## Questions & Support
 
 - 💬 **GitHub Discussions**: [Start a discussion](https://github.com/Creativity-Freaks/proshnobank/discussions)
-- 📧 **Email**: dev@proshnobank.io
+- 📧 **Email**: [dev@proshnobank.io](mailto:dev@proshnobank.io)
 - 🐦 **Twitter**: [@ProshnoBank](https://twitter.com/proshnobank)
 - 📚 **Documentation**: [Full Docs](https://docs.proshnobank.io)
-
----
 
 ## Recognition
 
 Your contributions matter! We recognize our contributors in:
+
 - 🏆 [CONTRIBUTORS.md](CONTRIBUTORS.md)
 - 📊 GitHub contributors page
 - 🎉 Release notes
@@ -472,12 +480,8 @@ Your contributions matter! We recognize our contributors in:
 
 ---
 
-<div align="center">
-
 Thank you for contributing to ProshnoBank! 🙏
 
 Together, we're building an amazing education platform.
 
 [Read our Code of Conduct](CODE_OF_CONDUCT.md)
-
-</div>
